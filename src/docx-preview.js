@@ -1,0 +1,2 @@
+import mammoth from 'mammoth/mammoth.browser.js';
+window.previewDocx=async(url,target)=>{target.textContent='Loading document text…';try{const response=await fetch(url);if(!response.ok)throw new Error('The file could not be loaded.');const result=await mammoth.extractRawText({arrayBuffer:await response.arrayBuffer()});target.textContent=result.value||'This document contains no readable text. Download it to view its full contents.';}catch(e){target.textContent='Text preview unavailable. Download the document to open it in Word.'}};
