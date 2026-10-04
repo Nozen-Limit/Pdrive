@@ -39,7 +39,7 @@ const backend={
   if(path==='state'){const state=await rpc('get_state');if(!state.user)fail('Account profile is missing. Run the Supabase setup first.',503);return state}
   if(path==='modules'&&method==='POST'){const mid=crypto.randomUUID(),file=await upload(body.get('file'),mid);await rpc('submit_module',{mid,details:Object.fromEntries([...body.entries()].filter(([k])=>k!=='file')),...file});return {id:mid}}
   if(path==='profile'){checked(await client.from('profiles').update({name:body.name,assignment:body.assignment}).eq('id',user.id));return {ok:true}}
-  if(path.startsWith('users/')){await rpc('change_role',{uid:path.split('/')[1],new_role:body.role});return {ok:true}}
+  if(path.startsWith('accounts/')){await rpc('decide_account',{uid:path.split('/')[1],decision:body.decision,note:body.note||''});return {ok:true}}
   if(path==='notifications'){checked(await client.from('notifications').update({read:true}).eq('owner',user.id));return {ok:true}}
   if(path==='notes'){checked(await client.from('notes').insert({owner:user.id,title:body.title,body:body.body,pinned:body.pinned}));return {ok:true}}
   if(path.startsWith('notes/')){const nid=path.split('/')[1];checked(await (method==='DELETE'?client.from('notes').delete():client.from('notes').update({title:body.title,body:body.body,pinned:body.pinned,updated:new Date().toISOString()})).eq('id',nid).eq('owner',user.id));return {ok:true}}

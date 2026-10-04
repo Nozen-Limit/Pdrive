@@ -7,7 +7,7 @@ A real Teacher Module Submission & Approval System. GitHub Pages hosts the inter
 ### 1. Connect Supabase
 
 1. Create a NEW project at https://supabase.com/dashboard. Keep its database password private.
-2. In **SQL Editor**, paste the complete contents of `supabase/setup.sql` and click Run. Run it once on a new database, not over an existing app. This creates all tables, protected workflow functions, access rules, the private document bucket and new-user profile trigger.
+2. In **SQL Editor**, paste the complete contents of `supabase/setup.sql` and click Run. Run it once on a new database, not over an existing app. Then run `supabase/account-approval.sql`. For an existing Project Sikap database, run only `account-approval.sql`, not `setup.sql` again. This creates/updates protected workflow functions, access rules, the private document bucket and new-user profile trigger.
 3. Find the **Project URL** and **publishable key** in the project's Connect/API settings. A legacy `anon` key also works. These are public frontend configuration values, not administrator credentials.
 4. Edit **docs/config.js** and fill in `supabaseUrl` and `supabasePublishableKey`. Never put a `service_role`, `sb_secret_`, database password, Google secret, or access token in the repository. `docs/config.js` is the deployment configuration; later builds preserve it. Root `config.js` is only the initial blank template.
 5. In **Authentication → URL Configuration**, set Site URL to `https://nozen-limit.github.io/Pdrive/` and add that exact address to Redirect URLs. Add `http://127.0.0.1:4175/Pdrive/` only for local testing.
@@ -27,7 +27,8 @@ A real Teacher Module Submission & Approval System. GitHub Pages hosts the inter
 
 1. Open your live website, Sign Up with YOUR email and confirm it from your inbox.
 2. Edit the email placeholder in `supabase/set-owner.sql` and run it in Supabase SQL Editor. This explicitly makes your account owner and Head Teacher. The first random visitor never becomes administrator.
-3. Sign in again. Open **Teachers** to assign other users Teacher or Head Teacher roles. All new accounts start as Teachers, including Google accounts. Only the owner can manage roles. A Head Teacher cannot approve their own submission.
+3. Ensure `supabase/account-approval.sql` was run before provisioning the owner. New accounts (email/password or Google) start as **Pending approval**. Existing Head Teachers stay approved; other existing accounts become pending when this upgrade is first applied. Existing records are preserved.
+4. Sign in again. Head Teachers open **Teachers → Pending approval → Review account** to approve Teacher access or reject the request with a note. Users must confirm their email first. Applicants cannot view modules, upload files, or write notes before approval. They can check their status or log out. Head Teacher roles must be provisioned by a trusted database administrator, not through the website. A Head Teacher cannot approve their own module.
 
 ### 4. Optional Google sign-in
 
@@ -35,7 +36,7 @@ Email/password works without Google. For Google, enable the Google provider in S
 
 ## Features
 
-Clean responsive Inter login; signup/confirmation, logout, password recovery and optional Google sign-in; visible account roles; resizable desktop sidebar/mobile drawer; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, teacher role management, CSV reports, stars, archive/restore. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
+Clean responsive Inter login; signup/confirmation, logout, password recovery and optional Google sign-in; pending-account approval by Head Teachers; visible account roles; resizable desktop sidebar/mobile drawer; mobile filter icon and compact cards/forms; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, account review, CSV reports, stars, archive/restore. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
 
 All data and documents are shared across devices through Supabase, not a browser-only demo. Browser storage holds the authentication session and layout preferences. Remember me uses persistent storage; otherwise the session uses the current tab's session storage. OAuth callbacks must return to the same browser that initiated them. Sign-out revokes this device's session. Use trusted devices and avoid entering real sensitive school records until your deployment and rules have been reviewed.
 
