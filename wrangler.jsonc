@@ -1,0 +1,1 @@
+{"name":"classflow-local","main":"dist/server/index.js","compatibility_date":"2026-09-01","d1_databases":[{"binding":"DB","database_name":"classflow-local","database_id":"local","migrations_dir":"drizzle"}],"r2_buckets":[{"binding":"BUCKET","bucket_name":"classflow-files"}]}

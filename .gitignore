@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.sites-runtime/
+*.tar.gz
+*.zip
+.env
+.env.local
+.dev.vars
+.dev.vars.*

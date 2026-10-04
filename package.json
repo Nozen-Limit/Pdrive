@@ -1,0 +1,1 @@
+{"name":"classflow","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","db:generate":"drizzle-kit generate","dev":"wrangler dev"},"devDependencies":{"@cloudflare/workerd-windows-64":"^1.20261001.1","drizzle-kit":"^0.31.0","drizzle-orm":"^0.44.0","esbuild":"^0.28.2","wrangler":"^4.0.0"},"dependencies":{"jose":"^6.2.12","mammoth":"^1.13.0"}}
