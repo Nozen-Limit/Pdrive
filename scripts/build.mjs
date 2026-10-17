@@ -1,4 +1,5 @@
-import {mkdir,copyFile,writeFile,access} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {mkdir,copyFile,writeFile,access,readFile} from 'node:fs/promises';
 import {build} from 'esbuild';
 await mkdir('docs',{recursive:true});
 await mkdir('docs/assets',{recursive:true});
@@ -12,3 +13,7 @@ await writeFile('docs/.nojekyll','');console.log('Project Sikap built in docs/ f
 await build({entryPoints:['src/landing-scene.js'],bundle:true,minify:true,platform:'browser',format:'iife',outfile:'docs/landing-scene.js'});
 
 await build({entryPoints:['src/head-desk.js'],bundle:true,minify:true,platform:'browser',format:'iife',outfile:'docs/head-desk.js'});
+
+const assets=['frontend.js','backend.js','styles.css','school-workflow.js','head-desk.js','landing-scene.js','docx-preview.js'];
+const hash=createHash('sha256');for(const name of assets)hash.update(await readFile('docs/'+name));const version=hash.digest('hex').slice(0,12);
+const html=await readFile('src/index.html','utf8');await writeFile('docs/index.html',html.replace(/((?:src|href)=")([^"/]+\.(?:js|css))(")/g,(_,start,name,end)=>start+name+'?v='+version+end));
