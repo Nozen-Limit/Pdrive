@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 test('Academic filters use in-page dropdowns and preserve mobile drafts',async()=>{
  const app={innerHTML:''},context=vm.createContext({console,URLSearchParams,localStorage:{getItem(){return null}},innerWidth:390,window:{},addEventListener(){},document:{querySelector:s=>s==='#app'?app:null,addEventListener(){}}});
- vm.runInContext((await readFile('src/frontend.js','utf8')).replace(/^load\(\);\s*$/m,''),context);
+ vm.runInContext((((await readFile('src/school-workflow.js','utf8'))+'\n'+(await readFile('src/frontend.js','utf8')))).replace(/^load\(\);\s*$/m,''),context);
  vm.runInContext("data={modules:[{subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026–2027'}]};filterOpen=true;filterDraft={...filters};setFilter('subject','Science')",context);
  const html=vm.runInContext('filterPanel()',context);
  assert.doesNotMatch(html,/<select|type="radio"/);
@@ -18,7 +18,7 @@ test('Academic filters use in-page dropdowns and preserve mobile drafts',async()
 
 test('Desktop filters also stage changes until Apply and discard cancelled edits',async()=>{
  const app={innerHTML:''},context=vm.createContext({console,URLSearchParams,localStorage:{getItem(){return null}},innerWidth:1280,window:{},addEventListener(){},document:{querySelector:s=>s==='#app'?app:null,addEventListener(){}}});
- vm.runInContext((await readFile('src/frontend.js','utf8')).replace(/^load\(\);\s*$/m,''),context);
+ vm.runInContext((((await readFile('src/school-workflow.js','utf8'))+'\n'+(await readFile('src/frontend.js','utf8')))).replace(/^load\(\);\s*$/m,''),context);
  vm.runInContext("data={modules:[]};render=()=>{};toggleFilters();setFilter('subject','Science')",context);
  assert.equal(vm.runInContext('filters.subject',context),'all');
  vm.runInContext('closeFilters()',context);assert.equal(vm.runInContext('filters.subject',context),'all');
