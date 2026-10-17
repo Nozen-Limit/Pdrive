@@ -37,7 +37,9 @@ const backend={
   if(path==='auth/resend'){checked(await client.auth.resend({type:'signup',email:body.email,options:{emailRedirectTo:callbackUrl()}}));return {ok:true}}
   if(path==='auth/logout'){checked(await client.auth.signOut({scope:'local'}));recovery=false;return {ok:true}}
   const user=await current();
-  if(path==='state'){const state=await rpc('get_state');if(!state.user)fail('Account profile is missing. Run the Supabase setup first.',503);return state}
+  if(path==='state'){const state=await rpc('get_state');if(!state.user)fail('Account profile is missing. Run the Supabase setup first.',503);const result=await client.rpc('get_workflow_state');if(result.error&&result.error.code!=='PGRST202')checked(result);return {...state,...(!result.error?result.data:{}),workflowReady:!result.error}}
+  if(path==='requirements'&&method==='POST')return {id:await rpc('create_requirement',{details:body.details,teacher_ids:body.teachers})};
+  if(path.startsWith('requirements/')){await rpc('update_requirement',{rid:path.split('/')[1],expected_revision:body.revision,new_due:body.due_at||null,cancel:!!body.cancel});return {ok:true}}
   if(path==='modules'&&method==='POST'){const mid=crypto.randomUUID(),file=await upload(body.get('file'),mid);await rpc('submit_module',{mid,details:Object.fromEntries([...body.entries()].filter(([k])=>k!=='file')),...file});return {id:mid}}
   if(path==='profile'){const result=await client.from('profiles').update({name:body.name,assignment:body.assignment,subjects:body.subjects,grade_levels:body.grade_levels}).eq('id',user.id).select('id').single();if(['PGRST204','42703'].includes(result.error?.code))fail('Teaching details need a database update. Ask the administrator to run profile-details.sql.',503);checked(result);return {ok:true}}
   if(path.startsWith('accounts/')){await rpc('decide_account',{uid:path.split('/')[1],decision:body.decision,note:body.note||''});return {ok:true}}
@@ -47,7 +49,7 @@ const backend={
   const match=path.match(/^modules\/([^/]+)(?:\/([^/]+))?$/);if(match){const [,mid,action]=match;
    if(!action){const detail=await rpc('module_details',{mid});detail.versions=await signedVersions(detail.versions);return detail}
    if(action==='revise'){const file=await upload(body.get('file'),mid);await rpc('revise_module',{mid,expected_revision:Number(body.get('revision')),changes:body.get('changes'),...file})}
-   else if(action==='decision')await rpc('review_module',{mid,expected_revision:Number(body.revision),decision:body.status,feedback:body.feedback||''});
+   else if(action==='decision')await rpc('review_module_checked',{mid,expected_revision:Number(body.revision),decision:body.status,feedback:body.feedback||'',checks:body.checklist||{}});
    else if(action==='comments')await rpc('comment_module',{mid,message:body.body});
    else if(action==='alert'){const result=await client.rpc('send_module_alert',{mid,message:body.body});if(result.error?.code==='PGRST202')fail('Teacher alerts need a database update. Ask the administrator to run teacher-alerts.sql.',503);checked(result)}
    else if(action==='archive')await rpc('archive_module',{mid,archive:!!body.archived});
