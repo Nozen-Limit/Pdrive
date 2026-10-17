@@ -50,6 +50,16 @@ This installation represents ONE school. Head Teachers can see all that school's
 
 ## Development and tests
 
+### Latest local update
+
+Run `supabase/profile-details.sql` to enable saving subjects handled and grade levels in Profile. Department continues to use the existing assignment field. The update preserves current accounts and profile values; users can edit only their own teaching details, while role and approval remain protected. The profile header uses name initials as an avatar.
+
+Run `supabase/teacher-alerts.sql` in the existing Supabase project's SQL Editor after the account-approval update. It adds Head Teacher alerts from an active module's details, with a notification for its teacher and an audit entry. It preserves existing records. Until this database update is applied, the new Send teacher alert action cannot send alerts.
+
+Pages refresh school data when opened. Notifications remain unread until **Mark all as read** is selected. Reports filter activity by the same modules as their summary/export. The login page can resend confirmation links; actual delivery and Google sign-in still depend on the school's Supabase email/provider configuration.
+
+The first Head Teacher must first register with an email and password in Project Sikap and confirm the email. Then a database administrator runs `supabase/set-owner.sql` with that email. That script checks the confirmed account exists and prevents replacing an existing owner; it does not create a password. Other Teacher accounts are approved in Teachers.
+
 Install Node 22 or newer, then:
 
 ```sh

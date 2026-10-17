@@ -16,8 +16,18 @@ test('Account approval is enforced by PostgreSQL, including direct API bypass at
  await db.exec(`insert into auth.users(id,email,email_confirmed_at) values('${head}','head@school.example',now());update profiles set role='head',is_owner=true where id='${head}';`);
  const migration=await readFile('supabase/account-approval.sql','utf8');await db.exec(migration);
  await db.exec(`insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values('${teacher}','teacher@school.example',now(),'\{"role":"head","approval_status":"approved","full_name":"Google Teacher"\}'),('${other}','other@school.example',now(),'{}'),('${unconfirmed}','unconfirmed@school.example',null,'{}');`);
+ await db.exec(await readFile('supabase/teacher-alerts.sql','utf8'));
+ await db.exec(await readFile('supabase/profile-details.sql','utf8'));
+ const mid='20000000-0000-4000-8000-000000000001';
+ await db.query("insert into modules(id,owner,title,subject,grade,term,year) values($1,$2,'Lesson','Science','Grade 1','Quarter 1','2026')",[mid,teacher]);
  const as=async uid=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid]);await db.exec('set role authenticated')};
+ await as(other);await assert.rejects(db.query("select send_module_alert($1,'Reminder')",[mid]),/Only an approved Head Teacher/);
+ await as(head);await assert.rejects(db.query("select send_module_alert($1,'  ')",[mid]),/Enter an alert/);
+ await db.query("select send_module_alert($1,'Please check the rubric')",[mid]);
  await as(teacher);let state=(await db.query('select get_state()')).rows[0].get_state;
+ await db.query("update profiles set subjects=array['Science'],grade_levels=array['Grade 5'] where id=$1",[teacher]);
+ assert.equal((await db.query('select subjects from profiles where id=$1',[teacher])).rows[0].subjects[0],'Science');
+ assert.equal((await db.query("update profiles set subjects=array['English'] where id=$1 returning id",[other])).rows.length,0);
  assert.equal(state.user.role,'teacher');assert.equal(state.user.approval_status,'pending');assert.equal(state.user.name,'Google Teacher');assert.deepEqual(state.modules,[]);assert.deepEqual(state.teachers,[]);
  await assert.rejects(db.query("update profiles set approval_status='approved' where id=$1",[teacher]),/permission denied/);
  await assert.rejects(db.query("select decide_account($1,'approved','')",[teacher]),/Only an approved Head Teacher/);
@@ -33,7 +43,7 @@ test('Account approval is enforced by PostgreSQL, including direct API bypass at
  await db.query("select decide_account($1,'approved','Welcome to school')",[teacher]);
  await assert.rejects(db.query("select decide_account($1,'rejected','Stale click')",[teacher]),/not awaiting approval/);
  await db.query("select decide_account($1,'rejected','Contact the school')",[other]);
- await as(teacher);state=(await db.query('select get_state()')).rows[0].get_state;assert.equal(state.user.role,'teacher');assert.equal(state.user.approval_status,'approved');assert.equal(state.user.decided_by,head);
+ await as(teacher);state=(await db.query('select get_state()')).rows[0].get_state;assert.equal(state.user.role,'teacher');assert.equal(state.user.approval_status,'approved');assert.equal(state.user.decided_by,head);assert.equal(state.notifications.length,1);assert.match(state.notifications[0].body,/Please check the rubric/);await assert.rejects(db.query("select send_module_alert($1,'Spoofed alert')",[mid]),/Only an approved Head Teacher/);
  await db.query("insert into notes(title,body) values('Allowed','Approved teacher')");
  await as(other);state=(await db.query('select get_state()')).rows[0].get_state;assert.equal(state.user.approval_status,'rejected');assert.equal(state.user.approval_note,'Contact the school');assert.deepEqual(state.notes,[]);assert.equal((await db.query('select * from notes')).rows.length,0);
  await db.exec('reset role');await db.exec(migration);assert.equal((await db.query('select count(*)::int as n from account_reviews')).rows[0].n,2);assert.equal((await db.query('select approval_status from profiles where id=$1',[teacher])).rows[0].approval_status,'approved');

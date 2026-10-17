@@ -34,11 +34,12 @@ const backend={
   if(path==='auth/context')return {googleConfigured:true};
   if(path==='auth/login'){remember(body.remember);checked(await client.auth.signInWithPassword({email:body.email,password:body.password}));return {ok:true}}
   if(path==='auth/register'){if(body.password.length<12)fail('Use at least 12 characters for your password.');remember(body.remember);const result=checked(await client.auth.signUp({email:body.email,password:body.password,options:{data:{name:body.name},emailRedirectTo:callbackUrl()}}));return {ok:true,needsConfirmation:!result.session}}
+  if(path==='auth/resend'){checked(await client.auth.resend({type:'signup',email:body.email,options:{emailRedirectTo:callbackUrl()}}));return {ok:true}}
   if(path==='auth/logout'){checked(await client.auth.signOut({scope:'local'}));recovery=false;return {ok:true}}
   const user=await current();
   if(path==='state'){const state=await rpc('get_state');if(!state.user)fail('Account profile is missing. Run the Supabase setup first.',503);return state}
   if(path==='modules'&&method==='POST'){const mid=crypto.randomUUID(),file=await upload(body.get('file'),mid);await rpc('submit_module',{mid,details:Object.fromEntries([...body.entries()].filter(([k])=>k!=='file')),...file});return {id:mid}}
-  if(path==='profile'){checked(await client.from('profiles').update({name:body.name,assignment:body.assignment}).eq('id',user.id));return {ok:true}}
+  if(path==='profile'){const result=await client.from('profiles').update({name:body.name,assignment:body.assignment,subjects:body.subjects,grade_levels:body.grade_levels}).eq('id',user.id).select('id').single();if(['PGRST204','42703'].includes(result.error?.code))fail('Teaching details need a database update. Ask the administrator to run profile-details.sql.',503);checked(result);return {ok:true}}
   if(path.startsWith('accounts/')){await rpc('decide_account',{uid:path.split('/')[1],decision:body.decision,note:body.note||''});return {ok:true}}
   if(path==='notifications'){checked(await client.from('notifications').update({read:true}).eq('owner',user.id));return {ok:true}}
   if(path==='notes'){checked(await client.from('notes').insert({owner:user.id,title:body.title,body:body.body,pinned:body.pinned}));return {ok:true}}
@@ -48,6 +49,7 @@ const backend={
    if(action==='revise'){const file=await upload(body.get('file'),mid);await rpc('revise_module',{mid,expected_revision:Number(body.get('revision')),changes:body.get('changes'),...file})}
    else if(action==='decision')await rpc('review_module',{mid,expected_revision:Number(body.revision),decision:body.status,feedback:body.feedback||''});
    else if(action==='comments')await rpc('comment_module',{mid,message:body.body});
+   else if(action==='alert'){const result=await client.rpc('send_module_alert',{mid,message:body.body});if(result.error?.code==='PGRST202')fail('Teacher alerts need a database update. Ask the administrator to run teacher-alerts.sql.',503);checked(result)}
    else if(action==='archive')await rpc('archive_module',{mid,archive:!!body.archived});
    else if(action==='star'){const rows=checked(await client.from('stars').select('id').eq('owner',user.id).eq('module',mid));checked(await(rows.length?client.from('stars').delete().eq('id',rows[0].id):client.from('stars').insert({module:mid,owner:user.id})))}
    else fail('Unknown action.');return {ok:true};
