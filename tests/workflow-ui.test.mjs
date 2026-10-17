@@ -25,3 +25,11 @@ test('Requirement screens distinguish missing, returned and late submissions wit
  vm.runInContext("data.reviews=[{module:'m2',version:1,decision:'returned',reviewerName:'Head',created:'2026-01-01',checklist:{objectives:'met',content:'met',activities:'met',assessment:'revise'},feedback:'Add answer key'}]",ctx);
  assert.match(vm.runInContext("reviewHistory('m2')",ctx),/Add answer key/);assert.match(vm.runInContext("reviewHistory('m2')",ctx),/Assessment and answer key/);
 });
+
+test('Published dashboard renders an existing module from the single UI asset',async()=>{
+ const app={innerHTML:''};const ctx=vm.createContext({console,URLSearchParams,Intl,localStorage:{getItem(){return null}},document:{querySelector:s=>s==='#app'?app:null,addEventListener(){}},addEventListener(){},window:{}});
+ const built=await readFile('docs/frontend.js','utf8');vm.runInContext(built.replace(/^load\(\);\s*$/m,''),ctx);
+ vm.runInContext("data={user:{id:'t',role:'teacher',name:'Teacher',approval_status:'approved'},workflowReady:true,modules:[{id:'m',title:'Existing module',teacher:'Teacher',subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026',status:'pending',version:1,created:'2026-10-17',updated:'2026-10-17',deadline:'2026-10-20'}],notes:[],teachers:[],notifications:[],events:[],requirements:[],assignments:[]};render()",ctx);
+ assert.match(app.innerHTML,/Existing module/);assert.match(app.innerHTML,/Due/);assert.equal(vm.runInContext('typeof workflowModuleDue',ctx),'function');
+ const html=await readFile('docs/index.html','utf8');assert.doesNotMatch(html,/src="school-workflow\.js/);
+});

@@ -14,6 +14,8 @@ await build({entryPoints:['src/landing-scene.js'],bundle:true,minify:true,platfo
 
 await build({entryPoints:['src/head-desk.js'],bundle:true,minify:true,platform:'browser',format:'iife',outfile:'docs/head-desk.js'});
 
+// Ship dependent UI code together so cached files cannot load mismatched helpers.
+await writeFile('docs/frontend.js',(await readFile('src/school-workflow.js','utf8'))+'\n'+(await readFile('src/frontend.js','utf8')));
 const assets=['frontend.js','backend.js','styles.css','school-workflow.js','head-desk.js','landing-scene.js','docx-preview.js'];
 const hash=createHash('sha256');for(const name of assets)hash.update(await readFile('docs/'+name));const version=hash.digest('hex').slice(0,12);
 const html=await readFile('src/index.html','utf8');await writeFile('docs/index.html',html.replace(/((?:src|href)=")([^"/]+\.(?:js|css))(")/g,(_,start,name,end)=>start+name+'?v='+version+end));
