@@ -706,3 +706,90 @@
 .book-wordmark .material-symbols-rounded {
   font-size: calc(var(--u) * 4.5);
 }
+@media (max-width: 700px) {
+  .book-landing {
+    display: block;
+    overflow: hidden;
+  }
+  .book-stage,
+  .book-register .book-stage {
+    min-height: 100svh;
+    padding: 230px 20px 96px;
+  }
+  .book-stage .book-dust {
+    height: 100% !important;
+  }
+  .book-left {
+    display: block;
+    top: 28px;
+    left: 0;
+    width: 100%;
+  }
+  .book-wordmark {
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+  }
+  .book-wordmark .material-symbols-rounded {
+    font-size: 32px;
+  }
+  .book-right,
+  .book-register .book-right {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: min(100%, 420px);
+    margin: 0 auto;
+    padding: 28px 24px;
+    border: 1px solid #b7c7df26;
+    border-radius: 20px;
+    background: #101720ed;
+    box-shadow: 0 20px 70px #0006;
+    backdrop-filter: blur(18px);
+  }
+  .book-form h1,
+  .book-signup h1 {
+    font-size: 30px;
+    margin: 0 0 26px;
+    letter-spacing: -0.03em;
+  }
+  .book-form .field > label {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .book-form .field input {
+    font-size: 16px;
+    height: 48px;
+    border-radius: 8px;
+  }
+  .book-form .login-submit {
+    font-size: 16px;
+    border-radius: 8px;
+    height: 48px;
+  }
+  .book-form .field {
+    margin-bottom: 18px;
+  }
+  .book-form .login-options {
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .book-landing .landing-appearance {
+    bottom: 20px;
+    right: 50%;
+    transform: translateX(50%);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 360px) {
+  .book-stage,
+  .book-register .book-stage {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .book-right,
+  .book-register .book-right {
+    padding: 24px 18px;
+  }
+}

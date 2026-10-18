@@ -303,3 +303,90 @@
     transition: none;
   }
 }
+.workspace-hero {
+  min-height: 220px;
+  margin-bottom: 16px;
+}
+.workspace-hero-copy {
+  padding: 24px;
+}
+.workspace-hero-copy h2 {
+  font-size: clamp(24px, 2vw, 29px);
+  margin: 8px 0;
+}
+.workspace-actions {
+  margin-top: 18px;
+}
+.workspace-desk {
+  min-height: 220px;
+}
+.app .stat {
+  padding: 15px 18px;
+}
+.app .stat .value {
+  font-size: 26px;
+}
+@media (max-width: 760px) {
+  .workspace-hero-copy {
+    padding: 18px;
+  }
+  .workspace-hero-copy h2 {
+    font-size: 25px;
+  }
+  .workspace-actions {
+    margin-top: 14px;
+    gap: 7px;
+  }
+  .workspace-actions button {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .workspace-desk {
+    min-height: 155px;
+    height: 155px;
+  }
+  .desk-notebook {
+    top: 62%;
+  }
+  .desk-documents {
+    top: 22%;
+  }
+  .app .content {
+    padding: 8px 16px 24px;
+  }
+  .app .cards {
+    gap: 10px;
+  }
+  .app .stat {
+    padding: 12px;
+  }
+  .app .stat .label {
+    font-size: 12px;
+  }
+  .app .stat .value {
+    font-size: 24px;
+    margin: 4px 0;
+  }
+}
+@media (max-width: 760px) {
+  .workspace-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .workspace-actions button {
+    font-size: 10px;
+    gap: 5px;
+    padding: 7px 6px;
+    white-space: normal;
+  }
+  .workspace-desk {
+    min-height: 130px;
+    height: 130px;
+  }
+  .desk-notebook {
+    top: 55%;
+  }
+  .desk-documents {
+    top: 16%;
+  }
+}

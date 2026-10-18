@@ -56,6 +56,7 @@ function mount(host) {
     value: new THREE.Vector3(...(palette?.waves || [0.09, 0.115, 0.16])),
   };
   shared.aspect = { value: 1 };
+  shared.bookFraming = { value: new THREE.Vector2(1, 0) };
   const waveGeometry = new THREE.PlaneGeometry(2, 2);
   const waveMaterial = new THREE.ShaderMaterial({
     depthWrite: false,
@@ -66,13 +67,13 @@ function mount(host) {
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
       float fbm(vec2 p){float value=0.,a=.5;mat2 r=mat2(.8,-.6,.6,.8);for(int i=0;i<4;i++){value+=a*noise(p);p=r*p*2.03+vec2(3.7,2.1);a*=.5;}return value;}
-      void main(){vec2 p=(vUv-.5)*vec2(aspect,1.);float t=time*.055;
+      void main(){vec2 p=(vUv-.5)*vec2(aspect,1.);float t=time*.32;
         vec2 flow=vec2(fbm(p*2.+vec2(t*.4,-t*.2)),fbm(p*2.+vec2(4.1,-2.3+t*.3)));
         float n=fbm(p*2.3+flow*2.8+vec2(t*.1,-t*.35));
         float bands=pow(.5+.5*sin(p.y*29.+p.x*3.3+n*11.-t*1.3),18.);
         float fine=pow(1.-abs(sin(n*36.+p.x*2.-t*.4)),14.);
         float vignette=1.-smoothstep(.4,1.25,length(p*vec2(.7,1.)));
-        vec3 color=vec3(.008,.011,.018)+waveTint*(pow(n,2.)*.9+bands*.24+fine*.12)*vignette;
+        vec3 color=vec3(.008,.011,.018)+waveTint*(pow(n,2.)*.9+bands*.55+fine*.22)*vignette;
         color+=(hash(gl_FragCoord.xy)-.5)/600.;gl_FragColor=vec4(color,1.);}`,
   });
   const waves = new THREE.Mesh(waveGeometry, waveMaterial);
@@ -131,7 +132,7 @@ function mount(host) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     uniforms: shared,
-    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;varying float opacity;varying float brightness;
+    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;varying float opacity;varying float brightness;
       void main(){
       float loose=step(1.5,seed.z);float edge=step(.5,seed.z);vec3 target=position;
       if(seed.z>.5&&seed.z<1.5){
@@ -153,7 +154,7 @@ function mount(host) {
       float age=max(0.,time-pulse);vec2 away=p.xy-pulseOrigin;
       float ripple=exp(-pow((length(away)-age*.7)*18.,2.))*exp(-age*1.3);
       p.xy+=normalize(away+vec2(.0001))*ripple*.14*edge;
-      gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);gl_Position.y=gl_Position.y*bookFraming.x+bookFraming.y;
       gl_PointSize=(.65+seed.w*1.3+edge*.35+loose*1.3)*ratio;
       float quiet=step(.12,seed.x)*step(seed.x,.93)*step(.12,seed.y)*step(seed.y,.9);
       opacity=mix(.24,.82,edge)*(1.-loose*.25)*(1.-quiet*.5);
@@ -198,9 +199,11 @@ function mount(host) {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     if (w <= 700) {
-      camera.left = -0.04;
-      camera.right = 0.7;
+      shared.bookFraming.value.set(220 / h, 1 - 350 / h);
+      camera.left = -1.05;
+      camera.right = 1.05;
     } else {
+      shared.bookFraming.value.set(1, 0);
       camera.left = -1;
       camera.right = 1;
     }
@@ -213,7 +216,10 @@ function mount(host) {
     const b = stage.getBoundingClientRect();
     const x = (e.clientX - b.left) / b.width,
       y = (e.clientY - b.top) / b.height;
-    return [camera.left + x * (camera.right - camera.left), 1 - y * 2];
+    return [
+      camera.left + x * (camera.right - camera.left),
+      (1 - y * 2 - shared.bookFraming.value.y) / shared.bookFraming.value.x,
+    ];
   };
   const move = (e) => {
     if (reduced.matches) return;
