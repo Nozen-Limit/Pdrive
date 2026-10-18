@@ -624,19 +624,6 @@
   border: 1px solid var(--line);
   color: var(--sikap-accent);
 }
-.app .workspace-actions [aria-label="Submit module"],
-.app .desk-notebook[aria-label="Submit module"] {
-  font-size: 30px;
-  line-height: 1;
-  min-width: 44px;
-  min-height: 44px;
-}
-.app .nav button[aria-label="Submit module"] .nav-label {
-  display: none;
-}
-.app .nav button[aria-label="Submit module"] .nav-ico {
-  font-size: 26px;
-}
 @media (max-width: 760px) {
   .real-desk-art {
     mask-image: linear-gradient(
