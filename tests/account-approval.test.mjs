@@ -152,6 +152,76 @@ test("Account approval is enforced by PostgreSQL, including direct API bypass at
   );
   await db.query("select set_profile_photo($1)", [avatar]);
   assert.equal(
+    (
+      await db.query(
+        "select name from storage.objects where bucket_id='sikap-avatars' and name=$1",
+        [avatar],
+      )
+    ).rows.length,
+    1,
+    "the owner can read their saved picture",
+  );
+  await as(head);
+  assert.equal(
+    (
+      await db.query(
+        "select name from storage.objects where bucket_id='sikap-avatars' and name=$1",
+        [avatar],
+      )
+    ).rows.length,
+    1,
+    "an approved Head Teacher can read the picture",
+  );
+  await as(other);
+  assert.equal(
+    (
+      await db.query(
+        "select name from storage.objects where bucket_id='sikap-avatars' and name=$1",
+        [avatar],
+      )
+    ).rows.length,
+    0,
+    "another account cannot read the picture",
+  );
+  await db.exec("reset role");
+  const photoViewer = "10000000-0000-4000-8000-000000000005";
+  await db.query(
+    "insert into auth.users(id,email,email_confirmed_at) values($1,'viewer@school.example',now())",
+    [photoViewer],
+  );
+  await db.query("update profiles set approval_status='approved' where id=$1", [
+    photoViewer,
+  ]);
+  await as(photoViewer);
+  assert.equal(
+    (
+      await db.query(
+        "select name from storage.objects where bucket_id='sikap-avatars' and name=$1",
+        [avatar],
+      )
+    ).rows.length,
+    0,
+    "an approved Teacher cannot read another Teacher's photo",
+  );
+  await db.exec("reset role");
+  const photoFix = await readFile(
+    "supabase/fix-profile-photo-read.sql",
+    "utf8",
+  );
+  await db.exec(photoFix);
+  await db.exec(photoFix);
+  await as(teacher);
+  assert.equal(
+    (
+      await db.query(
+        "select name from storage.objects where bucket_id='sikap-avatars' and name=$1",
+        [avatar],
+      )
+    ).rows.length,
+    1,
+    "the targeted live fix is safe to rerun",
+  );
+  assert.equal(
     (await db.query("select avatar_key from profiles where id=$1", [teacher]))
       .rows[0].avatar_key,
     avatar,

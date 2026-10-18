@@ -934,10 +934,10 @@ html[data-sikap-theme="white"] .landing-appearance .appearance-menu > summary {
   letter-spacing: 0.11em;
 }
 .book-wordmark .brand-type small {
-  font-size: calc(var(--u) * 0.7);
+  font-size: calc(var(--u) * 1.1);
 }
 .book-wordmark .brand-type strong {
-  font-size: calc(var(--u) * 2.1);
+  font-size: calc(var(--u) * 3.2);
 }
 .photo-error {
   flex-basis: 100%;
@@ -949,13 +949,13 @@ html[data-sikap-theme="white"] .photo-error {
 }
 @media (max-width: 700px) {
   .book-wordmark .brand-type small {
-    font-size: 9px;
+    font-size: 11px;
   }
   .book-wordmark .brand-type strong {
-    font-size: 22px;
+    font-size: 30px;
   }
   .book-wordmark .material-symbols-rounded {
-    font-size: 42px;
+    font-size: 54px;
   }
 }
 .app .nav button {
@@ -1010,4 +1010,22 @@ html[data-sikap-theme="white"] .app .nav button.active {
 }
 .appearance-choice input[value="white"] + .appearance-swatch {
   box-shadow: inset 0 0 0 1px #69788c66;
+}
+.book-landing .book-form .field input,
+html[data-sikap-theme="white"] .book-landing .book-form .field input {
+  background: transparent;
+  box-shadow: none;
+}
+.app .profile-banner {
+  flex-wrap: wrap;
+}
+.app .profile-identity {
+  flex: 1;
+  min-width: min(220px, 100%);
+}
+.app .profile-banner .photo-error {
+  width: 100%;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }

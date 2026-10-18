@@ -31,3 +31,7 @@ Keep database backups and private storage backups under school administration. V
 Do not expose administrator keys in browser configuration. Review unreferenced uploads before any administrator cleanup; the application does not automatically delete immutable documents. Uploaded documents are not malware-scanned.
 
 To roll back an interface release, restore source and generated assets from a known working commit and rebuild. Do not reverse database migrations by dropping tables or storage buckets containing school records.
+
+## Profile picture read correction
+
+If a saved profile picture reports Object not found, run `supabase/fix-profile-photo-read.sql` in Supabase SQL Editor after the profile-picture migration. It corrects the correlated storage object name in the private read policy. The picture owner and approved Head Teachers can read it; other Teachers cannot. It preserves existing files and accounts. Reload Profile and choose Retry after applying it.

@@ -704,7 +704,7 @@
   letter-spacing: 0.12em;
 }
 .book-wordmark .material-symbols-rounded {
-  font-size: calc(var(--u) * 4.5);
+  font-size: calc(var(--u) * 6.2);
 }
 @media (max-width: 700px) {
   .book-landing {

@@ -4,7 +4,7 @@ insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) v
 drop policy if exists sikap_avatar_upload on storage.objects;
 create policy sikap_avatar_upload on storage.objects for insert to authenticated with check(sikap_private.is_approved() and bucket_id='sikap-avatars' and split_part(name,'/',1)=auth.uid()::text and lower(name) ~ '\.(jpg|jpeg|png|webp)$');
 drop policy if exists sikap_avatar_read on storage.objects;
-create policy sikap_avatar_read on storage.objects for select to authenticated using(bucket_id='sikap-avatars' and sikap_private.is_approved() and exists(select 1 from public.profiles p where p.avatar_key=name and (p.id=auth.uid() or sikap_private.is_head())));
+create policy sikap_avatar_read on storage.objects for select to authenticated using(bucket_id='sikap-avatars' and sikap_private.is_approved() and exists(select 1 from public.profiles p where p.avatar_key=storage.objects.name and (p.id=auth.uid() or sikap_private.is_head())));
 create or replace function public.set_profile_photo(object_key text) returns void language plpgsql security definer set search_path=public,pg_temp as $$
 begin
  if not sikap_private.is_approved() then raise exception 'Account approval required';end if;
