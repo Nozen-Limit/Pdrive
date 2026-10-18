@@ -49,6 +49,7 @@ test("A saved photo remains visible when the following profile refresh fails", a
     data: { user: { id: "teacher", name: "Teacher" } },
     createImageBitmap: async () => ({ width: 20, height: 20, close() {} }),
     document: {
+      addEventListener() {},
       createElement: () => ({
         getContext: () => ({ fillRect() {}, drawImage() {} }),
         toBlob: (done) => done(new Blob(["image"], { type: "image/jpeg" })),

@@ -58,6 +58,7 @@ test("Module collections are nested for both roles and disclosure preserves the 
     state.user.role = role;
     vm.runInContext("render()", ctx);
     const nav = app.innerHTML.split('<nav class="nav">')[1].split("</nav>")[0];
+    assert.doesNotMatch(nav, /go\('reports'\)/);
     assert.match(nav, role === "head" ? /All Modules/ : /My Modules/);
     const nested = nav.match(/<div id="module-subnav"[^>]*>([\s\S]*?)<\/div>/);
     assert.ok(nested);
@@ -72,4 +73,6 @@ test("Module collections are nested for both roles and disclosure preserves the 
         nav.indexOf("go('teachers')") < nav.indexOf("go('notifications')"),
       );
   }
+  await vm.runInContext("go('reports')", ctx);
+  assert.equal(vm.runInContext("view", ctx), "dashboard");
 });

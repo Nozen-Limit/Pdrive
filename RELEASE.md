@@ -14,7 +14,7 @@ The build combines the interface files into one versioned browser asset to preve
 ## Before publishing
 
 1. Run `npm ci`, `npm run check` and `npm audit --omit=dev --audit-level=moderate`.
-2. Verify separate Teacher and Head Teacher accounts against the school database: submit, return with feedback, revise and approve. Check assignment deadlines, reports and teacher profiles.
+2. Verify separate Teacher and Head Teacher accounts against the school database: submit, return with feedback, revise and approve. Check assignment deadlines and teacher profiles.
 3. Verify a teacher cannot read another teacher's files or change their role. Automated database tests cover these permissions locally; live checks also verify the deployed configuration.
 4. Commit source and generated `docs` together. Push `main`; wait for the Pages deployment before sharing.
 

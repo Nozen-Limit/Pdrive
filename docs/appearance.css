@@ -1141,3 +1141,184 @@ html[data-sikap-theme="white"] .landing-appearance .appearance-popover {
 .app .nav-module-group.is-selected .nav-module-row > button:first-child {
   background: color-mix(in srgb, var(--sikap-action) 18%, transparent);
 }
+.profile-teaching-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 20px 0 26px;
+}
+.profile-select-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.profile-select-field legend {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.profile-multiselect {
+  position: relative;
+}
+.profile-multiselect > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink);
+  background: transparent;
+}
+.profile-multiselect > summary::-webkit-details-marker {
+  display: none;
+}
+.profile-multiselect > summary .material-symbols-rounded {
+  font-size: 20px;
+  flex-shrink: 0;
+  transition: transform 0.18s;
+}
+.profile-multiselect[open] > summary .material-symbols-rounded {
+  transform: rotate(180deg);
+}
+.profile-selection {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.profile-select-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--sikap-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px #0003;
+}
+.profile-select-options > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  min-height: 44px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--ink);
+}
+.profile-select-options > label:hover {
+  background: #8093b018;
+}
+.profile-select-options input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: var(--sikap-action);
+}
+.app .profile-select-done {
+  width: 100%;
+  margin-top: 6px;
+  min-height: 40px;
+}
+.profile-multiselect > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .profile-teaching-selects {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-multiselect > summary .material-symbols-rounded {
+    transition: none;
+  }
+}
+.book-recovery .book-stage {
+  --u: 12px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 100svh;
+  height: auto;
+  aspect-ratio: auto;
+  padding: 72px 24px 96px;
+  transform: none !important;
+}
+.book-recovery .recovery-form {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  padding: 24px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.book-recovery .book-wordmark {
+  justify-content: center;
+  margin-bottom: 36px;
+  gap: 14px;
+}
+.book-recovery .book-wordmark .material-symbols-rounded {
+  font-size: 50px;
+}
+.book-recovery .book-wordmark .brand-type small {
+  font-size: 10px;
+}
+.book-recovery .book-wordmark .brand-type strong {
+  font-size: 28px;
+}
+.book-recovery .book-form h1 {
+  font-size: clamp(25px, 3vw, 32px);
+  line-height: 1.2;
+  margin: 0 0 30px;
+  text-align: center;
+}
+.book-recovery .book-form .field {
+  margin-bottom: 22px;
+}
+.book-recovery .book-form .field > label {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.book-recovery .book-form .field input {
+  height: 50px;
+  font-size: 16px;
+  padding: 0 14px;
+  border-radius: 8px;
+}
+.book-recovery .book-form .login-submit {
+  height: 48px;
+  width: 100%;
+  font-size: 15px;
+  border-radius: 8px;
+}
+.book-recovery .book-form .form-error {
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .book-recovery .book-stage {
+    padding: 48px 24px 92px;
+  }
+}
+.profile-select-options {
+  max-height: var(--profile-options-height, 300px);
+}
+.profile-multiselect.opens-up .profile-select-options {
+  top: auto;
+  bottom: calc(100% + 6px);
+}

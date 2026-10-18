@@ -33,7 +33,7 @@ A real Teacher Module Submission & Approval System. GitHub Pages hosts the inter
 
 ## Features
 
-Clean responsive Inter login; signup/confirmation, logout and password recovery; pending-account approval by Head Teachers; visible account roles; resizable desktop sidebar/mobile drawer; mobile filter icon and compact cards/forms; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, account review, CSV reports, stars. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
+Clean responsive Inter login; signup/confirmation, logout and password recovery; pending-account approval by Head Teachers; visible account roles; resizable desktop sidebar/mobile drawer; mobile filter icon and compact cards/forms; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, account review, stars. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
 
 All data and documents are shared across devices through Supabase, not a browser-only demo. Browser storage holds the authentication session and layout preferences. Remember me uses persistent storage; otherwise the session uses the current tab's session storage. OAuth callbacks must return to the same browser that initiated them. Sign-out revokes this device's session. Use trusted devices and avoid entering real sensitive school records until your deployment and rules have been reviewed.
 
@@ -61,7 +61,7 @@ Run `supabase/profile-details.sql` to enable saving subjects handled and grade l
 
 Run `supabase/teacher-alerts.sql` in the existing Supabase project's SQL Editor after the account-approval update. It adds Head Teacher alerts from an active module's details, with a notification for its teacher and an audit entry. It preserves existing records. Until this database update is applied, the new Send teacher alert action cannot send alerts.
 
-Pages refresh school data when opened. Notifications remain unread until **Mark all as read** is selected. Reports filter activity by the same modules as their summary/export. Email confirmation and password recovery currently use Supabase’s default sender, as requested. Its delivery restrictions apply.
+Pages refresh school data when opened. Notifications remain unread until **Mark all as read** is selected. Email confirmation and password recovery currently use Supabase’s default sender, as requested. Its delivery restrictions apply.
 
 The first Head Teacher must first register with an email and password in Project Sikap and confirm the email. Then a database administrator runs `supabase/set-owner.sql` with that email. That script checks the confirmed account exists and prevents replacing an existing owner; it does not create a password. Other Teacher accounts are approved in Teachers.
 
@@ -85,3 +85,6 @@ Official setup references:
 ## Maintenance
 
 Run `npm run check` before publishing. GitHub Actions also checks the build, tests, formatting and production dependencies. See `RELEASE.md` for source structure and release operations.
+
+
+The Reports screen has been removed from navigation and routing. Profile subjects and grade levels use multi-select dropdowns; existing selections are preserved. Password recovery uses the centered transparent form and the shared GLSL wave background.

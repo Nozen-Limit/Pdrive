@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 // The book is exclusively point particles; a separate fullscreen shader draws the flowing background.
 function mount(host) {
+  const wavesOnly = host.hasAttribute("data-waves-only");
   const stage = host.querySelector(".book-stage"),
     canvas = host.querySelector(".book-dust");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -84,7 +85,7 @@ function mount(host) {
   disposables.push(waveGeometry, waveMaterial);
   const particlePositions = [],
     particleSeeds = [];
-  for (let i = 0; i < 56000; i++) {
+  for (let i = 0; i < (wavesOnly ? 0 : 56000); i++) {
     const side = i % 2 ? 1 : -1;
     let u = random(),
       v = random(),
@@ -107,7 +108,7 @@ function mount(host) {
     particleSeeds.push(u, v, kind, random());
   }
   // Loose particles are drawn from the page silhouette, not an unrelated orbit.
-  for (let i = 0; i < 5800; i++) {
+  for (let i = 0; i < (wavesOnly ? 0 : 5800); i++) {
     const side = i % 2 ? 1 : -1,
       u = 0.7 + random() * 0.3,
       v = random();

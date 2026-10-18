@@ -7,7 +7,6 @@ export const uiSources = [
   "ui/accounts.js",
   "ui/modules.js",
   "ui/notes.js",
-  "ui/reports.js",
   "frontend.js",
 ];
 export async function readUi() {
