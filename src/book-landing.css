@@ -793,3 +793,11 @@
     padding: 24px 18px;
   }
 }
+@media (min-width: 701px) {
+  .book-stage {
+    --u: min(1vw, 1.7768svh);
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+  }
+}

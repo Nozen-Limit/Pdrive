@@ -390,3 +390,8 @@
     top: 16%;
   }
 }
+.appearance-compact legend > .material-symbols-rounded {
+  display: inline-block;
+  font-size: 20px;
+  vertical-align: middle;
+}
