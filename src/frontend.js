@@ -1,111 +1,415 @@
-const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ico=s=>`<span class="material-symbols-rounded" aria-hidden="true">${s}</span>`;
-const label=s=>({pending:'Pending review',returned:'Needs revision',approved:'Approved'})[s];
-const date=s=>s?new Date(/^\d{4}-\d{2}-\d{2}$/.test(s)?s+'T12:00:00':s).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—';
-const size=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.ceil(n/1024)+' KB';
-let data=null,view='dashboard',detail=null,busy=false,width=Number(localStorage.getItem('sikap-sidebar-width')||238);
-let authContext=null,authMode='login';
-let filters={subject:'all',grade:'all',term:'all',year:'all',status:'all',search:'',sort:'updated'};
-const subjects=['Mathematics','Science','English','Filipino','Social Studies','Health','MAPEH','Technology and Livelihood Education'];
-const titles={dashboard:'Dashboard',requirements:'Requirements',modules:'My modules',library:'Approved modules',reviews:'Pending reviews',submit:'Submit a module',notes:'My notes',notifications:'Notifications',teachers:'Teachers',reports:'Reports',profile:'Profile',review:'Module details',starred:'Starred modules'};
-async function api(path,options={}){return window.sikapBackend.api(path,options)}
-function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500)}
-function login(error=''){
- const setup=authMode==='register';
- $('#app').innerHTML=`<main class="centered-login clean-login"><section class="landing-editorial" aria-label="Project Sikap introduction"><div class="landing-wordmark">${ico('auto_stories')} PROJECT SIKAP</div><div class="landing-story"><span class="editorial-kicker"><i></i> TEACHER MODULE PORTAL</span><h2>Module submission.<br><em>Review and approval.</em></h2><p>One workspace for your modules,<br>feedback, and every version along the way.</p></div><div class="landing-caption"><span class="caption-line"></span><span>PROJECT SIKAP</span></div></section><form class="login-card centered-card school-login" onsubmit="schoolLogin(event)" aria-label="${setup?'Create an account':'Sign in to Project Sikap'}">
- <div class="clean-brand"><span class="login-brand-icon">${ico('auto_stories')}</span>Project Sikap</div><div class="login-intro"><span class="login-kicker">YOUR SCHOOL WORKSPACE</span><h1>${setup?'Create your account':'Sign in'}</h1><p>${setup?'Create your account to get started.':'Enter your school account details.'}</p></div>
- ${setup?'<div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" autocomplete="name" placeholder="Enter your name" maxlength="120" required></div>':''}
- <div class="field"><label for="login-email">Email</label><div class="input-wrap">${ico('alternate_email')}<input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your Email" required></div></div>
- <div class="field"><label for="login-password">Password</label><div class="input-wrap">${ico('lock')}<input id="login-password" name="password" type="password" autocomplete="${setup?'new-password':'current-password'}" ${setup?'minlength="12"':''} maxlength="200" placeholder="${setup?'At least 12 characters':'Enter your password'}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico('visibility')}</button></div></div>
- ${setup?'<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>':''}
- <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup?'<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>':''}</div>
- <p class="form-error" role="alert">${esc(error||googleError())}</p>
- <button class="primary login-submit" type="submit">${setup?'Sign Up':'Sign In'}</button>
- <div class="login-footer">${setup?'Already have an account?':"Don’t have an account?"} <button type="button" class="link-btn" onclick="setAuthMode('${setup?'login':'register'}')">${setup?'Sign In':'Sign Up'}</button></div>
- </form></main>`;
+const $ = (s) => document.querySelector(s);
+const esc = (s) =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+const ico = (s) =>
+  `<span class="material-symbols-rounded" aria-hidden="true">${s}</span>`;
+const label = (s) =>
+  ({
+    pending: "Pending review",
+    returned: "Needs revision",
+    approved: "Approved",
+  })[s];
+const date = (s) =>
+  s
+    ? new Date(
+        /^\d{4}-\d{2}-\d{2}$/.test(s) ? s + "T12:00:00" : s,
+      ).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
+const size = (n) =>
+  n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.ceil(n / 1024) + " KB";
+let data = null,
+  view = "dashboard",
+  detail = null,
+  busy = false,
+  width = Number(localStorage.getItem("sikap-sidebar-width") || 238);
+let authContext = null,
+  authMode = "login",
+  dirty = false;
+let filters = {
+  subject: "all",
+  grade: "all",
+  term: "all",
+  year: "all",
+  status: "all",
+  search: "",
+  sort: "updated",
+};
+const subjects = [
+  "Mathematics",
+  "Science",
+  "English",
+  "Filipino",
+  "Social Studies",
+  "Health",
+  "MAPEH",
+  "Technology and Livelihood Education",
+];
+const titles = {
+  dashboard: "Dashboard",
+  requirements: "Requirements",
+  modules: "My modules",
+  library: "Approved modules",
+  reviews: "Pending reviews",
+  submit: "Submit a module",
+  notes: "My notes",
+  notifications: "Notifications",
+  teachers: "Teachers",
+  reports: "Reports",
+  profile: "Profile",
+  review: "Module details",
+  starred: "Starred modules",
+};
+async function api(path, options = {}) {
+  return window.sikapBackend.api(path, options);
 }
-function setAuthMode(mode){authMode=mode;login()}
-function googleError(){const code=new URLSearchParams(location.search).get('auth_error');return ({google_setup:'Google sign-in is not configured yet. Ask the workspace owner to connect it.',google_failed:'Google sign-in could not be completed. Please try again.',google_cancelled:'Google sign-in was cancelled.',google_link_required:'This email already has a school login. Sign in with your password, then link Google from Profile.'})[code]||''}
-async function googleSignIn(link=false){try{await window.sikapBackend.google(link)}catch(e){const error=$('.school-login .form-error');if(error)error.textContent=e.message;else toast(e.message)}}
-function togglePassword(){const input=$('#login-password'),button=$('.password-toggle'),show=input.type==='password';input.type=show?'text':'password';button.setAttribute('aria-label',show?'Hide password':'Show password');button.innerHTML=ico(show?'visibility_off':'visibility')}
-async function passwordHelp(){const email=$('#login-email').value.trim();if(!email){$('.form-error').textContent='Enter your email above first.';$('#login-email').focus();return}try{await window.sikapBackend.reset(email);$('.form-error').textContent='If the account exists, a reset link will arrive by email.'}catch(e){$('.form-error').textContent=e.message}}
-async function resendConfirmation(){const email=$('#login-email'),error=$('.school-login .form-error');if(!email.reportValidity()||!email.value.trim()){error.textContent='Enter your registered email first.';email.focus();return}if(busy)return;busy=true;try{await api('auth/resend',{method:'POST',body:JSON.stringify({email:email.value.trim()})});error.textContent='If your account needs confirmation, a new link will arrive by email. Check Spam too.'}catch(e){error.textContent=e.message}finally{busy=false}}
-async function schoolLogin(e){e.preventDefault();if(busy)return;const form=e.target,f=new FormData(form),button=form.querySelector('button[type="submit"]'),error=form.querySelector('.form-error');error.textContent='';if(authMode==='register'&&f.get('password')!==f.get('confirm')){error.textContent='The passwords do not match.';return}busy=true;button.disabled=true;const old=button.textContent;button.textContent=authMode==='register'?'Creating account…':'Signing in…';try{const result=await api('auth/'+(authMode==='register'?'register':'login'),{method:'POST',body:JSON.stringify({name:f.get('name'),email:f.get('email'),password:f.get('password'),remember:f.has('remember')})});if(result.needsConfirmation){error.textContent='Account created. Check your email to confirm your account, then sign in.';return}view='dashboard';await load()}catch(e){error.textContent=e.message}finally{busy=false;button.disabled=false;button.textContent=old}}
-async function logout(){try{await api('auth/logout',{method:'POST',body:'{}'});data=null;detail=null;view='dashboard';authMode='login';await load();toast('You have been logged out.')}catch(e){toast(e.message)}}
-async function load(){try{await window.sikapBackend.ready();if(window.sikapBackend.recovery){resetPage();return}data=await api('state');render()}catch(e){if(e.status===503&&e.message.includes('config.js')){authContext={};login(e.message);return}if(e.status===401){try{authContext=await api('auth/context')}catch{authContext=null}login()}else $('#app').innerHTML=`<main class="centered-login"><section class="login-card centered-card"><h1>Project Sikap</h1><p role="alert">${esc(e.message)}</p><button class="primary" onclick="load()">Try again</button></section></main>`}}
-async function go(next){if(busy)return;busy=true;try{const fresh=await api('state');data=fresh;if(next==='archive'||(next==='submit'&&data.user.role==='head'))next='dashboard';view=next;detail=null;filterOpen=false;filterDraft=null;render();window.scrollTo(0,0)}catch(e){if(e.status===401)await load();else toast('Could not refresh this page. '+e.message)}finally{busy=false}}
+function toast(message) {
+  const el = $("#toast");
+  el.textContent = message;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3500);
+}
+async function go(next) {
+  if (busy) return;
+  if (dirty && !confirm("Discard your unsaved changes?")) return;
+  busy = true;
+  try {
+    const fresh = await api("state");
+    data = fresh;
+    if (next === "archive" || (next === "submit" && data.user.role === "head"))
+      next = "dashboard";
+    view = next;
+    dirty = false;
+    detail = null;
+    filterOpen = false;
+    filterDraft = null;
+    render();
+    window.scrollTo(0, 0);
+  } catch (e) {
+    if (e.status === 401) await load();
+    else toast("Could not refresh this page. " + e.message);
+  } finally {
+    busy = false;
+  }
+}
 
-function badge(s){return `<span class="badge ${s}">${label(s)}</span>`}
-function navItem(key,icon,text,count=0){return `<button class="${view===key?'active':''}" onclick="go('${key}')"><span class="nav-ico">${ico(icon)}</span><span class="nav-label">${text}</span>${count?`<span class="nav-count">${count}</span>`:''}</button>`}
-function render(){if(!data)return;const u=data.user,head=u.role==='head',active=data.modules.filter(m=>!m.archived),unread=data.notifications.filter(n=>!n.read).length;$('#app').innerHTML=`<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico('auto_stories')}</span><div>Project Sikap</div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${esc(u.name.split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><div><strong>${esc(u.name)}</strong><small>${head?'Head teacher':'Teacher'}${u.assignment?' · '+esc(u.assignment):''}</small></div>${ico('chevron_right')}</button><nav class="nav">${navItem('dashboard','space_dashboard','Dashboard')}${navItem('requirements','event_note','Requirements')}${!head?navItem('submit','upload_file','Submit module'):''}${navItem('modules','folder_open',head?'All modules':'My modules',active.length)}${head?navItem('reviews','fact_check','Pending reviews',active.filter(m=>m.status==='pending').length):''}${navItem('library','verified','Approved modules')}${navItem('starred','star','Starred')}${navItem('notes','edit_note','My notes',data.notes.length)}${navItem('notifications','notifications','Notifications',unread)}${head?navItem('teachers','group','Teachers',data.teachers.filter(u=>u.approval_status==='pending').length)+navItem('reports','analytics','Reports'):''}</nav><button class="logout-btn" onclick="logout()">${ico('logout')}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico('menu')}</button><h1>${view==='modules'&&head?'All modules':titles[view]}</h1></div><div class="top-actions"><button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico('notifications')}${unread?'<span class="unread"></span>':''}</button>${!head&&view!=='submit'?'<button class="primary" onclick="go(\'submit\')">Submit module</button>':''}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`}
-function menu(){$('#side').classList.toggle('open');$('#overlay').classList.toggle('show')}
-function resizeSide(e){if(innerWidth<=760)return;e.preventDefault();document.body.classList.add('resizing-sidebar');const move=e=>{width=Math.max(210,Math.min(360,e.clientX-8));$('.app').style.setProperty('--sidebar-width',width+'px')};const stop=()=>{localStorage.setItem('sikap-sidebar-width',width);document.body.classList.remove('resizing-sidebar');removeEventListener('pointermove',move);removeEventListener('pointerup',stop)};addEventListener('pointermove',move);addEventListener('pointerup',stop)}
-let filterOpen=false,filterDraft=null;
-function defaultFilters(){return {subject:'all',grade:'all',term:'all',year:'all',status:'all',search:'',sort:'updated'}}
-function editingFilters(){return filterOpen?filterDraft:filters}
-function filterDropdown(key,title,options){const current=editingFilters(),selected=options.find(o=>o.value===current[key])||options[0];return `<div class="academic-filter"><span id="filter-label-${key}" class="filter-label">${title}</span><details class="filter-dropdown" data-filter-key="${key}" ontoggle="filterDropdownToggle(this)"><summary id="filter-${key}" aria-labelledby="filter-label-${key} filter-value-${key}"><span id="filter-value-${key}">${esc(selected.text)}</span>${ico('expand_more')}</summary><div class="filter-dropdown-options" aria-label="${title}" onkeydown="filterDropdownKeys(event)">${options.map(o=>`<button type="button" data-value="${esc(o.value)}" aria-pressed="${current[key]===o.value}" onclick="chooseFilter(this)"><span>${esc(o.text)}</span>${current[key]===o.value?ico('check'):''}</button>`).join('')}</div></details></div>`}
-function select(key,title,values){return filterDropdown(key,title,[{value:'all',text:`All ${key==='grade'?'grades':key==='year'?'school years':key==='term'?'terms':'subjects'}`},...values.map(value=>({value,text:value}))])}
-function filterDropdownToggle(el){if(el.open)document.querySelectorAll('.filter-dropdown[open]').forEach(other=>{if(other!==el)other.open=false})}
-function filterDropdownKeys(e){const menu=e.currentTarget,buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus()}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();const dropdown=menu.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus()}}
-function chooseFilter(button){const dropdown=button.closest('details'),key=dropdown.dataset.filterKey,value=button.dataset.value;setFilter(key,value);if(dropdown.isConnected){dropdown.querySelector('summary span').textContent=button.querySelector('span').textContent;dropdown.querySelectorAll('button').forEach(option=>{option.setAttribute('aria-pressed',String(option===button));option.querySelector('.material-symbols-rounded')?.remove()});button.insertAdjacentHTML('beforeend',ico('check'));dropdown.open=false;dropdown.querySelector('summary').focus()}else $('#filter-'+key)?.focus()}
-function filterPanel(){const current=editingFilters(),active=data.modules.filter(m=>view==='archive'?m.archived:!m.archived),count=['subject','grade','term','year','status'].filter(k=>filters[k]!=='all').length+(filters.search.trim()?1:0)+(filters.sort!=='updated'?1:0);const unique=k=>[...new Set(active.map(m=>m[k]))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));return `<div class="filter-shell ${filterOpen?'is-open':''}"><div class="mobile-filter-bar"><span class="filter-caption">${count?`${count} active filter${count===1?'':'s'}`:'All submissions'}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count?`, ${count} active`:''}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico('tune')}<span>Filters</span>${ico('expand_more')}${count?`<span class="filter-count">${count}</span>`:''}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico('close')}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select('subject','Subject',unique('subject'))}${select('grade','Grade / Year level',unique('grade'))}${select('term','Quarter / Semester',unique('term'))}${select('year','School year',unique('year'))}${filterDropdown('status','Status',[{value:'all',text:'All statuses'},...['pending','approved','returned'].map(value=>({value,text:label(value)}))])}${filterDropdown('sort','Sort by',[{value:'updated',text:'Last updated'},{value:'oldest',text:'Oldest submission'},{value:'title',text:'Module title'}])}<button class="filter-clear desktop-filter-reset" onclick="clearFilters()">Reset filters</button><div class="mobile-filter-actions"><button class="secondary" onclick="clearFilters()">Reset</button><button class="primary" onclick="applyFilters()">Apply filters</button></div></div></div>`}
-function toggleFilters(){if(filterOpen){closeFilters();return}filterDraft={...filters};filterOpen=true;render();$('#filter-subject')?.focus()}
-function closeFilters(){filterOpen=false;filterDraft=null;render();$('#mobile-filter-toggle')?.focus()}
-function applyFilters(){if(filterDraft)filters={...filterDraft};closeFilters()}
-function setFilter(key,value){if(filterOpen){filterDraft[key]=value;return}filters[key]=value;render()}
-function clearFilters(){filters=defaultFilters();filterOpen=false;filterDraft=null;render();$('#mobile-filter-toggle')?.focus()}
-function searchModules(value){if(filterOpen){filterDraft.search=value;return}filters.search=value;const result=$('#module-results');if(result)result.innerHTML=moduleResults();else render()}
-function filtered(){let list=data.modules.filter(m=>view==='archive'?m.archived:!m.archived);if(view==='library')list=list.filter(m=>m.status==='approved');if(view==='reviews')list=list.filter(m=>m.status==='pending');if(view==='starred')list=list.filter(m=>m.starred);list=list.filter(m=>['subject','grade','term','year'].every(k=>filters[k]==='all'||m[k]===filters[k])&&(filters.status==='all'||m.status===filters.status)&&`${m.title} ${m.teacher}`.toLowerCase().includes(filters.search.toLowerCase()));return list.sort((a,b)=>filters.sort==='title'?a.title.localeCompare(b.title):filters.sort==='oldest'?a.created.localeCompare(b.created):b.updated.localeCompare(a.updated))}
-function stat(title,n,tint){const icon=({'Total modules':'folder_open','Pending review':'schedule','Approved':'task_alt','Needs revision':'edit_note','Approval rate':'donut_large','Submitting teachers':'groups'})[title]||'description';return `<div class="stat" style="--tint:${tint}"><div class="stat-icon">${ico(icon)}</div><div class="stat-copy"><div class="label">${title}</div><div class="value">${n}</div></div></div>`}
-function moduleResults(){const list=filtered();return `<div class="panel-head"><span class="muted">${list.length} module${list.length===1?'':'s'}</span>${view==='dashboard'?'<button class="link-btn" onclick="go(\'modules\')">View all</button>':''}</div><div class="module-list">${list.map(m=>`<div class="module-row"><div><button class="module-title text-button" onclick="openModule('${m.id}')">${esc(m.title)}</button><div class="module-meta">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · v${m.version}</div><div class="module-meta">${esc(m.teacher)} · Updated ${date(m.updated)}${m.file?' · '+size(m.size):''}</div>${workflowModuleDue(m)}</div><div class="row-actions"><button class="icon-btn star-btn" aria-label="${m.starred?'Unstar':'Star'} ${esc(m.title)}" onclick="starModule('${m.id}')">${ico(m.starred?'star':'star_outline')}</button>${badge(m.status)}<button class="action-btn" onclick="openModule('${m.id}')">${view==='reviews'?'Review':'Open'}</button></div></div>`).join('')||'<div class="empty"><h3>No modules here yet</h3><p>Try changing the filters. New submissions appear here.</p></div>'}</div>`}
-function headDesk(){const pending=data.modules.filter(m=>m.status==='pending'&&!m.archived).length,approved=data.modules.filter(m=>m.status==='approved'&&!m.archived).length,teachers=data.teachers.filter(u=>u.role==='teacher'&&u.approval_status==='approved').length;return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">HEAD TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(' ')[0])}.</h2><p>Review submissions and track requirements.</p></div><div id="head-desk" class="head-desk-scene" aria-label="Interactive review desk"></div></section>`}
-function teacherDesk(){return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(' ')[0])}.</h2><p>Your submissions and assigned requirements.</p></div><div id="head-desk" data-desk-role="teacher" class="head-desk-scene" aria-label="Interactive preparation desk"></div></section>`}
-function modulePage(){const total=filtered();return `${view==='dashboard'?(data.user.role==='head'?headDesk():teacherDesk()):''}${view==='dashboard'?workflowAttention():''}${filterPanel()}${view==='dashboard'?`<div class="cards">${stat('Total modules',total.length,'#e8f1ff')}${stat('Pending review',total.filter(m=>m.status==='pending').length,'#fff3cf')}${stat('Approved',total.filter(m=>m.status==='approved').length,'#e4f3e9')}${stat('Needs revision',total.filter(m=>m.status==='returned').length,'#f9e7ea')}</div>`:''}${view==='library'?'<p class="muted">Final approved versions, accessible to their submitting teacher and head teachers.</p>':''}<div class="${view==='dashboard'?'grid-2':''}"><div class="panel" id="module-results">${moduleResults()}</div>${view==='dashboard'?`<aside><div class="panel"><div class="panel-head"><h3>Pinned notes</h3><button class="link-btn" onclick="go('notes')">Manage</button></div>${data.notes.filter(n=>n.pinned).map(n=>`<div class="note"><strong>${esc(n.title)}</strong><p>${esc(n.body)}</p></div>`).join('')||'<p class="muted">No pinned notes.</p>'}</div><div class="panel activity-panel"><h3>Recent activity</h3>${activity(data.events.slice(0,5))}</div></aside>`:''}</div>`}
-function activity(events){return `<div class="activity">${events.map(e=>`<div class="activity-item"><i class="dot"></i><div><p>${esc(e.body)}${e.title?` · ${esc(e.title)}`:''}</p><small>${esc(e.actorName)} · ${date(e.created)}</small></div></div>`).join('')||'<p class="muted">Activity appears after a submission or review.</p>'}</div>`}
-function field(name,title,html,full=false){return `<div class="field ${full?'full':''}"><label for="${name}">${title}</label>${html}</div>`}
-function submitPage(){if(data.user.role==='head')return '';queueMicrotask(()=>applyRequirement());const year=new Date().getFullYear();return `<div class="panel form-panel"><div class="panel-head"><h2>Module details</h2></div><form onsubmit="submitModule(event)">${requirementPicker()}<div class="form-grid">${field('title','Module title','<input id="title" name="title" maxlength="200" required placeholder="e.g. Fractions in everyday life">',true)}${field('subject','Subject',`<select id="subject" name="subject">${subjects.map(s=>`<option>${s}</option>`).join('')}</select>`)}${field('grade','Grade / Year level',`<select id="grade" name="grade">${Array.from({length:12},(_,i)=>`<option>Grade ${i+1}</option>`).join('')}</select>`)}${field('term','Quarter / Semester','<select id="term" name="term"><option>Quarter 1</option><option>Quarter 2</option><option>Quarter 3</option><option>Quarter 4</option><option>Semester 1</option><option>Semester 2</option></select>')}${field('year','School year',`<input id="year" name="year" value="${year}–${year+1}" maxlength="200" required>`)}${field('teacher','Teacher name',`<input id="teacher" value="${esc(data.user.name)}" readonly>`)}${field('file','Module file', '<div class="upload"><input id="file" name="file" type="file" accept=".pdf,.docx" required><p class="muted">PDF or DOCX · maximum 20 MB</p></div>',true)}${field('remarks','Remarks (optional)','<textarea id="remarks" name="remarks" maxlength="3000" placeholder="Context for your reviewer"></textarea>',true)}</div><p class="muted">The submission date is recorded automatically.</p><p class="form-error" role="alert"></p><div class="form-actions"><button class="secondary" type="button" onclick="go('modules')">Cancel</button><button class="primary" type="submit">Submit for review</button></div></form></div>`}
-async function formSave(e,fn){e.preventDefault();if(busy)return;busy=true;const form=e.target,button=form.querySelector('button[type="submit"]'),error=form.querySelector('.form-error');const buttons=[...form.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);const old=button.textContent;button.textContent='Saving…';error.textContent='';try{await fn(form);data=await api('state');render()}catch(e){error.textContent=e.message}finally{busy=false;buttons.forEach(b=>b.disabled=false);button.textContent=old}}
-async function submitModule(e){if(data.user.role==='head'){e.preventDefault();return}await formSave(e,async form=>{const result=await api('modules',{method:'POST',body:new FormData(form)});view='modules';toast('Module uploaded and submitted for review.');})}
-async function openModule(mid){try{detail=await api('modules/'+mid);view='review';render()}catch(e){toast(e.message)}}
-function fileUrl(m,v,download=false){const version=detail?.versions.find(x=>x.version===v);return download?version?.downloadUrl||'#':version?.url||'#'}
-function reviewPage(){if(!detail)return '';const m=detail.module,v=detail.versions.find(v=>v.version===m.version),canReview=data.user.role==='head'&&m.owner!==data.user.id&&m.status==='pending'&&!m.archived;return `<div class="toolbar"><button class="secondary" onclick="go('modules')">Back to modules</button>${badge(m.status)}</div><div class="review-layout"><section><div class="panel"><h2>${esc(m.title)}</h2><p class="muted">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · ${esc(m.year)}</p><div class="file-toolbar"><strong>${esc(v.name)}</strong><span class="muted">v${v.version} · ${size(v.size)}</span><a class="action-btn" href="${fileUrl(m,v.version,true)}">Download</a></div>${v.type==='application/pdf'?`<iframe class="pdf-preview" title="${esc(m.title)} PDF preview" src="${fileUrl(m,v.version)}"></iframe>`:`<div class="doc-preview"><div><h3>DOCX document</h3><p>Download this file to read it in Word or your document editor.</p><a class="primary" href="${fileUrl(m,v.version,true)}">Download DOCX</a></div></div>`}</div><div class="panel activity-panel"><h3>Version history</h3><div class="version-list">${detail.versions.map(v=>`<div class="version-entry"><div><strong>Version ${v.version}${m.final_version===v.version?' · Approved final':''}</strong><p class="module-meta">${date(v.created)} · ${esc(v.name)} · ${size(v.size)}</p><p>${esc(v.changes)}</p></div><a class="action-btn" href="${fileUrl(m,v.version,true)}">Download</a></div>`).join('')}</div></div><div class="panel activity-panel"><h3>Activity history</h3>${activity(detail.events)}</div></section><aside><div class="panel"><h3>Submission details</h3><dl class="detail-list"><div class="detail"><dt>Teacher</dt><dd>${esc(m.teacher)}</dd></div><div class="detail"><dt>Submitted</dt><dd>${date(m.created)}</dd></div>${m.deadline?`<div class="detail"><dt>Due date</dt><dd>${date(m.deadline)}</dd></div>`:''}${m.approved?`<div class="detail"><dt>Approved by</dt><dd>${esc(data.modules.find(x=>x.id===m.id)?.approverName||'Head teacher')}</dd></div><div class="detail"><dt>Approved on</dt><dd>${date(m.approved)}</dd></div>`:''}</dl>${moduleRequirementDetails(m)}${reviewHistory(m.id)}${m.remarks?`<h4>Teacher remarks</h4><p>${esc(m.remarks)}</p>`:''}${m.status==='approved'?'<p class="lock-message">Approved version locked. This document cannot be replaced.</p>':''}${data.user.role==='head'&&m.owner!==data.user.id&&!m.archived?'<button class="secondary" onclick="alertModal()">Send teacher alert</button>':''}${canReview?`<form onsubmit="reviewDecision(event)">${reviewChecklist()}<div class="field"><label for="feedback">Required changes / review notes</label><textarea id="feedback" name="feedback" maxlength="5000" placeholder="List the changes needed, including page or activity references."></textarea></div><p class="form-error" role="alert"></p><div class="decision"><button type="submit" class="approve-btn" name="decision" value="approved">Approve</button><button type="submit" class="return-btn" name="decision" value="returned">Return for revision</button></div></form>`:''}${m.owner===data.user.id&&m.status==='returned'&&!m.archived?`<form class="revision-form" onsubmit="resubmitModule(event)"><h4>Submit a revised version</h4><div class="field"><label for="revision-file">Revised PDF / DOCX</label><input id="revision-file" name="file" type="file" accept=".pdf,.docx" required></div><div class="field"><label for="changes">What changed?</label><textarea id="changes" name="changes" required maxlength="3000"></textarea></div><p class="form-error" role="alert"></p><button class="primary" type="submit">Upload and resubmit</button></form>`:''}</div><div class="panel activity-panel"><h3>Comments and feedback</h3><div class="comments">${detail.comments.map(c=>`<article class="comment"><strong>${esc(c.authorName)}</strong><small class="module-meta">${date(c.created)} · v${c.version}</small><p>${esc(c.body)}</p></article>`).join('')||'<p class="muted">No feedback yet.</p>'}</div>${!m.archived?`<form onsubmit="addComment(event)"><div class="field"><label for="comment">Add a comment</label><textarea id="comment" name="body" required maxlength="5000"></textarea></div><p class="form-error" role="alert"></p><button type="submit" class="secondary">Post comment</button></form>`:''}</div></aside></div>`}
-function alertModal(){$('#modalRoot').innerHTML=`<div class="overlay show" onclick="closeModal()"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="alert-title"><div class="modal-head"><h2 id="alert-title">Send teacher alert</h2><button class="close" onclick="closeModal()" aria-label="Close">×</button></div><p>To ${esc(detail.module.teacher)} · ${esc(detail.module.title)}</p><form onsubmit="sendAlert(event)"><div class="field"><label for="alert-message">Message</label><textarea id="alert-message" name="message" required maxlength="2000"></textarea></div><p class="muted">Appears in the teacher’s notifications. No email is sent.</p><p class="form-error" role="alert"></p><div class="form-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="submit" class="primary">Send alert</button></div></form></section>`;$('#alert-message').focus()}
-async function sendAlert(e){await formSave(e,async form=>{await api('modules/'+detail.module.id+'/alert',{method:'POST',body:JSON.stringify({body:form.elements.message.value})});detail=await api('modules/'+detail.module.id);toast('Alert sent to the teacher.');})}
-async function reviewDecision(e){const decision=e.submitter.value;await formSave(e,async form=>{await api(`modules/${detail.module.id}/decision`,{method:'POST',body:JSON.stringify({status:decision,feedback:form.feedback.value,checklist:readChecklist(form),revision:detail.module.revision})});detail=await api('modules/'+detail.module.id);toast(decision==='approved'?'Final version approved.':'Returned with feedback.');})}
-async function resubmitModule(e){await formSave(e,async form=>{const body=new FormData(form);body.set('revision',detail.module.revision);await api(`modules/${detail.module.id}/revise`,{method:'POST',body});detail=await api('modules/'+detail.module.id);toast('New version submitted. Prior files preserved.');})}
-async function addComment(e){await formSave(e,async form=>{await api(`modules/${detail.module.id}/comments`,{method:'POST',body:JSON.stringify({body:form.body.value})});detail=await api('modules/'+detail.module.id);toast('Comment posted.');})}
-async function starModule(mid){try{await api(`modules/${mid}/star`,{method:'POST',body:'{}'});data=await api('state');render()}catch(e){toast(e.message)}}
+function badge(s) {
+  return `<span class="badge ${s}">${label(s)}</span>`;
+}
+function navItem(key, icon, text, count = 0) {
+  return `<button class="${view === key ? "active" : ""}" onclick="go('${key}')"><span class="nav-ico">${ico(icon)}</span><span class="nav-label">${text}</span>${count ? `<span class="nav-count">${count}</span>` : ""}</button>`;
+}
+function render() {
+  if (!data) return;
+  const u = data.user,
+    head = u.role === "head",
+    active = data.modules.filter((m) => !m.archived),
+    unread = data.notifications.filter((n) => !n.read).length;
+  $("#app").innerHTML =
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div>Project Sikap</div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "space_dashboard", "Dashboard")}${navItem("requirements", "event_note", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit module") : ""}${navItem("modules", "folder_open", head ? "All modules" : "My modules", active.length)}${head ? navItem("reviews", "fact_check", "Pending reviews", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "verified", "Approved modules")}${navItem("starred", "star", "Starred")}${navItem("notes", "edit_note", "My notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "group", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "analytics", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All modules" : titles[view]}</h1></div><div class="top-actions"><button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary" onclick="go(\'submit\')">Submit module</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+}
+function menu() {
+  $("#side").classList.toggle("open");
+  $("#overlay").classList.toggle("show");
+}
+function resizeSide(e) {
+  if (innerWidth <= 760) return;
+  e.preventDefault();
+  document.body.classList.add("resizing-sidebar");
+  const move = (e) => {
+    width = Math.max(210, Math.min(360, e.clientX - 8));
+    $(".app").style.setProperty("--sidebar-width", width + "px");
+  };
+  const stop = () => {
+    localStorage.setItem("sikap-sidebar-width", width);
+    document.body.classList.remove("resizing-sidebar");
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", stop);
+  };
+  addEventListener("pointermove", move);
+  addEventListener("pointerup", stop);
+}
+let filterOpen = false,
+  filterDraft = null;
+function defaultFilters() {
+  return {
+    subject: "all",
+    grade: "all",
+    term: "all",
+    year: "all",
+    status: "all",
+    search: "",
+    sort: "updated",
+  };
+}
+function editingFilters() {
+  return filterOpen ? filterDraft : filters;
+}
+function filterDropdown(key, title, options) {
+  const current = editingFilters(),
+    selected = options.find((o) => o.value === current[key]) || options[0];
+  return `<div class="academic-filter"><span id="filter-label-${key}" class="filter-label">${title}</span><details class="filter-dropdown" data-filter-key="${key}" ontoggle="filterDropdownToggle(this)"><summary id="filter-${key}" aria-labelledby="filter-label-${key} filter-value-${key}"><span id="filter-value-${key}">${esc(selected.text)}</span>${ico("expand_more")}</summary><div class="filter-dropdown-options" aria-label="${title}" onkeydown="filterDropdownKeys(event)">${options.map((o) => `<button type="button" data-value="${esc(o.value)}" aria-pressed="${current[key] === o.value}" onclick="chooseFilter(this)"><span>${esc(o.text)}</span>${current[key] === o.value ? ico("check") : ""}</button>`).join("")}</div></details></div>`;
+}
+function select(key, title, values) {
+  return filterDropdown(key, title, [
+    {
+      value: "all",
+      text: `All ${key === "grade" ? "grades" : key === "year" ? "school years" : key === "term" ? "terms" : "subjects"}`,
+    },
+    ...values.map((value) => ({ value, text: value })),
+  ]);
+}
+function filterDropdownToggle(el) {
+  if (el.open)
+    document.querySelectorAll(".filter-dropdown[open]").forEach((other) => {
+      if (other !== el) other.open = false;
+    });
+}
+function filterDropdownKeys(e) {
+  const menu = e.currentTarget,
+    buttons = [...menu.querySelectorAll("button")],
+    index = buttons.indexOf(document.activeElement);
+  if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+    e.preventDefault();
+    buttons[
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? buttons.length - 1
+          : (index + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) %
+            buttons.length
+    ]?.focus();
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropdown = menu.closest("details");
+    dropdown.open = false;
+    dropdown.querySelector("summary").focus();
+  }
+}
+function chooseFilter(button) {
+  const dropdown = button.closest("details"),
+    key = dropdown.dataset.filterKey,
+    value = button.dataset.value;
+  setFilter(key, value);
+  if (dropdown.isConnected) {
+    dropdown.querySelector("summary span").textContent =
+      button.querySelector("span").textContent;
+    dropdown.querySelectorAll("button").forEach((option) => {
+      option.setAttribute("aria-pressed", String(option === button));
+      option.querySelector(".material-symbols-rounded")?.remove();
+    });
+    button.insertAdjacentHTML("beforeend", ico("check"));
+    dropdown.open = false;
+    dropdown.querySelector("summary").focus();
+  } else $("#filter-" + key)?.focus();
+}
+function filterPanel() {
+  const current = editingFilters(),
+    active = data.modules.filter((m) =>
+      view === "archive" ? m.archived : !m.archived,
+    ),
+    count =
+      ["subject", "grade", "term", "year", "status"].filter(
+        (k) => filters[k] !== "all",
+      ).length +
+      (filters.search.trim() ? 1 : 0) +
+      (filters.sort !== "updated" ? 1 : 0);
+  const unique = (k) =>
+    [...new Set(active.map((m) => m[k]))].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
+  return `<div class="filter-shell ${filterOpen ? "is-open" : ""}"><div class="mobile-filter-bar"><span class="filter-caption">${count ? `${count} active filter${count === 1 ? "" : "s"}` : "All submissions"}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count ? `, ${count} active` : ""}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico("tune")}<span>Filters</span>${ico("expand_more")}${count ? `<span class="filter-count">${count}</span>` : ""}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico("close")}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select("subject", "Subject", unique("subject"))}${select("grade", "Grade / Year level", unique("grade"))}${select("term", "Quarter / Semester", unique("term"))}${select("year", "School year", unique("year"))}${filterDropdown("status", "Status", [{ value: "all", text: "All statuses" }, ...["pending", "approved", "returned"].map((value) => ({ value, text: label(value) }))])}${filterDropdown(
+    "sort",
+    "Sort by",
+    [
+      { value: "updated", text: "Last updated" },
+      { value: "oldest", text: "Oldest submission" },
+      { value: "title", text: "Module title" },
+    ],
+  )}<button class="filter-clear desktop-filter-reset" onclick="clearFilters()">Reset filters</button><div class="mobile-filter-actions"><button class="secondary" onclick="clearFilters()">Reset</button><button class="primary" onclick="applyFilters()">Apply filters</button></div></div></div>`;
+}
+function toggleFilters() {
+  if (filterOpen) {
+    closeFilters();
+    return;
+  }
+  filterDraft = { ...filters };
+  filterOpen = true;
+  render();
+  $("#filter-subject")?.focus();
+}
+function closeFilters() {
+  filterOpen = false;
+  filterDraft = null;
+  render();
+  $("#mobile-filter-toggle")?.focus();
+}
+function applyFilters() {
+  if (filterDraft) filters = { ...filterDraft };
+  closeFilters();
+}
+function setFilter(key, value) {
+  if (filterOpen) {
+    filterDraft[key] = value;
+    return;
+  }
+  filters[key] = value;
+  render();
+}
+function clearFilters() {
+  filters = defaultFilters();
+  filterOpen = false;
+  filterDraft = null;
+  render();
+  $("#mobile-filter-toggle")?.focus();
+}
+function searchModules(value) {
+  if (filterOpen) {
+    filterDraft.search = value;
+    return;
+  }
+  filters.search = value;
+  const result = $("#module-results");
+  if (result) result.innerHTML = moduleResults();
+  else render();
+}
+function filtered() {
+  let list = data.modules.filter((m) =>
+    view === "archive" ? m.archived : !m.archived,
+  );
+  if (view === "library") list = list.filter((m) => m.status === "approved");
+  if (view === "reviews") list = list.filter((m) => m.status === "pending");
+  if (view === "starred") list = list.filter((m) => m.starred);
+  list = list.filter(
+    (m) =>
+      ["subject", "grade", "term", "year"].every(
+        (k) => filters[k] === "all" || m[k] === filters[k],
+      ) &&
+      (filters.status === "all" || m.status === filters.status) &&
+      `${m.title} ${m.teacher}`
+        .toLowerCase()
+        .includes(filters.search.toLowerCase()),
+  );
+  return list.sort((a, b) =>
+    filters.sort === "title"
+      ? a.title.localeCompare(b.title)
+      : filters.sort === "oldest"
+        ? a.created.localeCompare(b.created)
+        : b.updated.localeCompare(a.updated),
+  );
+}
+function stat(title, n, tint) {
+  const icon =
+    {
+      "Total modules": "folder_open",
+      "Pending review": "schedule",
+      Approved: "task_alt",
+      "Needs revision": "edit_note",
+      "Approval rate": "donut_large",
+      "Submitting teachers": "groups",
+    }[title] || "description";
+  return `<div class="stat" style="--tint:${tint}"><div class="stat-icon">${ico(icon)}</div><div class="stat-copy"><div class="label">${title}</div><div class="value">${n}</div></div></div>`;
+}
+function page() {
+  if (["dashboard", "modules", "library", "reviews", "starred"].includes(view))
+    return modulePage();
+  return (
+    {
+      requirements: requirementsPage,
+      submit: submitPage,
+      review: reviewPage,
+      notes: notesPage,
+      notifications: notificationsPage,
+      profile: profilePage,
+      teachers: teachersPage,
+      reports: reportsPage,
+    }[view]?.() || ""
+  );
+}
+const renderShell = render;
+render = function () {
+  if (data && data.user.approval_status !== "approved") {
+    approvalPage();
+    return;
+  }
+  renderShell();
+  if (view === "review" && detail) {
+    const v = detail.versions.find((v) => v.version === detail.module.version),
+      target = $(".doc-preview");
+    if (v?.type !== "application/pdf" && target && window.previewDocx) {
+      target.innerHTML =
+        '<div class="docx-text-wrap"><h3>Document text preview</h3><p class="module-meta">Download the DOCX for its original formatting and images.</p><div class="docx-text"></div></div>';
+      window.previewDocx(
+        fileUrl(detail.module, v.version),
+        target.querySelector(".docx-text"),
+      );
+    }
+  }
+};
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (filterOpen) closeFilters();
+    else if ($("#modalRoot")) closeModal();
+  }
+});
+document.addEventListener("click", (e) => {
+  document.querySelectorAll(".filter-dropdown[open]").forEach((el) => {
+    if (!el.contains(e.target)) el.open = false;
+  });
+  if (filterOpen && !e.target.closest(".filter-shell")) {
+    filterOpen = false;
+    filterDraft = null;
+    const shell = $(".filter-shell");
+    shell?.classList.remove("is-open");
+    $("#mobile-filter-toggle")?.setAttribute("aria-expanded", "false");
+  }
+});
 
-function noteActions(n){return `<button class="action-btn" onclick="pinNote('${n.id}')">${n.pinned?'Unpin':'Pin'}</button><button class="action-btn" onclick="noteModal('${n.id}')">Edit</button><button class="action-btn" onclick="deleteNote('${n.id}')">Delete</button>`}
-function notesPage(){return `<div class="toolbar"><p class="muted">Your private notes</p><button class="primary" onclick="noteModal()">New note</button></div><div class="cards notes-grid">${data.notes.map(n=>`<article class="panel note-panel" tabindex="0"><div class="note-top"><h3>${esc(n.title)}</h3>${n.pinned?'<span class="pin">Pinned</span>':''}<details class="mobile-more note-more"><summary aria-label="Actions for ${esc(n.title)}">${ico('more_horiz')}</summary><div class="more-actions">${noteActions(n)}</div></details></div><p class="note-body">${esc(n.body)}</p><div class="note-actions desktop-note-actions">${noteActions(n)}</div></article>`).join('')||'<div class="panel empty"><h3>No notes yet</h3><p>Create a note to keep your checklist or lesson ideas nearby.</p></div>'}</div>`}
-function noteModal(nid){const n=data.notes.find(n=>n.id===nid);$('#modalRoot').innerHTML=`<div class="overlay show" onclick="closeModal()"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="note-title"><div class="modal-head"><h2 id="note-title">${n?'Edit note':'New note'}</h2><button class="close" onclick="closeModal()" aria-label="Close">×</button></div><form onsubmit="saveNote(event,'${nid||''}')"><div class="field"><label for="note-name">Title</label><input id="note-name" name="title" value="${esc(n?.title)}" maxlength="160" required></div><div class="field"><label for="note-body">Note</label><textarea id="note-body" name="body" maxlength="5000" required>${esc(n?.body)}</textarea></div><label class="checkbox-label"><input name="pinned" type="checkbox" ${n?.pinned?'checked':''}> Pin this note</label><p class="form-error" role="alert"></p><div class="form-actions"><button class="secondary" type="button" onclick="closeModal()">Cancel</button><button class="primary" type="submit">Save note</button></div></form></section>`;$('#note-name').focus()}
-function closeModal(){const root=$('#modalRoot');if(root)root.innerHTML=''}
-async function saveNote(e,nid){await formSave(e,async form=>{const f=new FormData(form);await api(nid?'notes/'+nid:'notes',{method:nid?'PATCH':'POST',body:JSON.stringify({title:f.get('title'),body:f.get('body'),pinned:f.has('pinned')})});toast('Note saved.');})}
-async function pinNote(nid){try{const n=data.notes.find(n=>n.id===nid);await api('notes/'+nid,{method:'PATCH',body:JSON.stringify({...n,pinned:!n.pinned})});data=await api('state');render()}catch(e){toast(e.message)}}
-async function deleteNote(nid){if(!confirm('Delete this note? This cannot be undone.'))return;try{await api('notes/'+nid,{method:'DELETE'});data=await api('state');render();toast('Note deleted.')}catch(e){toast(e.message)}}
-function notificationsPage(){const unread=data.notifications.some(n=>!n.read);return `<div class="panel"><div class="panel-head"><h2>Notifications</h2><button class="secondary" onclick="markNotificationsRead()" ${unread?'':'disabled'}>Mark all as read</button></div><div class="module-list">${data.notifications.map(n=>`<button class="module-row notification-row" onclick="openNotification('${n.id}')"><span>${!n.read?'<strong>Unread</strong> · ':''}${esc(n.body)}<small class="module-meta">${date(n.created)}</small></span>${ico('chevron_right')}</button>`).join('')||'<div class="empty">No notifications yet.</div>'}</div></div>`}
-async function markNotificationsRead(){if(busy)return;busy=true;try{await api('notifications',{method:'PATCH',body:'{}'});data=await api('state');render()}catch(e){toast(e.message)}finally{busy=false}}
-async function openNotification(nid){const n=data.notifications.find(n=>n.id===nid);if(n?.module)await openModule(n.module);else if(n?.requirement_id)await go('requirements')}
-
-function profilePage(){const u=data.user,initials=u.name.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase(),grades=['Kindergarten',...Array.from({length:12},(_,i)=>'Grade '+(i+1))];return `<div class="profile-layout"><section class="profile-banner"><div class="profile-avatar" aria-label="Profile initials">${esc(initials)}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role==='head'?'verified_user':'school')}${u.role==='head'?'Head Teacher':'Teacher'}</span></div></section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico('person')}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field('name','Full name',`<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field('email','Email',`<input id="email" value="${esc(u.email)}" readonly>`)}</div><div class="profile-section-title teaching-title">${ico('auto_stories')}<div><h2>Teaching details</h2><p>Keep your teaching assignment up to date.</p></div></div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><fieldset class="profile-choices"><legend>Subjects handled</legend><div class="choice-grid">${subjects.map(subject=>`<label class="choice-chip"><input type="checkbox" name="subjects" value="${esc(subject)}" ${(u.subjects||[]).includes(subject)?'checked':''}><span>${esc(subject)}</span></label>`).join('')}</div></fieldset><fieldset class="profile-choices"><legend>Grade levels</legend><div class="choice-grid grades">${grades.map(grade=>`<label class="choice-chip"><input type="checkbox" name="grade_levels" value="${grade}" ${(u.grade_levels||[]).includes(grade)?'checked':''}><span>${grade}</span></label>`).join('')}</div></fieldset><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form><section class="panel profile-connections"><h2>Google sign-in</h2><p class="muted">Link Google as an additional way to sign in.</p><button class="secondary" onclick="googleSignIn(true)">Link Google account</button></section></div>`}
-async function saveProfile(e){await formSave(e,async form=>{const f=new FormData(form);await api('profile',{method:'PATCH',body:JSON.stringify({name:f.get('name').trim(),assignment:f.get('assignment').trim(),subjects:f.getAll('subjects'),grade_levels:f.getAll('grade_levels')})});toast('Profile saved.');})}
-let accountFilter='all';
-const accountLabel=s=>({pending:'Pending approval',approved:'Approved',rejected:'Rejected'})[s]||'Setup required';
-function teachersPage(){const teachers=data.teachers.filter(u=>u.role==='teacher'),pending=teachers.filter(u=>u.approval_status==='pending').length,list=teachers.filter(u=>accountFilter==='all'||u.approval_status===accountFilter);return `<div class="toolbar"><div class="filters">${['all','approved','pending','rejected'].map(s=>`<button class="filter ${accountFilter===s?'active':''}" onclick="accountFilter='${s}';render()">${s==='all'?'All teachers':accountLabel(s)}${s==='pending'?` (${pending})`:''}</button>`).join('')}</div><button class="secondary" onclick="load()">Refresh</button></div><div class="panel"><div class="panel-head"><h2>Teachers</h2><span class="muted">${list.length}</span></div><div class="account-list">${list.map(u=>`<article class="account-row"><div><strong>${esc(u.name)}</strong><div class="module-meta">${esc(u.email)}</div><div class="module-meta">${u.role==='head'?'Head Teacher':'Teacher'} · Requested ${date(u.requested_at)}</div>${u.approval_note?`<p>${esc(u.approval_note)}</p>`:''}</div><div class="account-actions"><button class="action-btn" onclick="teacherProfile('${u.id}')">View profile</button><span class="badge ${u.approval_status==='approved'?'approved':u.approval_status==='pending'?'pending':'returned'}">${accountLabel(u.approval_status)}</span>${u.approval_status==='pending'&&u.role==='teacher'?u.emailConfirmed?`<button class="action-btn" onclick="accountDecisionModal('${u.id}')">Review account</button>`:'<span class="module-meta">Email not confirmed</span>':''}</div></article>`).join('')||'<div class="empty"><h3>No accounts here</h3><p>New registrations appear under Pending approval.</p></div>'}</div></div>`}
-function teacherProfile(uid){if(data.user.role!=='head')return;const u=data.teachers.find(u=>u.id===uid&&u.role==='teacher');if(!u)return;const initials=u.name.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase(),chips=items=>items?.length?items.map(item=>`<span class="teacher-detail-chip">${esc(item)}</span>`).join(''):'<span class="muted">Not provided</span>';$('#modalRoot').innerHTML=`<div class="overlay show" onclick="closeModal()"></div><section class="modal teacher-profile-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-profile-title"><div class="modal-head"><h2 id="teacher-profile-title">Teacher profile</h2><button class="close" onclick="closeModal()" aria-label="Close">×</button></div><div class="teacher-profile-header"><div class="profile-avatar">${esc(initials)}</div><div><h3>${esc(u.name)}</h3><p class="module-meta">${esc(u.email)}</p><span class="profile-role">Teacher</span></div></div><dl class="teacher-profile-details"><dt>Department</dt><dd>${esc(u.assignment)||'<span class="muted">Not provided</span>'}</dd><dt>Subjects handled</dt><dd class="teacher-chip-list">${chips(u.subjects)}</dd><dt>Grade levels</dt><dd class="teacher-chip-list">${chips(u.grade_levels)}</dd><dt>Account status</dt><dd>${accountLabel(u.approval_status)}</dd><dt>Email confirmation</dt><dd>${u.emailConfirmed?'Confirmed':'Not confirmed'}</dd></dl><div class="form-actions">${u.approval_status==='pending'&&u.emailConfirmed?`<button class="primary" onclick="accountDecisionModal('${u.id}')">Review account</button>`:''}<button class="secondary" onclick="closeModal()">Close</button></div></section>`;$('.teacher-profile-modal .close').focus()}
-function accountDecisionModal(uid){const u=data.teachers.find(u=>u.id===uid);if(!u||data.user.role!=='head')return;$('#modalRoot').innerHTML=`<div class="overlay show" onclick="closeModal()"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="account-review-title"><div class="modal-head"><h2 id="account-review-title">Review teacher account</h2><button class="close" onclick="closeModal()" aria-label="Close">×</button></div><strong>${esc(u.name)}</strong><p class="muted">${esc(u.email)}</p><p>Approval grants Teacher access only. Head Teacher accounts are provisioned separately.</p><form onsubmit="decideAccount(event,'${uid}')"><div class="field"><label for="account-note">Decision note (optional)</label><textarea id="account-note" name="note" maxlength="2000" placeholder="A short explanation for the teacher"></textarea></div><p class="form-error" role="alert"></p><div class="decision"><button class="approve-btn" type="submit" name="decision" value="approved">Approve Teacher</button><button class="return-btn" type="submit" name="decision" value="rejected">Reject request</button></div></form></section>`}
-async function decideAccount(e,uid){e.preventDefault();if(busy)return;const decision=e.submitter.value,form=e.target;busy=true;form.querySelectorAll('button').forEach(b=>b.disabled=true);try{await api('accounts/'+uid,{method:'POST',body:JSON.stringify({decision,note:form.elements.note.value})});data=await api('state');render();toast(decision==='approved'?'Teacher account approved.':'Account request rejected.')}catch(error){form.querySelector('.form-error').textContent=error.message}finally{busy=false;form.querySelectorAll('button').forEach(b=>b.disabled=false)}}
-function approvalPage(){const u=data.user,status=u?.approval_status,rejected=status==='rejected',configured=!!status;$('#app').innerHTML=`<main class="centered-login clean-login"><section class="login-card centered-card school-login approval-card"><div class="clean-brand">Project Sikap</div><h1>${!configured?'Database update needed':rejected?'Request not approved':'Awaiting approval'}</h1><p>${!configured?'Your school administrator needs to run the account-approval database update.':rejected?'The Head Teacher has declined your account request. Contact your school for assistance.':'Your account is registered. A Head Teacher must approve it before you can access school modules.'}</p><p class="approval-email">${esc(u?.email)}</p>${u?.approval_note?`<div class="approval-feedback"><strong>Head Teacher note</strong><p>${esc(u.approval_note)}</p></div>`:''}<div class="form-actions"><button class="secondary" onclick="logout()">Log out</button><button class="primary" onclick="load()">Check status</button></div></section></main>`}
-function reportsPage(){const list=filtered(),approved=list.filter(m=>m.status==='approved').length,returned=list.filter(m=>m.status==='returned').length,pending=list.filter(m=>m.status==='pending').length;return `${complianceReport()}${filterPanel()}<div class="toolbar"><p class="muted">Report for the current filters · ${list.length} modules</p><button class="secondary" onclick="exportReport()">Export CSV</button></div><div class="cards">${stat('Approval rate',list.length?Math.round(approved/list.length*100)+'%':'0%','#e4f3e9')}${stat('Pending review',pending,'#fff3cf')}${stat('Needs revision',returned,'#f9e7ea')}${stat('Submitting teachers',new Set(list.map(m=>m.owner)).size,'#efecf9')}</div><div class="panel activity-panel"><h2>Submission activity</h2>${activity(data.events.filter(e=>list.some(m=>m.id===e.module)))}</div>`}
-function exportReport(){const quote=s=>'"'+String(s??'').replace(/^(\s*)([=+@-])/,"'$1$2").replace(/"/g,'""')+'"',rows=[['Title','Teacher','Subject','Grade','Term','School year','Status','Version','Submitted','Approved on'],...filtered().map(m=>[m.title,m.teacher,m.subject,m.grade,m.term,m.year,label(m.status),m.version,m.created,m.approved])],blob=new Blob([rows.map(r=>r.map(quote).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='project-sikap-report.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function page(){if(['dashboard','modules','library','reviews','starred'].includes(view))return modulePage();return ({requirements:requirementsPage,submit:submitPage,review:reviewPage,notes:notesPage,notifications:notificationsPage,profile:profilePage,teachers:teachersPage,reports:reportsPage})[view]?.()||''}
-const renderShell=render;
-render=function(){if(data&&data.user.approval_status!=='approved'){approvalPage();return}renderShell();if(view==='review'&&detail){const v=detail.versions.find(v=>v.version===detail.module.version),target=$('.doc-preview');if(v?.type!=='application/pdf'&&target&&window.previewDocx){target.innerHTML='<div class="docx-text-wrap"><h3>Document text preview</h3><p class="module-meta">Download the DOCX for its original formatting and images.</p><div class="docx-text"></div></div>';window.previewDocx(fileUrl(detail.module,v.version),target.querySelector('.docx-text'));}}};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(filterOpen)closeFilters();else if($('#modalRoot'))closeModal()}});
-document.addEventListener('click',e=>{document.querySelectorAll('.filter-dropdown[open]').forEach(el=>{if(!el.contains(e.target))el.open=false});if(filterOpen&&!e.target.closest('.filter-shell')){filterOpen=false;filterDraft=null;const shell=$('.filter-shell');shell?.classList.remove('is-open');$('#mobile-filter-toggle')?.setAttribute('aria-expanded','false')}});
-
-$('#app').innerHTML='<main class="centered-login"><section class="login-card centered-card"><h1>Project Sikap</h1><p>Loading your workspace…</p></section></main>';
+$("#app").innerHTML =
+  '<main class="centered-login"><section class="login-card centered-card"><h1>Project Sikap</h1><p>Loading your workspace…</p></section></main>';
 load();
-function resetPage(){$('#app').innerHTML='<main class="centered-login clean-login"><form class="login-card centered-card school-login" onsubmit="resetPassword(event)"><div class="clean-brand">Project Sikap</div><h1 class="signup-heading">Set a new password</h1><div class="field"><label for="new-password">New password</label><input id="new-password" name="password" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div><div class="field"><label for="repeat-password">Confirm password</label><input id="repeat-password" name="confirm" type="password" minlength="12" autocomplete="new-password" required></div><p class="form-error" role="alert"></p><button class="primary login-submit" type="submit">Update password</button></form></main>'}
-async function resetPassword(e){e.preventDefault();const f=new FormData(e.target),button=e.target.querySelector('button');if(f.get('password')!==f.get('confirm')){e.target.querySelector('.form-error').textContent='Passwords do not match.';return}button.disabled=true;try{await window.sikapBackend.updatePassword(f.get('password'));history.replaceState(null,'',location.pathname);await load();toast('Password updated.')}catch(error){e.target.querySelector('.form-error').textContent=error.message}finally{button.disabled=false}}
+
+document.addEventListener("input", (e) => {
+  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+});
+document.addEventListener("change", (e) => {
+  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+});
+addEventListener("beforeunload", (e) => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const dialog = document.querySelector(".modal");
+  if (!dialog) return;
+  const items = [
+    ...dialog.querySelectorAll(
+      "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]",
+    ),
+  ].filter((el) => el.getClientRects().length);
+  const first = items[0],
+    last = items.at(-1);
+  if (!first) return;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+});

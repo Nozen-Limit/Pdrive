@@ -30,13 +30,10 @@ A real Teacher Module Submission & Approval System. GitHub Pages hosts the inter
 3. Ensure `supabase/account-approval.sql` was run before provisioning the owner. New accounts (email/password or Google) start as **Pending approval**. Existing Head Teachers stay approved; other existing accounts become pending when this upgrade is first applied. Existing records are preserved.
 4. Sign in again. Head Teachers open **Teachers → Pending approval → Review account** to approve Teacher access or reject the request with a note. Users must confirm their email first. Applicants cannot view modules, upload files, or write notes before approval. They can check their status or log out. Head Teacher roles must be provisioned by a trusted database administrator, not through the website. A Head Teacher cannot approve their own module.
 
-### 4. Optional Google sign-in
-
-Email/password works without Google. For Google, enable the Google provider in Supabase Authentication and supply your Google Web OAuth client ID/secret THERE, not in GitHub. In Google Cloud, authorize `https://nozen-limit.github.io` as the JavaScript origin and the Supabase callback shown in the provider settings (normally `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`) as the redirect URI. Keep the Pages URL allowed in Supabase too. Configure Google audience/test users or production status as appropriate. Supabase handles OAuth tokens and validation. The Google button reports provider errors if it has not been enabled. Explicit linking from Profile additionally requires Supabase's Allow manual linking setting. Google login does not give access to Google Drive.
 
 ## Features
 
-Clean responsive Inter login; signup/confirmation, logout, password recovery and optional Google sign-in; pending-account approval by Head Teachers; visible account roles; resizable desktop sidebar/mobile drawer; mobile filter icon and compact cards/forms; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, account review, CSV reports, stars, archive/restore. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
+Clean responsive Inter login; signup/confirmation, logout and password recovery; pending-account approval by Head Teachers; visible account roles; resizable desktop sidebar/mobile drawer; mobile filter icon and compact cards/forms; subject/grade/term/year/search/status filters; upload PDF/DOCX (20 MB); private modules; feedback, return, resubmission, immutable version history, approval record/final-version lock; notes create/edit/pin/delete, notifications, profile, account review, CSV reports, stars. PDF previews use signed file URLs. DOCX preview extracts text; download for original layout.
 
 All data and documents are shared across devices through Supabase, not a browser-only demo. Browser storage holds the authentication session and layout preferences. Remember me uses persistent storage; otherwise the session uses the current tab's session storage. OAuth callbacks must return to the same browser that initiated them. Sign-out revokes this device's session. Use trusted devices and avoid entering real sensitive school records until your deployment and rules have been reviewed.
 
@@ -60,11 +57,11 @@ Requirements track not submitted, pending review, returned, and approved states.
 
 Every new review requires four checklist results: learning objectives, content accuracy, learning activities, and assessment/answer key. Approval requires all four to meet requirements. Return requires an item marked for revision and written changes. Decisions preserve their checklist and feedback by module version. The old review endpoint cannot bypass this gate. Compliance reports use assigned teacher/requirement pairs as the denominator, with a requirement filter and CSV export; they exclude cancelled requirements and independent submissions. Only approved Head Teachers can create requirements or review. Teachers see only their own assignments and accessible module reviews.
 
-Run `supabase/profile-details.sql` to enable saving subjects handled and grade levels in Profile. Department continues to use the existing assignment field. The update preserves current accounts and profile values; users can edit only their own teaching details, while role and approval remain protected. The profile header uses name initials as an avatar.
+Run `supabase/profile-details.sql` to enable saving subjects handled and grade levels in Profile. Department continues to use the existing assignment field. The update preserves current accounts and profile values; users can edit only their own teaching details, while role and approval remain protected. Run `supabase/profile-pictures.sql` afterward for private profile pictures. Approved users change their own picture; its owner and approved Head Teachers can view it. Initials appear when no picture is set.
 
 Run `supabase/teacher-alerts.sql` in the existing Supabase project's SQL Editor after the account-approval update. It adds Head Teacher alerts from an active module's details, with a notification for its teacher and an audit entry. It preserves existing records. Until this database update is applied, the new Send teacher alert action cannot send alerts.
 
-Pages refresh school data when opened. Notifications remain unread until **Mark all as read** is selected. Reports filter activity by the same modules as their summary/export. The login page can resend confirmation links; actual delivery and Google sign-in still depend on the school's Supabase email/provider configuration.
+Pages refresh school data when opened. Notifications remain unread until **Mark all as read** is selected. Reports filter activity by the same modules as their summary/export. Email confirmation and password recovery currently use Supabase’s default sender, as requested. Its delivery restrictions apply.
 
 The first Head Teacher must first register with an email and password in Project Sikap and confirm the email. Then a database administrator runs `supabase/set-owner.sql` with that email. That script checks the confirmed account exists and prevents replacing an existing owner; it does not create a password. Other Teacher accounts are approved in Teachers.
 
@@ -84,3 +81,7 @@ Official setup references:
 - https://supabase.com/docs/guides/auth/redirect-urls
 - https://supabase.com/docs/guides/auth/social-login/auth-google
 - https://supabase.com/docs/guides/storage/security/access-control
+
+## Maintenance
+
+Run `npm run check` before publishing. GitHub Actions also checks the build, tests, formatting and production dependencies. See `RELEASE.md` for source structure and release operations.
