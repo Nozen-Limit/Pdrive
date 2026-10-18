@@ -714,7 +714,7 @@
   .book-stage,
   .book-register .book-stage {
     min-height: 100svh;
-    padding: 280px 20px 96px;
+    padding: 145px 20px 96px;
   }
   .book-stage .book-dust {
     height: 100% !important;
