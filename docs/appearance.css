@@ -395,3 +395,30 @@
   font-size: 20px;
   vertical-align: middle;
 }
+.landing-appearance {
+  background: transparent;
+  backdrop-filter: none;
+  padding: 0;
+}
+.landing-appearance .appearance-menu > summary {
+  color: var(--sikap-accent);
+  background: #0c121b99;
+  border: 1px solid #b7c7df26;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+}
+.landing-appearance .appearance-popover {
+  top: auto;
+  bottom: calc(100% + 10px);
+  right: 0;
+}
+@media (max-width: 700px) {
+  .book-landing .landing-appearance {
+    right: 20px;
+    transform: none;
+  }
+  .landing-appearance .appearance-popover {
+    right: 0;
+  }
+}
