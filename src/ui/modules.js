@@ -2,20 +2,35 @@ function moduleResults() {
   const list = filtered();
   return `<div class="panel-head"><span class="muted">${list.length} module${list.length === 1 ? "" : "s"}</span>${view === "dashboard" ? '<button class="link-btn" onclick="go(\'modules\')">View all</button>' : ""}</div><div class="module-list">${list.map((m) => `<div class="module-row"><div><button class="module-title text-button" onclick="openModule('${m.id}')">${esc(m.title)}</button><div class="module-meta">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · v${m.version}</div><div class="module-meta">${esc(m.teacher)} · Updated ${date(m.updated)}${m.file ? " · " + size(m.size) : ""}</div>${workflowModuleDue(m)}</div><div class="row-actions"><button class="icon-btn star-btn" aria-label="${m.starred ? "Unstar" : "Star"} ${esc(m.title)}" onclick="starModule('${m.id}')">${ico(m.starred ? "star" : "star_outline")}</button>${badge(m.status)}<button class="action-btn" onclick="openModule('${m.id}')">${view === "reviews" ? "Review" : "Open"}</button></div></div>`).join("") || '<div class="empty"><h3>No modules here yet</h3><p>Try changing the filters. New submissions appear here.</p></div>'}</div>`;
 }
+function workspaceBanner(head) {
+  const modules = data.modules.filter((m) => !m.archived);
+  const pending = modules.filter((m) => m.status === "pending").length;
+  const returned = modules.filter((m) => m.status === "returned").length;
+  const approved = modules.filter((m) => m.status === "approved").length;
+  const actions = head
+    ? [
+        ["reviews", "Pending reviews", pending],
+        ["library", "Approved modules", approved],
+        [
+          "teachers",
+          "Teachers",
+          data.teachers.filter(
+            (t) => t.role === "teacher" && t.approval_status === "approved",
+          ).length,
+        ],
+      ]
+    : [
+        ["submit", "Submit module", null],
+        ["modules", "My modules", modules.length],
+        ["requirements", "Requirements", null],
+      ];
+  return `<section class="workspace-hero"><div class="workspace-hero-copy"><span class="workspace-role">${head ? "Head Teacher" : "Teacher"}</span><h2>${head ? "Review queue" : "Your modules"}</h2><p>${head ? (pending ? pending + " submission" + (pending === 1 ? "" : "s") + " awaiting review." : "No submissions awaiting review.") : returned ? returned + " module" + (returned === 1 ? "" : "s") + " need" + (returned === 1 ? "s" : "") + " revision." : "No revisions requested."}</p><div class="workspace-actions">${actions.map(([route, label, count], i) => `<button class="${i === 0 ? "workspace-action-primary" : ""}" onclick="go('${route}')">${label}${count !== null ? `<span>${count}</span>` : ico("north_east")}</button>`).join("")}</div></div><div id="head-desk" data-desk-role="${head ? "head" : "teacher"}" class="workspace-desk" aria-label="School desk"><div class="real-desk-art" aria-hidden="true"></div><button class="desk-hotspot desk-notebook" onclick="go('${head ? "reviews" : "submit"}')">${head ? "Review modules" : "Submit module"}</button><button class="desk-hotspot desk-documents" onclick="go('${head ? "library" : "modules"}')">${head ? "Approved modules" : "My modules"}</button></div></section>`;
+}
 function headDesk() {
-  const pending = data.modules.filter(
-      (m) => m.status === "pending" && !m.archived,
-    ).length,
-    approved = data.modules.filter(
-      (m) => m.status === "approved" && !m.archived,
-    ).length,
-    teachers = data.teachers.filter(
-      (u) => u.role === "teacher" && u.approval_status === "approved",
-    ).length;
-  return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">HEAD TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(" ")[0])}.</h2><p>Review submissions and track requirements.</p></div><div id="head-desk" class="head-desk-scene" aria-label="Interactive review desk"></div></section>`;
+  return workspaceBanner(true);
 }
 function teacherDesk() {
-  return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(" ")[0])}.</h2><p>Your submissions and assigned requirements.</p></div><div id="head-desk" data-desk-role="teacher" class="head-desk-scene" aria-label="Interactive preparation desk"></div></section>`;
+  return workspaceBanner(false);
 }
 function modulePage() {
   const total = filtered();

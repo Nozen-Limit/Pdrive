@@ -1,361 +1,286 @@
-import * as T from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-let stop = null;
+import * as THREE from "three";
+
+// The book is exclusively point particles; a separate fullscreen shader draws the flowing background.
 function mount(host) {
+  const stage = host.querySelector(".book-stage"),
+    canvas = host.querySelector(".book-dust");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   let renderer;
   try {
-    renderer = new T.WebGLRenderer({
-      antialias: true,
+    renderer = new THREE.WebGLRenderer({
+      canvas,
       alpha: true,
+      antialias: true,
       powerPreference: "low-power",
     });
   } catch {
+    host.classList.add("book-no-webgl");
     return () => {};
   }
-  const canvas = renderer.domElement;
-  canvas.className = "campus-canvas";
-  canvas.setAttribute("aria-hidden", "true");
-  host.prepend(canvas);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFSoftShadowMap;
-  const scene = new T.Scene();
-  scene.fog = new T.Fog("#182c37", 32, 88);
-  const pmrem = new T.PMREMGenerator(renderer),
-    room = new RoomEnvironment(),
-    environment = pmrem.fromScene(room, 0.04);
-  scene.environment = environment.texture;
-  scene.environmentIntensity = 0.35;
-  room.dispose();
-  pmrem.dispose();
-  const camera = new T.PerspectiveCamera(36, 1, 0.1, 160);
-  camera.position.set(23, 13, 32);
-  scene.add(new T.HemisphereLight("#cddedc", "#394840", 1.5));
-  const sun = new T.DirectionalLight("#ffdfad", 4.2);
-  sun.position.set(-14, 18, 8);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  Object.assign(sun.shadow.camera, {
-    left: -35,
-    right: 35,
-    top: 28,
-    bottom: -28,
-    near: 0.5,
-    far: 90,
-  });
-  sun.shadow.normalBias = 0.035;
-  sun.shadow.bias = -0.00015;
-  scene.add(sun);
-  const campus = new T.Group();
-  scene.add(campus);
-  campus.position.x = -8;
-  campus.rotation.y = -0.13;
-  const textures = [];
-  let noiseSeed = 91;
-  const noise = () => {
-    noiseSeed = (noiseSeed * 1664525 + 1013904223) >>> 0;
-    return noiseSeed / 4294967296;
-  };
-  function surface(base, grain) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
-    const c = canvas.getContext("2d");
-    c.fillStyle = base;
-    c.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 12000; i++) {
-      c.fillStyle =
-        noise() > 0.5 ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.045)";
-      c.fillRect(noise() * 256, noise() * 256, grain, grain);
-    }
-    const texture = new T.CanvasTexture(canvas);
-    texture.colorSpace = T.SRGBColorSpace;
-    texture.wrapS = texture.wrapT = T.RepeatWrapping;
-    texture.repeat.set(3, 3);
-    textures.push(texture);
-    return texture;
-  }
-  const plaster = surface("#ded9c9", 2),
-    stone = surface("#c6c4b6", 3),
-    grass = surface("#69745a", 3);
-  const mats = {};
-  const mat = (color) =>
-    (mats[color] ??= new T.MeshStandardMaterial({
-      color,
-      roughness: 0.82,
-      map:
-        color === "#d7d4c9"
-          ? plaster
-          : color === "#e9e3da"
-            ? stone
-            : color === "#727f68"
-              ? grass
-              : null,
-    }));
-  function box(w, h, d, x, y, z, color, parent = campus) {
-    const mesh = new T.Mesh(new T.BoxGeometry(w, h, d), mat(color));
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
-  box(70, 0.2, 65, 0, -0.65, -7, "#727f68");
-  box(26, 0.15, 20, 0, -0.47, 0, "#e9e3da");
-  box(3.8, 0.08, 27, 0, -0.34, 11, "#c0c1b8");
-  // A pitched metal roof with real eaves, ridge, and standing seams.
-  function roof(x, z, w, d) {
-    const pitch = 0.24,
-      depth = d + 0.9,
-      length = w + 0.9,
-      half = depth / 2,
-      slant = Math.sqrt(half * half + (half * pitch) ** 2);
-    for (const side of [-1, 1]) {
-      const panel = box(
-        length,
-        0.1,
-        slant,
-        x,
-        4.5 + (half * pitch) / 2,
-        z + (side * half) / 2,
-        "#546879",
-      );
-      panel.rotation.x = side * Math.atan(pitch);
-      for (let i = -length / 2; i < length / 2; i += 0.65) {
-        const seam = box(
-          0.035,
-          0.045,
-          slant,
-          x + i,
-          4.57 + (half * pitch) / 2,
-          z + (side * half) / 2,
-          "#6b7d88",
-        );
-        seam.rotation.x = side * Math.atan(pitch);
-      }
-    }
-    box(length, 0.11, 0.14, x, 4.5 + half * pitch, z, "#748791");
-  }
-  function building(x, z, w, d) {
-    box(w, 4.2, d, x, 2, z, "#d7d4c9");
-    box(w + 0.08, 0.3, d + 0.08, x, 0.04, z, "#aaa99e");
-    roof(x, z, w, d);
-    box(w + 0.15, 0.16, d + 0.15, x, 2.12, z, "#a5b2bc");
-    for (let i = 0; i < Math.floor(w / 1.6); i++) {
-      const wx = x - w / 2 + 1 + i * 1.6;
-      for (const y of [1, 3.12]) {
-        const front = z + d / 2;
-        box(1.03, 1.25, 0.12, wx, y, front + 0.03, "#6c7a7f");
-        const glass = box(0.86, 1.08, 0.06, wx, y, front + 0.105, "#77939c");
-        glass.material = glassMaterial;
-        box(0.04, 1.15, 0.07, wx, y, front + 0.15, "#c6cdd0");
-        box(0.92, 0.045, 0.07, wx, y + 0.04, front + 0.15, "#c6cdd0");
-        box(1.15, 0.1, 0.35, wx, y - 0.63, front + 0.14, "#e4e1d5");
-        box(1.17, 0.09, 0.5, wx, y + 0.7, front + 0.19, "#a8b6bf");
-      }
-    }
-    // Covered veranda gives the facade depth rather than a flat wall of windows.
-    const edge = z + d / 2 + 1.1;
-    box(w + 0.6, 0.15, 1.8, x, 2.05, edge - 0.2, "#bec6c7");
-    box(w + 0.7, 0.12, 1.9, x, 4.22, edge - 0.2, "#c5cccb");
-    for (let px = x - w / 2 + 0.3; px < x + w / 2; px += 2.2) {
-      box(0.14, 4.2, 0.14, px, 2, edge + 0.55, "#b6c1c4");
-      box(0.25, 0.12, 0.25, px, 0, edge + 0.55, "#989e9d");
-    }
-    box(w, 0.08, 0.065, x, 2.85, edge + 0.55, "#8496a1");
-    for (let px = x - w / 2; px < x + w / 2; px += 0.42)
-      box(0.035, 0.75, 0.035, px, 2.45, edge + 0.55, "#8c9fa9");
-  }
-  const glassMaterial = new T.MeshPhysicalMaterial({
-    color: "#6a8c97",
-    metalness: 0.25,
-    roughness: 0.16,
-    clearcoat: 1,
-    clearcoatRoughness: 0.15,
-  });
-  building(-6, -4, 10, 4);
-  building(6, -4, 10, 4);
-  building(-11, 1, 3.5, 9);
-  box(2.1, 2.8, 0.35, 0, 1.25, -1.8, "#465b63");
-  box(0.06, 2.7, 0.08, 0, 1.3, -1.57, "#b4c4c5");
-  box(3.8, 0.18, 2.4, 0, 3.1, -0.8, "#d1d4cc");
-  for (const x of [-1.65, 1.65]) box(0.15, 3.2, 0.15, x, 1.2, 0.2, "#8f9c99");
-  // Recessed entrance and a timber pergola at the edge of the courtyard.
-  box(4.2, 0.25, 1.1, 0, -0.22, 0.5, "#b8b9ae");
-  for (let i = 0; i < 3; i++)
-    box(
-      4.6 + i * 0.45,
-      0.1,
-      0.38,
-      0,
-      -0.25 - i * 0.08,
-      1.05 + i * 0.38,
-      "#c9c6b9",
-    );
-  for (const x of [-7, -3])
-    for (const z of [2, 5]) box(0.14, 2.7, 0.14, x, 1.1, z, "#816b53");
-  for (let x = -7.3; x <= -2.7; x += 0.42)
-    box(0.12, 0.15, 3.7, x, 2.5, 3.5, "#9c8669");
-  box(3, 0.1, 16, 0, -0.15, 2, "#d3ddea");
-  // Architectural rhythm: entrance steps, courtyard seating and warm walkway lamps.
-  for (let i = 0; i < 3; i++)
-    box(
-      3.5 - i * 0.25,
-      0.14,
-      1.3 - i * 0.2,
-      0,
-      -0.1 + i * 0.14,
-      -1 + i * 0.2,
-      "#c3d1e1",
-    );
-  for (let x of [-7, 7])
-    for (let z of [2, 6]) {
-      box(2, 0.17, 0.7, x, 0.5, z, "#8b6953");
-      box(0.12, 0.6, 0.5, x - 0.7, 0.15, z, "#60738b");
-      box(0.12, 0.6, 0.5, x + 0.7, 0.15, z, "#60738b");
-    }
-  for (let x of [-2.3, 2.3])
-    for (let z of [2, 7]) {
-      box(0.08, 1.4, 0.08, x, 0.6, z, "#526884");
-      const bulb = new T.Mesh(
-        new T.SphereGeometry(0.15, 8, 6),
-        new T.MeshStandardMaterial({
-          color: "#ffe1a6",
-          emissive: "#ffce82",
-          emissiveIntensity: 1.8,
-        }),
-      );
-      bulb.position.set(x, 1.4, z);
-      campus.add(bulb);
-    }
-  // Layered irregular foliage, branching trunks and understory planting.
-  let seed = 42;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene(),
+    camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 30);
+  camera.position.z = 5;
+  let seed = 427;
   const random = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  const foliage = new T.IcosahedronGeometry(1, 2),
-    trunkGeo = new T.CylinderGeometry(0.09, 0.16, 1, 8);
-  for (const x of [-9, -5, 5, 9])
-    for (const z of [5, 9]) {
-      box(2.5, 0.25, 2.2, x, -0.07, z, "#b9b8aa");
-      box(2.3, 0.07, 2, x, 0.1, z, "#5f7258");
-      const trunk = new T.Mesh(trunkGeo, mat("#71624e"));
-      trunk.scale.y = 2.3;
-      trunk.position.set(x, 1.2, z);
-      trunk.castShadow = true;
-      campus.add(trunk);
-      for (let j = 0; j < 9; j++) {
-        const angle = j * 2.4,
-          r = 0.4 + random() * 0.7;
-        const leaf = new T.Mesh(
-          foliage,
-          mat(["#526e54", "#698261", "#7c9069", "#5c795b"][j % 4]),
-        );
-        leaf.position.set(
-          x + Math.cos(angle) * r,
-          2.5 + random() * 0.95,
-          z + Math.sin(angle) * r,
-        );
-        leaf.scale.set(
-          0.65 + random() * 0.3,
-          0.75 + random() * 0.4,
-          0.6 + random() * 0.35,
-        );
-        leaf.castShadow = true;
-        leaf.receiveShadow = true;
-        campus.add(leaf);
-      }
-      for (let j = 0; j < 5; j++) {
-        const shrub = new T.Mesh(foliage, mat("#748166"));
-        shrub.scale.set(0.35, 0.27, 0.35);
-        shrub.position.set(x - 1 + random() * 2, 0.3, z - 0.8 + random() * 1.6);
-        campus.add(shrub);
-      }
-    }
-  // Fine paving joints and lawn edging establish scale at courtyard level.
-  for (let x = -10; x <= 10; x += 1.2)
-    box(0.013, 0.008, 14, x, -0.19, 1, "#c7c4ba");
-  for (let z = -5; z <= 8; z += 1.2)
-    box(21, 0.008, 0.013, 0, -0.185, z, "#c7c4ba");
-  for (let i = 0; i < 16; i++) {
-    const angle = i * 0.7,
-      x = Math.sin(angle) * 23,
-      z = -14 - Math.cos(angle) * 8;
-    const foliageMesh = new T.Mesh(
-      new T.IcosahedronGeometry(2 + random(), 2),
-      mat(["#485f4d", "#596e54", "#6c7e5c"][i % 3]),
-    );
-    foliageMesh.position.set(x, 2.6 + random() * 2, z);
-    foliageMesh.scale.y = 1.25;
-    foliageMesh.castShadow = true;
-    scene.add(foliageMesh);
+  function pagePoint(u, v, side, layer = 0) {
+    const top = 0.745 + 0.095 * Math.sin(u * Math.PI * 0.5);
+    const bottom = -0.865 + 0.07 * Math.sin(u * Math.PI * 0.5);
+    return [
+      side * (u * 0.645 + layer * 0.0014),
+      top * (1 - v) + bottom * v - layer * 0.0026,
+      0.04 + Math.sin(u * Math.PI) * 0.09 - layer * 0.003,
+    ];
   }
-  const clouds = [];
-  let px = 0,
-    py = 0;
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const move = (e) => {
-    px = (e.clientX / innerWidth - 0.5) * 2;
-    py = (e.clientY / innerHeight - 0.5) * 2;
+  const disposables = [];
+  const shared = {
+    time: { value: 0 },
+    ratio: { value: 1 },
+    pointer: { value: new THREE.Vector2(9, 9) },
+    pulse: { value: -100 },
+    formation: { value: reduced.matches ? 1 : 0 },
+    pulseOrigin: { value: new THREE.Vector2(0, 0) },
   };
-  const resize = () => {
-    const width = host.clientWidth * (innerWidth > 760 ? 0.72 : 1),
-      height = host.clientHeight * (innerWidth > 760 ? 0.65 : 1);
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    draw(0);
+  const palette = window.sikapAppearance?.();
+  shared.particleTint = {
+    value: new THREE.Vector3(...(palette?.particles || [0.4, 0.49, 0.64])),
   };
-  function draw(time) {
-    camera.position.x +=
-      (21 + (reduced.matches ? 0 : px * 1.5) - camera.position.x) * 0.04;
-    camera.position.y +=
-      (13 + (reduced.matches ? 0 : py * 0.7) - camera.position.y) * 0.04;
-    camera.lookAt(-7, 0.6, 0);
-    if (!reduced.matches)
-      clouds.forEach(
-        (c, i) =>
-          (c.position.x = -12 + i * 8 + Math.sin(time * 0.00015 + i) * 1.1),
-      );
+  shared.particleHighlight = {
+    value: new THREE.Vector3(...(palette?.highlight || [0.82, 0.88, 0.98])),
+  };
+  shared.waveTint = {
+    value: new THREE.Vector3(...(palette?.waves || [0.09, 0.115, 0.16])),
+  };
+  shared.aspect = { value: 1 };
+  const waveGeometry = new THREE.PlaneGeometry(2, 2);
+  const waveMaterial = new THREE.ShaderMaterial({
+    depthWrite: false,
+    depthTest: false,
+    uniforms: shared,
+    vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,.999,1.);}`,
+    fragmentShader: `precision highp float;varying vec2 vUv;uniform float time;uniform float aspect;uniform vec2 pointer;uniform vec3 waveTint;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+      float fbm(vec2 p){float value=0.,a=.5;mat2 r=mat2(.8,-.6,.6,.8);for(int i=0;i<4;i++){value+=a*noise(p);p=r*p*2.03+vec2(3.7,2.1);a*=.5;}return value;}
+      void main(){vec2 p=(vUv-.5)*vec2(aspect,1.);float t=time*.055;
+        vec2 flow=vec2(fbm(p*2.+vec2(t*.4,-t*.2)),fbm(p*2.+vec2(4.1,-2.3+t*.3)));
+        float n=fbm(p*2.3+flow*2.8+vec2(t*.1,-t*.35));
+        float bands=pow(.5+.5*sin(p.y*29.+p.x*3.3+n*11.-t*1.3),18.);
+        float fine=pow(1.-abs(sin(n*36.+p.x*2.-t*.4)),14.);
+        float vignette=1.-smoothstep(.4,1.25,length(p*vec2(.7,1.)));
+        vec3 color=vec3(.008,.011,.018)+waveTint*(pow(n,2.)*.9+bands*.24+fine*.12)*vignette;
+        color+=(hash(gl_FragCoord.xy)-.5)/600.;gl_FragColor=vec4(color,1.);}`,
+  });
+  const waves = new THREE.Mesh(waveGeometry, waveMaterial);
+  waves.frustumCulled = false;
+  waves.renderOrder = -10;
+  scene.add(waves);
+  disposables.push(waveGeometry, waveMaterial);
+  const particlePositions = [],
+    particleSeeds = [];
+  for (let i = 0; i < 56000; i++) {
+    const side = i % 2 ? 1 : -1;
+    let u = random(),
+      v = random(),
+      kind = 0;
+    if (i < 18000) {
+      kind = 1;
+      const edge = Math.floor(i / 2) % 4;
+      if (edge === 0) u = 1 - random() * 0.035;
+      else if (edge === 1) v = random() * 0.025;
+      else if (edge === 2) v = 1 - random() * 0.035;
+      else u = random() * 0.02;
+    }
+    const p = pagePoint(u, v, side, kind ? Math.floor(random() * 12) : 0);
+    if (kind) {
+      p[0] += (random() - 0.5) * 0.012;
+      p[1] += (random() - 0.5) * 0.012;
+      p[2] += random() * 0.05;
+    } else p[2] += 0.005;
+    particlePositions.push(...p);
+    particleSeeds.push(u, v, kind, random());
+  }
+  // Loose particles are drawn from the page silhouette, not an unrelated orbit.
+  for (let i = 0; i < 5800; i++) {
+    const side = i % 2 ? 1 : -1,
+      u = 0.7 + random() * 0.3,
+      v = random();
+    const p = pagePoint(u, v, side);
+    p[0] += side * Math.pow(random(), 2) * 0.19;
+    p[1] += (random() - 0.5) * 0.25;
+    p[2] += random() * 0.16;
+    particlePositions.push(...p);
+    particleSeeds.push(u, v, 2, random());
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(particlePositions, 3),
+  );
+  geometry.setAttribute(
+    "seed",
+    new THREE.Float32BufferAttribute(particleSeeds, 4),
+  );
+  disposables.push(geometry);
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: shared,
+    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;varying float opacity;varying float brightness;
+      void main(){
+      float loose=step(1.5,seed.z);float edge=step(.5,seed.z);vec3 target=position;
+      if(seed.z>.5&&seed.z<1.5){
+        float path=seed.y<.08?seed.x*.25:(seed.x>.9?.25+seed.y*.25:(seed.y>.92?.75-seed.x*.25:1.-seed.y*.25));
+        float phase=fract(path+time*(.028+seed.w*.012));float u;float v;
+        if(phase<.25){u=phase*4.;v=0.;}else if(phase<.5){u=1.;v=(phase-.25)*4.;}
+        else if(phase<.75){u=1.-(phase-.5)*4.;v=1.;}else{u=0.;v=1.-(phase-.75)*4.;}
+        target.x=sign(position.x)*(u*.645+seed.w*.012);
+        target.y=mix(.745+.095*sin(u*1.5708),-.865+.07*sin(u*1.5708),v)-seed.w*.018;
+        target.xy+=vec2(sin(time*.8+seed.w*30.),cos(time*.65+u*6.))*.009;
+      }
+      float life=fract(seed.y-time*.095);
+      if(loose>.5){target.y=mix(.92,-.96,life);target.x+=sin(time*.55+seed.w*12.)*.045;}
+      vec3 cloud=vec3(sin(seed.w*73.)*.98,cos(seed.w*57.+seed.x)*.9,seed.w*.25);vec3 p=mix(cloud,target,formation);
+      p.x+=sin(time*.8+seed.w*40.)*.012*edge+loose*sin(time*.45+seed.y*9.)*.055;
+      p.y+=cos(time*.7+seed.w*30.)*.013*edge+loose*sin(time*.55+seed.w*12.)*.07;
+      vec2 delta=p.xy-pointer;float influence=exp(-dot(delta,delta)*40.)*edge;
+      p.xy+=normalize(delta+vec2(.00001))*influence*.18;
+      float age=max(0.,time-pulse);vec2 away=p.xy-pulseOrigin;
+      float ripple=exp(-pow((length(away)-age*.7)*18.,2.))*exp(-age*1.3);
+      p.xy+=normalize(away+vec2(.0001))*ripple*.14*edge;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
+      gl_PointSize=(.65+seed.w*1.3+edge*.35+loose*1.3)*ratio;
+      float quiet=step(.12,seed.x)*step(seed.x,.93)*step(.12,seed.y)*step(seed.y,.9);
+      opacity=mix(.24,.82,edge)*(1.-loose*.25)*(1.-quiet*.5);
+      opacity*=mix(1.,smoothstep(0.,.1,life)*smoothstep(0.,.12,1.-life),loose);
+      opacity*=.75+.25*sin(time*.65+seed.w*30.);brightness=seed.w+influence*.8+ripple*.5;}`,
+    fragmentShader: `uniform vec3 particleTint;uniform vec3 particleHighlight;varying float opacity;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;vec3 color=mix(particleTint,particleHighlight,clamp(brightness,0.,1.));gl_FragColor=vec4(color,pow(1.-r,1.4)*opacity);}`,
+  });
+  disposables.push(material);
+  scene.add(new THREE.Points(geometry, material));
+  let frame = 0,
+    last = 0,
+    time = 0,
+    inView = true;
+  function render() {
+    shared.time.value = time;
+    shared.formation.value = reduced.matches
+      ? 1
+      : THREE.MathUtils.smoothstep(time * 2, 0.1, 1.8);
     renderer.render(scene, camera);
   }
-  function loop() {
-    renderer.setAnimationLoop(
-      !document.hidden && !reduced.matches ? draw : null,
-    );
-    draw(0);
+  function tick(now) {
+    frame = 0;
+    if (document.hidden || !inView || reduced.matches) return;
+    if (now - last > 32) {
+      time += Math.min((now - last) / 1000, 0.05) * 0.5;
+      last = now;
+      render();
+    }
+    frame = requestAnimationFrame(tick);
   }
-  addEventListener("pointermove", move, { passive: true });
-  addEventListener("resize", resize);
+  function loop() {
+    cancelAnimationFrame(frame);
+    render();
+    if (!document.hidden && inView && !reduced.matches) {
+      last = performance.now();
+      frame = requestAnimationFrame(tick);
+    }
+  }
+  const resize = () => {
+    const w = stage.clientWidth,
+      h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    if (w <= 700) {
+      camera.left = -0.04;
+      camera.right = 0.7;
+    } else {
+      camera.left = -1;
+      camera.right = 1;
+    }
+    camera.updateProjectionMatrix();
+    shared.ratio.value = renderer.getPixelRatio();
+    shared.aspect.value = w / h;
+    render();
+  };
+  const locate = (e) => {
+    const b = stage.getBoundingClientRect();
+    const x = (e.clientX - b.left) / b.width,
+      y = (e.clientY - b.top) / b.height;
+    return [camera.left + x * (camera.right - camera.left), 1 - y * 2];
+  };
+  const move = (e) => {
+    if (reduced.matches) return;
+    shared.pointer.value.set(...locate(e));
+    if (!stage.contains(document.activeElement) && innerWidth > 700) {
+      const b = stage.getBoundingClientRect();
+      stage.style.setProperty(
+        "--book-rx",
+        `${(-(e.clientY - b.top - b.height * 0.5) / b.height) * 1.2}deg`,
+      );
+      stage.style.setProperty(
+        "--book-ry",
+        `${((e.clientX - b.left - b.width * 0.5) / b.width) * 1.6}deg`,
+      );
+    }
+  };
+  const leave = () => {
+    shared.pointer.value.set(9, 9);
+    stage.style.setProperty("--book-rx", "0deg");
+    stage.style.setProperty("--book-ry", "0deg");
+  };
+  const click = (e) => {
+    if (!reduced.matches && !e.target.closest("input,button,label,form")) {
+      shared.pulse.value = time;
+      shared.pulseOrigin.value.set(...locate(e));
+    }
+  };
+  stage.addEventListener("pointermove", move, { passive: true });
+  stage.addEventListener("pointerleave", leave);
+  stage.addEventListener("click", click);
+  const size = new ResizeObserver(resize);
+  size.observe(stage);
+  const visible = new IntersectionObserver(([entry]) => {
+    inView = entry.isIntersecting;
+    loop();
+  });
+  visible.observe(stage);
   document.addEventListener("visibilitychange", loop);
   reduced.addEventListener("change", loop);
+  const changePalette = (e) => {
+    shared.particleTint.value.set(...e.detail.particles);
+    shared.particleHighlight.value.set(...e.detail.highlight);
+    shared.waveTint.value.set(...e.detail.waves);
+    render();
+  };
+  window.addEventListener("sikap-appearance", changePalette);
+  host.classList.add("book-emerge");
   resize();
   loop();
   return () => {
-    renderer.setAnimationLoop(null);
-    removeEventListener("pointermove", move);
-    removeEventListener("resize", resize);
+    cancelAnimationFrame(frame);
+    size.disconnect();
+    visible.disconnect();
+    stage.removeEventListener("pointermove", move);
+    stage.removeEventListener("pointerleave", leave);
+    stage.removeEventListener("click", click);
     document.removeEventListener("visibilitychange", loop);
     reduced.removeEventListener("change", loop);
-    const materials = new Set();
-    scene.traverse((o) => {
-      o.geometry?.dispose();
-      if (o.material) materials.add(o.material);
-    });
-    materials.forEach((m) => m.dispose());
-    textures.forEach((t) => t.dispose());
-    environment.dispose();
+    window.removeEventListener("sikap-appearance", changePalette);
+    disposables.forEach((x) => x.dispose());
     renderer.dispose();
-    canvas.remove();
   };
 }
-let current = null;
+let current = null,
+  stop = null;
 function sync() {
-  const host = document.querySelector(".clean-login");
+  const host = document.querySelector(".book-landing");
   if (host === current) return;
   stop?.();
   current = host;

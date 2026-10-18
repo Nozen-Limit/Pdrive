@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 export const uiSources = [
   "school-workflow.js",
+  "ui/appearance.js",
   "ui/auth.js",
   "ui/profile.js",
   "ui/accounts.js",

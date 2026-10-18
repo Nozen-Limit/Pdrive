@@ -1,21 +1,42 @@
 function login(error = "") {
-  const setup = authMode === "register";
   $("#app").innerHTML =
-    `<main class="centered-login clean-login"><section class="landing-editorial" aria-label="Project Sikap introduction"><div class="landing-wordmark">${ico("auto_stories")} PROJECT SIKAP</div><div class="landing-story"><span class="editorial-kicker"><i></i> TEACHER MODULE PORTAL</span><h2>Module submission.<br><em>Review and approval.</em></h2></div></section><form class="login-card centered-card school-login" onsubmit="schoolLogin(event)" aria-label="${setup ? "Create an account" : "Sign in to Project Sikap"}">
- <div class="clean-brand"><span class="login-brand-icon">${ico("auto_stories")}</span>Project Sikap</div><div class="login-intro"><span class="login-kicker">YOUR SCHOOL WORKSPACE</span><h1>${setup ? "Create your account" : "Sign in"}</h1><p>${setup ? "Create your account to get started." : "Enter your school account details."}</p></div>
- ${setup ? '<div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" autocomplete="name" placeholder="Enter your name" maxlength="120" required></div>' : ""}
- <div class="field"><label for="login-email">Email</label><div class="input-wrap">${ico("alternate_email")}<input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your Email" required></div></div>
- <div class="field"><label for="login-password">Password</label><div class="input-wrap">${ico("lock")}<input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
- ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
- <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
- <p class="form-error" role="alert">${esc(error || googleError())}</p>
- <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign In"}</button>
- <div class="login-footer">${setup ? "Already have an account?" : "Don’t have an account?"} <button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Sign Up"}</button></div>
- </form></main>`;
+    `<main class="book-landing ${authMode === "register" ? "book-register" : ""}">
+    <div class="book-stage">
+      <div class="book-art" aria-hidden="true"></div>
+      <canvas class="book-dust" aria-hidden="true"></canvas>
+      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span>PROJECT SIKAP</span></div></section>
+      <section class="book-right" aria-label="School account"><div id="book-form-slot">${bookAuthForm(error)}</div></section>
+    </div><div class="landing-appearance">${appearanceControls(true)}</div>
+  </main>`;
+}
+function bookAuthForm(error = "") {
+  const setup = authMode === "register";
+  return `<form class="school-login book-form ${setup ? "book-signup" : ""}" onsubmit="schoolLogin(event)" aria-label="${setup ? "Create an account" : "Sign in to Project Sikap"}">
+    <h1>${setup ? "Create account" : "Sign in"}</h1>
+    ${setup ? '<div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" autocomplete="name" placeholder="Enter your name" maxlength="120" required></div>' : ""}
+    <div class="field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your email" required></div>
+    <div class="field"><label for="login-password">Password</label><div class="input-wrap"><input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
+    ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
+    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
+    <p class="form-error" role="alert">${esc(error || googleError())}</p>
+    <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign in"}</button>
+    <div class="login-footer"><button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Create an account"}</button></div>
+  </form>`;
 }
 function setAuthMode(mode) {
+  if (busy) return;
   authMode = mode;
-  login();
+  const slot = $("#book-form-slot");
+  if (!slot) {
+    login();
+    return;
+  }
+  const landing = $(".book-landing");
+  landing.classList.toggle("book-register", mode === "register");
+  slot.innerHTML = bookAuthForm();
+  slot.classList.remove("book-page-turn");
+  void slot.offsetWidth;
+  slot.classList.add("book-page-turn");
 }
 function googleError() {
   const code = new URLSearchParams(location.search).get("auth_error");

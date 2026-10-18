@@ -50,7 +50,7 @@ test("Pages interface renders real login/signup and confirmation feedback withou
   vm.runInContext(source, context);
   await new Promise((r) => setTimeout(r, 10));
   assert.match(app.innerHTML, /Sign in to Project Sikap/);
-  assert.match(app.innerHTML, /Sign Up/);
+  assert.match(app.innerHTML, /Create an account/);
   assert.doesNotMatch(
     app.innerHTML,
     /Continue with Google|How it works|Resend confirmation email/,

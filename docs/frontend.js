@@ -321,24 +321,130 @@ function moduleRequirementDetails(m) {
     : "";
 }
 
+const appearanceThemes = {
+  slate: {
+    label: "Slate",
+    background: "#101720",
+    accent: "#b7c7df",
+    action: "#34475f",
+    particles: [0.4, 0.49, 0.64],
+    highlight: [0.82, 0.88, 0.98],
+    waves: [0.09, 0.115, 0.16],
+  },
+  ocean: {
+    label: "Ocean",
+    background: "#0a1722",
+    accent: "#a6cbdc",
+    action: "#2e5b72",
+    particles: [0.4, 0.64, 0.78],
+    highlight: [0.79, 0.93, 0.98],
+    waves: [0.04, 0.15, 0.22],
+  },
+  forest: {
+    label: "Forest",
+    background: "#111d19",
+    accent: "#b8cdbd",
+    action: "#426051",
+    particles: [0.48, 0.64, 0.53],
+    highlight: [0.85, 0.95, 0.88],
+    waves: [0.07, 0.15, 0.11],
+  },
+  warm: {
+    label: "Warm",
+    background: "#211c17",
+    accent: "#d9c6ac",
+    action: "#6d5944",
+    particles: [0.7, 0.58, 0.43],
+    highlight: [0.98, 0.91, 0.8],
+    waves: [0.15, 0.105, 0.065],
+  },
+};
+let appearanceChoice = "slate";
+try {
+  const saved = localStorage.getItem("sikap-appearance");
+  if (appearanceThemes[saved]) appearanceChoice = saved;
+} catch {}
+function setAppearance(key, persist = true) {
+  if (!appearanceThemes[key]) return;
+  appearanceChoice = key;
+  const theme = appearanceThemes[key];
+  const style = document.documentElement?.style;
+  style?.setProperty("--sikap-bg", theme.background);
+  style?.setProperty("--sikap-accent", theme.accent);
+  style?.setProperty("--sikap-action", theme.action);
+  if (persist) {
+    try {
+      localStorage.setItem("sikap-appearance", key);
+    } catch {}
+  }
+  document
+    .querySelectorAll?.('input[name="sikap-appearance"]')
+    .forEach((input) => {
+      input.checked = input.value === key;
+    });
+  if (
+    typeof window.dispatchEvent === "function" &&
+    typeof CustomEvent === "function"
+  )
+    window.dispatchEvent(
+      new CustomEvent("sikap-appearance", { detail: theme }),
+    );
+}
+function appearanceControls(compact = false) {
+  return `<fieldset class="appearance-choices ${compact ? "appearance-compact" : ""}"><legend>Color</legend>${Object.entries(
+    appearanceThemes,
+  )
+    .map(
+      ([key, theme]) =>
+        `<label class="appearance-choice" title="${theme.label}"><input type="radio" name="sikap-appearance" value="${key}" ${appearanceChoice === key ? "checked" : ""} onchange="setAppearance(this.value)" aria-label="${theme.label}"><span class="appearance-swatch" style="--swatch:${theme.accent}" aria-hidden="true"></span><span class="appearance-name">${theme.label}</span></label>`,
+    )
+    .join("")}</fieldset>`;
+}
+function appearanceMenu() {
+  return `<details class="appearance-menu"><summary class="icon-btn" aria-label="Choose color">${ico("palette")}</summary><div class="appearance-popover">${appearanceControls()}</div></details>`;
+}
+window.sikapAppearance = () => appearanceThemes[appearanceChoice];
+setAppearance(appearanceChoice, false);
+
 function login(error = "") {
-  const setup = authMode === "register";
   $("#app").innerHTML =
-    `<main class="centered-login clean-login"><section class="landing-editorial" aria-label="Project Sikap introduction"><div class="landing-wordmark">${ico("auto_stories")} PROJECT SIKAP</div><div class="landing-story"><span class="editorial-kicker"><i></i> TEACHER MODULE PORTAL</span><h2>Module submission.<br><em>Review and approval.</em></h2></div></section><form class="login-card centered-card school-login" onsubmit="schoolLogin(event)" aria-label="${setup ? "Create an account" : "Sign in to Project Sikap"}">
- <div class="clean-brand"><span class="login-brand-icon">${ico("auto_stories")}</span>Project Sikap</div><div class="login-intro"><span class="login-kicker">YOUR SCHOOL WORKSPACE</span><h1>${setup ? "Create your account" : "Sign in"}</h1><p>${setup ? "Create your account to get started." : "Enter your school account details."}</p></div>
- ${setup ? '<div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" autocomplete="name" placeholder="Enter your name" maxlength="120" required></div>' : ""}
- <div class="field"><label for="login-email">Email</label><div class="input-wrap">${ico("alternate_email")}<input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your Email" required></div></div>
- <div class="field"><label for="login-password">Password</label><div class="input-wrap">${ico("lock")}<input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
- ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
- <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
- <p class="form-error" role="alert">${esc(error || googleError())}</p>
- <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign In"}</button>
- <div class="login-footer">${setup ? "Already have an account?" : "Don’t have an account?"} <button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Sign Up"}</button></div>
- </form></main>`;
+    `<main class="book-landing ${authMode === "register" ? "book-register" : ""}">
+    <div class="book-stage">
+      <div class="book-art" aria-hidden="true"></div>
+      <canvas class="book-dust" aria-hidden="true"></canvas>
+      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span>PROJECT SIKAP</span></div></section>
+      <section class="book-right" aria-label="School account"><div id="book-form-slot">${bookAuthForm(error)}</div></section>
+    </div><div class="landing-appearance">${appearanceControls(true)}</div>
+  </main>`;
+}
+function bookAuthForm(error = "") {
+  const setup = authMode === "register";
+  return `<form class="school-login book-form ${setup ? "book-signup" : ""}" onsubmit="schoolLogin(event)" aria-label="${setup ? "Create an account" : "Sign in to Project Sikap"}">
+    <h1>${setup ? "Create account" : "Sign in"}</h1>
+    ${setup ? '<div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" autocomplete="name" placeholder="Enter your name" maxlength="120" required></div>' : ""}
+    <div class="field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your email" required></div>
+    <div class="field"><label for="login-password">Password</label><div class="input-wrap"><input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
+    ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
+    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
+    <p class="form-error" role="alert">${esc(error || googleError())}</p>
+    <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign in"}</button>
+    <div class="login-footer"><button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Create an account"}</button></div>
+  </form>`;
 }
 function setAuthMode(mode) {
+  if (busy) return;
   authMode = mode;
-  login();
+  const slot = $("#book-form-slot");
+  if (!slot) {
+    login();
+    return;
+  }
+  const landing = $(".book-landing");
+  landing.classList.toggle("book-register", mode === "register");
+  slot.innerHTML = bookAuthForm();
+  slot.classList.remove("book-page-turn");
+  void slot.offsetWidth;
+  slot.classList.add("book-page-turn");
 }
 function googleError() {
   const code = new URLSearchParams(location.search).get("auth_error");
@@ -705,20 +811,35 @@ function moduleResults() {
   const list = filtered();
   return `<div class="panel-head"><span class="muted">${list.length} module${list.length === 1 ? "" : "s"}</span>${view === "dashboard" ? '<button class="link-btn" onclick="go(\'modules\')">View all</button>' : ""}</div><div class="module-list">${list.map((m) => `<div class="module-row"><div><button class="module-title text-button" onclick="openModule('${m.id}')">${esc(m.title)}</button><div class="module-meta">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · v${m.version}</div><div class="module-meta">${esc(m.teacher)} · Updated ${date(m.updated)}${m.file ? " · " + size(m.size) : ""}</div>${workflowModuleDue(m)}</div><div class="row-actions"><button class="icon-btn star-btn" aria-label="${m.starred ? "Unstar" : "Star"} ${esc(m.title)}" onclick="starModule('${m.id}')">${ico(m.starred ? "star" : "star_outline")}</button>${badge(m.status)}<button class="action-btn" onclick="openModule('${m.id}')">${view === "reviews" ? "Review" : "Open"}</button></div></div>`).join("") || '<div class="empty"><h3>No modules here yet</h3><p>Try changing the filters. New submissions appear here.</p></div>'}</div>`;
 }
+function workspaceBanner(head) {
+  const modules = data.modules.filter((m) => !m.archived);
+  const pending = modules.filter((m) => m.status === "pending").length;
+  const returned = modules.filter((m) => m.status === "returned").length;
+  const approved = modules.filter((m) => m.status === "approved").length;
+  const actions = head
+    ? [
+        ["reviews", "Pending reviews", pending],
+        ["library", "Approved modules", approved],
+        [
+          "teachers",
+          "Teachers",
+          data.teachers.filter(
+            (t) => t.role === "teacher" && t.approval_status === "approved",
+          ).length,
+        ],
+      ]
+    : [
+        ["submit", "Submit module", null],
+        ["modules", "My modules", modules.length],
+        ["requirements", "Requirements", null],
+      ];
+  return `<section class="workspace-hero"><div class="workspace-hero-copy"><span class="workspace-role">${head ? "Head Teacher" : "Teacher"}</span><h2>${head ? "Review queue" : "Your modules"}</h2><p>${head ? (pending ? pending + " submission" + (pending === 1 ? "" : "s") + " awaiting review." : "No submissions awaiting review.") : returned ? returned + " module" + (returned === 1 ? "" : "s") + " need" + (returned === 1 ? "s" : "") + " revision." : "No revisions requested."}</p><div class="workspace-actions">${actions.map(([route, label, count], i) => `<button class="${i === 0 ? "workspace-action-primary" : ""}" onclick="go('${route}')">${label}${count !== null ? `<span>${count}</span>` : ico("north_east")}</button>`).join("")}</div></div><div id="head-desk" data-desk-role="${head ? "head" : "teacher"}" class="workspace-desk" aria-label="School desk"><div class="real-desk-art" aria-hidden="true"></div><button class="desk-hotspot desk-notebook" onclick="go('${head ? "reviews" : "submit"}')">${head ? "Review modules" : "Submit module"}</button><button class="desk-hotspot desk-documents" onclick="go('${head ? "library" : "modules"}')">${head ? "Approved modules" : "My modules"}</button></div></section>`;
+}
 function headDesk() {
-  const pending = data.modules.filter(
-      (m) => m.status === "pending" && !m.archived,
-    ).length,
-    approved = data.modules.filter(
-      (m) => m.status === "approved" && !m.archived,
-    ).length,
-    teachers = data.teachers.filter(
-      (u) => u.role === "teacher" && u.approval_status === "approved",
-    ).length;
-  return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">HEAD TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(" ")[0])}.</h2><p>Review submissions and track requirements.</p></div><div id="head-desk" class="head-desk-scene" aria-label="Interactive review desk"></div></section>`;
+  return workspaceBanner(true);
 }
 function teacherDesk() {
-  return `<section class="head-desk-banner"><div class="desk-heading"><p class="eyebrow">TEACHER WORKSPACE</p><h2>Hello, ${esc(data.user.name.split(" ")[0])}.</h2><p>Your submissions and assigned requirements.</p></div><div id="head-desk" data-desk-role="teacher" class="head-desk-scene" aria-label="Interactive preparation desk"></div></section>`;
+  return workspaceBanner(false);
 }
 function modulePage() {
   const total = filtered();
@@ -1139,7 +1260,7 @@ function render() {
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div>Project Sikap</div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "space_dashboard", "Dashboard")}${navItem("requirements", "event_note", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit module") : ""}${navItem("modules", "folder_open", head ? "All modules" : "My modules", active.length)}${head ? navItem("reviews", "fact_check", "Pending reviews", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "verified", "Approved modules")}${navItem("starred", "star", "Starred")}${navItem("notes", "edit_note", "My notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "group", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "analytics", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All modules" : titles[view]}</h1></div><div class="top-actions"><button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary" onclick="go(\'submit\')">Submit module</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div>Project Sikap</div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "space_dashboard", "Dashboard")}${navItem("requirements", "event_note", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit module") : ""}${navItem("modules", "folder_open", head ? "All modules" : "My modules", active.length)}${head ? navItem("reviews", "fact_check", "Pending reviews", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "verified", "Approved modules")}${navItem("starred", "star", "Starred")}${navItem("notes", "edit_note", "My notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "group", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "analytics", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary" onclick="go(\'submit\')">Submit module</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");

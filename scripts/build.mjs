@@ -4,11 +4,19 @@ import { mkdir, copyFile, writeFile, access, readFile } from "node:fs/promises";
 import { build } from "esbuild";
 await mkdir("docs", { recursive: true });
 await mkdir("docs/assets", { recursive: true });
+await copyFile("src/assets/school-desk.webp", "docs/assets/school-desk.webp");
 await copyFile("src/assets/school-campus.png", "docs/assets/school-campus.png");
+await copyFile(
+  "src/assets/sikap-book-library.webp",
+  "docs/assets/sikap-book-library.webp",
+);
 for (const file of [
   "index.html",
   "frontend.js",
   "styles.css",
+  "book-landing.css",
+  "workspace.css",
+  "appearance.css",
   "school-workflow.js",
 ])
   await copyFile("src/" + file, "docs/" + file);
@@ -59,6 +67,9 @@ const assets = [
   "frontend.js",
   "backend.js",
   "styles.css",
+  "book-landing.css",
+  "workspace.css",
+  "appearance.css",
   "school-workflow.js",
   "head-desk.js",
   "landing-scene.js",
