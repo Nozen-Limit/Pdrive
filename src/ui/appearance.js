@@ -79,7 +79,7 @@ function setAppearance(key, persist = true) {
     );
 }
 function appearanceControls(compact = false) {
-  return `<fieldset class="appearance-choices ${compact ? "appearance-compact" : ""}"><legend>${compact ? '<span class="material-symbols-rounded" aria-hidden="true">palette</span><span class="appearance-name">Choose color</span>' : "Color"}</legend>${Object.entries(
+  return `<fieldset aria-label="Color theme" class="appearance-choices ${compact ? "appearance-compact" : ""}"><legend>${compact ? '<span class="material-symbols-rounded" aria-hidden="true">palette</span><span class="appearance-name">Choose color</span>' : "Color"}</legend>${Object.entries(
     appearanceThemes,
   )
     .map(

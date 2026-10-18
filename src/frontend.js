@@ -35,6 +35,7 @@ let data = null,
 let authContext = null,
   authMode = "login",
   dirty = false;
+let moduleNavOpen = false;
 let filters = {
   subject: "all",
   grade: "all",
@@ -88,6 +89,7 @@ async function go(next) {
     if (next === "archive" || (next === "submit" && data.user.role === "head"))
       next = "dashboard";
     view = next;
+    if (["modules", "library", "starred"].includes(next)) moduleNavOpen = true;
     dirty = false;
     detail = null;
     filterOpen = false;
@@ -108,6 +110,20 @@ function badge(s) {
 function navItem(key, icon, text, count = 0) {
   return `<button class="${view === key ? "active" : ""}" aria-label="${key === "submit" ? "Submit module" : text}" title="${key === "submit" ? "Submit module" : text}" onclick="go('${key}')"><span class="nav-ico">${ico(icon)}</span><span class="nav-label">${text}</span>${count ? `<span class="nav-count">${count}</span>` : ""}</button>`;
 }
+function modulesNav(head, active) {
+  const selected = ["modules", "library", "starred"].includes(view);
+  return `<div class="nav-module-group ${selected ? "is-selected" : ""}"><div class="nav-module-row">${navItem("modules", "folder_open", head ? "All Modules" : "My Modules", active.length)}<button class="module-nav-toggle" type="button" aria-label="${moduleNavOpen ? "Collapse" : "Expand"} module sections" aria-expanded="${moduleNavOpen}" aria-controls="module-subnav" onclick="toggleModuleSections(this)">${ico("expand_more")}</button></div><div id="module-subnav" class="nav-module-children" ${moduleNavOpen ? "" : "hidden"}>${navItem("library", "task_alt", "Approved Modules")}${navItem("starred", "bookmark", "Saved Modules")}</div></div>`;
+}
+function toggleModuleSections(button) {
+  moduleNavOpen = !moduleNavOpen;
+  const children = $("#module-subnav");
+  if (children) children.hidden = !moduleNavOpen;
+  button.setAttribute("aria-expanded", String(moduleNavOpen));
+  button.setAttribute(
+    "aria-label",
+    `${moduleNavOpen ? "Collapse" : "Expand"} module sections`,
+  );
+}
 function render() {
   if (!data) return;
   const u = data.user,
@@ -115,7 +131,7 @@ function render() {
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${navItem("modules", "folder_open", head ? "All Modules" : "My Modules", active.length)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "task_alt", "Approved Modules")}${navItem("starred", "bookmark", "Saved Modules")}${navItem("notes", "description", "Personal Notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "bar_chart", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("reports", "bar_chart", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");

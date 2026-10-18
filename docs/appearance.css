@@ -1029,3 +1029,115 @@ html[data-sikap-theme="white"] .book-landing .book-form .field input {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+.nav-module-group {
+  min-width: 0;
+}
+.nav-module-row {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+}
+.app .nav-module-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+  padding-right: 6px;
+}
+.app .nav .module-nav-toggle {
+  flex: 0 0 32px;
+  width: 32px;
+  min-height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.module-nav-toggle .material-symbols-rounded {
+  font-size: 19px;
+  transition: transform 0.18s ease;
+}
+.module-nav-toggle[aria-expanded="true"] .material-symbols-rounded {
+  transform: rotate(180deg);
+}
+.nav-module-children {
+  margin: 3px 0 7px 22px;
+  padding-left: 9px;
+  border-left: 1px solid var(--line);
+}
+.nav-module-children[hidden] {
+  display: none;
+}
+.app .nav .nav-module-children button {
+  width: 100%;
+  padding: 9px 8px;
+  gap: 9px;
+  font-size: 12px;
+  min-height: 42px;
+}
+.app .nav .nav-module-children .nav-ico {
+  flex-basis: 18px;
+  width: 18px;
+}
+.app .nav .nav-module-children .material-symbols-rounded {
+  font-size: 18px;
+}
+.app .nav-module-group.is-selected .module-nav-toggle {
+  color: var(--ink);
+}
+.appearance-choices legend {
+  display: none;
+}
+.app .appearance-popover,
+.landing-appearance .appearance-popover {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: blur(16px);
+  color: #dce5f2;
+}
+html[data-sikap-theme="white"] .app .appearance-popover,
+html[data-sikap-theme="white"] .landing-appearance .appearance-popover {
+  color: #34475f;
+}
+.app :is(.panel, .stat, .workspace-hero, .workflow-attention, .profile-banner) {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .app
+    :is(
+      .panel,
+      .stat,
+      .workspace-hero,
+      .workflow-attention,
+      .profile-banner
+    ):hover {
+    border-color: color-mix(in srgb, currentColor 35%, transparent);
+    box-shadow: 0 6px 24px #0000000d;
+  }
+}
+.app
+  :is(
+    .panel,
+    .stat,
+    .workspace-hero,
+    .workflow-attention,
+    .profile-banner
+  ):focus-within {
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app
+    :is(.panel, .stat, .workspace-hero, .workflow-attention, .profile-banner),
+  .module-nav-toggle .material-symbols-rounded {
+    transition: none;
+  }
+}
+.app .nav-module-row > button:first-child {
+  gap: 8px;
+  padding-left: 9px;
+  font-size: 12px;
+}
+.app .nav-module-group.is-selected .nav-module-row > button:first-child {
+  background: color-mix(in srgb, var(--sikap-action) 18%, transparent);
+}
