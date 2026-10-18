@@ -57,7 +57,6 @@ function mount(host) {
   };
   shared.aspect = { value: 1 };
   shared.bookFraming = { value: new THREE.Vector2(1, 0) };
-  shared.bookOpacity = { value: 1 };
   const waveGeometry = new THREE.PlaneGeometry(2, 2);
   const waveMaterial = new THREE.ShaderMaterial({
     depthWrite: false,
@@ -133,7 +132,7 @@ function mount(host) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     uniforms: shared,
-    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;uniform float bookOpacity;varying float opacity;varying float brightness;
+    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;varying float opacity;varying float brightness;
       void main(){
       float loose=step(1.5,seed.z);float edge=step(.5,seed.z);vec3 target=position;
       if(seed.z>.5&&seed.z<1.5){
@@ -160,7 +159,7 @@ function mount(host) {
       float quiet=step(.12,seed.x)*step(seed.x,.93)*step(.12,seed.y)*step(seed.y,.9);
       opacity=mix(.24,.82,edge)*(1.-loose*.25)*(1.-quiet*.5);
       opacity*=mix(1.,smoothstep(0.,.1,life)*smoothstep(0.,.12,1.-life),loose);
-      opacity*=bookOpacity*(.75+.25*sin(time*.65+seed.w*30.));brightness=seed.w+influence*.8+ripple*.5;}`,
+      opacity*=.75+.25*sin(time*.65+seed.w*30.);brightness=seed.w+influence*.8+ripple*.5;}`,
     fragmentShader: `uniform vec3 particleTint;uniform vec3 particleHighlight;varying float opacity;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;vec3 color=mix(particleTint,particleHighlight,clamp(brightness,0.,1.));gl_FragColor=vec4(color,pow(1.-r,1.4)*opacity);}`,
   });
   disposables.push(material);
@@ -200,13 +199,11 @@ function mount(host) {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     if (w <= 700) {
-      shared.bookFraming.value.set(220 / h, 1 - 700 / h);
-      shared.bookOpacity.value = 0.45;
+      shared.bookFraming.value.set(220 / h, 1 - 350 / h);
       camera.left = -1.05;
       camera.right = 1.05;
     } else {
       shared.bookFraming.value.set(1, 0);
-      shared.bookOpacity.value = 1;
       camera.left = -1;
       camera.right = 1;
     }
