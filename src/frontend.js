@@ -114,7 +114,7 @@ function navItem(key, icon, text, count = 0) {
 }
 function modulesNav(head, active) {
   const selected = ["modules", "library", "starred"].includes(view);
-  return `<div class="nav-module-group ${selected ? "is-selected" : ""}"><div class="nav-module-row">${navItem("modules", "folder_open", head ? "All Modules" : "My Modules", active.length)}<button class="module-nav-toggle" type="button" aria-label="${moduleNavOpen ? "Collapse" : "Expand"} module sections" aria-expanded="${moduleNavOpen}" aria-controls="module-subnav" onclick="toggleModuleSections(this)">${ico("expand_more")}</button></div><div id="module-subnav" class="nav-module-children" ${moduleNavOpen ? "" : "hidden"}>${navItem("library", "task_alt", "Approved Modules")}${navItem("starred", "star", "Starred Modules")}</div></div>`;
+  return `<div class="nav-module-group ${selected ? "is-selected" : ""}"><div class="nav-module-row">${navItem("modules", "folder_open", head ? "All Modules" : "My Modules", active.length)}<button class="module-nav-toggle" type="button" aria-label="${moduleNavOpen ? "Collapse" : "Expand"} module sections" aria-expanded="${moduleNavOpen}" aria-controls="module-subnav" onclick="toggleModuleSections(this)">${ico("expand_more")}</button></div><div id="module-subnav" class="nav-module-children" ${moduleNavOpen ? "" : "hidden"}>${navItem("library", "task_alt", "Approved Modules")}${navItem("starred", "bookmark", "Starred Modules")}</div></div>`;
 }
 function toggleModuleSections(button) {
   moduleNavOpen = !moduleNavOpen;
