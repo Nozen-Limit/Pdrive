@@ -3413,7 +3413,7 @@ button:disabled {
   margin-top: 2px;
 }
 .sidebar {
-  border-color: #e5eaf2 !important;
+  border-color: var(--line);
 }
 .nav button {
   transition:
