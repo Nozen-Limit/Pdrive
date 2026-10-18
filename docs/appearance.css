@@ -720,3 +720,294 @@
   color: var(--ink);
   border-color: var(--line);
 }
+/* One continuous hero image, blended across the whole banner. */
+.app .workspace-hero {
+  display: block;
+  position: relative;
+  isolation: isolate;
+  min-height: 245px;
+}
+.app .workspace-hero-copy {
+  width: 56%;
+  max-width: 620px;
+  padding: 28px;
+}
+.app .workspace-desk {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.app .real-desk-art {
+  background-image: url("assets/school-workspace-v2.webp");
+  background-position: right 55%;
+  mask-image: linear-gradient(90deg, transparent 15%, #000 78%);
+}
+.app .workspace-desk::before {
+  background:
+    linear-gradient(90deg, var(--sikap-bg) 0%, transparent 85%),
+    linear-gradient(0deg, var(--sikap-bg) 0%, transparent 45%);
+}
+@media (max-width: 760px) {
+  .app .workspace-hero {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .app .workspace-hero-copy {
+    width: 100%;
+    padding: 18px;
+  }
+  .app .workspace-desk {
+    position: relative;
+    inset: auto;
+    height: 155px;
+    min-height: 155px;
+    z-index: 0;
+  }
+  .app .real-desk-art {
+    background-position: right 65%;
+    mask-image: linear-gradient(
+      180deg,
+      transparent,
+      #000 35%,
+      #000 75%,
+      transparent
+    );
+  }
+  .app .workspace-desk::before {
+    background: linear-gradient(180deg, var(--sikap-bg), transparent 60%);
+  }
+}
+html[data-sikap-theme="white"] .app,
+html[data-sikap-theme="white"] #modalRoot .modal {
+  --ink: #243244;
+  --muted: #5f6f83;
+  --line: #34475f2b;
+  --blue-l: #34475f0d;
+  color-scheme: light;
+}
+html[data-sikap-theme="white"] .app {
+  background: #f5f7fa;
+}
+html[data-sikap-theme="white"] .app .sidebar {
+  background: #edf1f6;
+  color: var(--ink);
+}
+html[data-sikap-theme="white"]
+  .app
+  :is(
+    .workspace-brand,
+    .nav button,
+    .logout-btn,
+    .profile-head,
+    .profile-head strong,
+    .profile-head small,
+    .nav-ico,
+    .nav-count,
+    .brand-symbol
+  ) {
+  color: var(--ink);
+}
+html[data-sikap-theme="white"] .app .nav button.active {
+  color: #243244;
+  background: #34475f14;
+}
+html[data-sikap-theme="white"] .app .topbar {
+  background: #f5f7faf2;
+}
+html[data-sikap-theme="white"]
+  .app
+  :is(.workspace-role, .workspace-hero-copy p) {
+  color: var(--muted);
+}
+html[data-sikap-theme="white"] .app .workspace-hero-copy h2 {
+  color: var(--ink);
+}
+html[data-sikap-theme="white"]
+  .app
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  background: #ffffffb8;
+  color: var(--ink);
+}
+html[data-sikap-theme="white"]
+  .app
+  :is(.link-btn, .stat-icon, .submit-plus, .brand-symbol) {
+  color: #405674;
+}
+html[data-sikap-theme="white"] .app :is(.primary, .approve-btn) {
+  background: #34475f;
+  color: #fff;
+  border-color: #34475f;
+}
+html[data-sikap-theme="white"] .app .primary.submit-plus {
+  background: transparent;
+  color: #34475f;
+  border-color: var(--line);
+}
+html[data-sikap-theme="white"] .app .badge.pending {
+  color: #345378;
+  background: #dce7f3;
+}
+html[data-sikap-theme="white"] .app .badge.returned {
+  color: #82502a;
+  background: #f1e4d7;
+}
+html[data-sikap-theme="white"] .app .badge.approved {
+  color: #365b43;
+  background: #dfece4;
+}
+html[data-sikap-theme="white"] .app .choice-chip input:checked + span {
+  background: #34475f14;
+  border-color: #687b93;
+}
+html[data-sikap-theme="white"] .app .avatar {
+  background: #dae2ed;
+  color: #34475f;
+}
+html[data-sikap-theme="white"]
+  #modalRoot
+  .modal
+  :is(input:not([type="checkbox"]), select, textarea) {
+  background: #fff;
+}
+html[data-sikap-theme="white"] .book-landing {
+  color: #243244;
+  background: #f5f7fa;
+}
+html[data-sikap-theme="white"]
+  .book-landing
+  :is(
+    .book-wordmark,
+    .book-wordmark .material-symbols-rounded,
+    .book-form h1,
+    .book-form label,
+    .book-form .link-btn,
+    .book-form .login-options,
+    .password-toggle,
+    .landing-appearance
+  ) {
+  color: #34475f;
+}
+html[data-sikap-theme="white"] .book-form .field input {
+  background: #ffffff99;
+  color: #243244;
+  border-color: #34475f44;
+}
+html[data-sikap-theme="white"] .book-form .field input::placeholder {
+  color: #6a788a;
+}
+html[data-sikap-theme="white"] .book-form .login-submit {
+  color: #fff;
+  background: #34475f;
+  border-color: #34475f;
+}
+html[data-sikap-theme="white"] .book-form .login-options input {
+  border-color: #5f6f83;
+  background: #fff;
+}
+html[data-sikap-theme="white"] .landing-appearance .appearance-menu > summary {
+  color: #34475f;
+  background: #ffffffa8;
+  border-color: #34475f33;
+}
+.brand-type {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  line-height: 1;
+}
+.brand-type small {
+  font:
+    500 10px/1 Inter,
+    sans-serif;
+  letter-spacing: 0.28em;
+}
+.brand-type strong {
+  font:
+    600 25px/1.08 Inter,
+    sans-serif;
+  letter-spacing: 0.11em;
+}
+.book-wordmark .brand-type small {
+  font-size: calc(var(--u) * 0.7);
+}
+.book-wordmark .brand-type strong {
+  font-size: calc(var(--u) * 2.1);
+}
+.photo-error {
+  flex-basis: 100%;
+  color: #d79b85;
+  font-size: 13px;
+}
+html[data-sikap-theme="white"] .photo-error {
+  color: #9b412c;
+}
+@media (max-width: 700px) {
+  .book-wordmark .brand-type small {
+    font-size: 9px;
+  }
+  .book-wordmark .brand-type strong {
+    font-size: 22px;
+  }
+  .book-wordmark .material-symbols-rounded {
+    font-size: 42px;
+  }
+}
+.app .nav button {
+  min-height: 46px;
+  padding: 10px 12px;
+  gap: 12px;
+  align-items: center;
+  font:
+    500 13px/1.35 Inter,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0.005em;
+  border-radius: 8px;
+}
+.app .nav .nav-ico {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 24px;
+  padding: 0;
+}
+.app .nav .nav-ico .material-symbols-rounded {
+  font-size: 21px;
+  line-height: 1;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 350,
+    "GRAD" 0,
+    "opsz" 24;
+}
+.app .nav .nav-label {
+  flex: 1;
+  text-align: left;
+}
+.app .nav button.active {
+  font-weight: 600;
+  box-shadow: inset 2px 0 var(--sikap-accent);
+}
+.app .nav-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  font:
+    600 11px/1 Inter,
+    sans-serif;
+  border-radius: 6px;
+}
+html[data-sikap-theme="white"] .app .nav button.active {
+  box-shadow: inset 2px 0 #34475f;
+}
+.appearance-choice input[value="white"] + .appearance-swatch {
+  box-shadow: inset 0 0 0 1px #69788c66;
+}

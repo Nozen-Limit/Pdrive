@@ -5,6 +5,10 @@ import { build } from "esbuild";
 await mkdir("docs", { recursive: true });
 await mkdir("docs/assets", { recursive: true });
 await copyFile("src/assets/school-desk.webp", "docs/assets/school-desk.webp");
+await copyFile(
+  "src/assets/school-workspace-v2.webp",
+  "docs/assets/school-workspace-v2.webp",
+);
 await copyFile("src/assets/school-campus.png", "docs/assets/school-campus.png");
 await copyFile(
   "src/assets/sikap-book-library.webp",

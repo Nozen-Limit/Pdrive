@@ -1,4 +1,5 @@
 import { documentXml } from "./lib/docx.js";
+import { attachProfilePhoto } from "./lib/profile-photo.js";
 import { createClient } from "@supabase/supabase-js";
 const config = window.SIKAP_CONFIG || {};
 const fail = (message, status = 400) => {
@@ -213,15 +214,18 @@ const backend = {
       const state = await rpc("get_state");
       if (!state.user)
         fail("Account profile is missing. Run the Supabase setup first.", 503);
+      // Older deployed state RPCs can omit fields added by later migrations.
+      if (!Object.hasOwn(state.user, "avatar_key")) {
+        const reference = await client
+          .from("profiles")
+          .select("avatar_key")
+          .eq("id", user.id)
+          .single();
+        if (!reference.error) state.user.avatar_key = reference.data.avatar_key;
+      }
       const people = [state.user, ...state.teachers];
       await Promise.all(
-        people.map(async (p) => {
-          if (!p.avatar_key) return;
-          const photo = await client.storage
-            .from("sikap-avatars")
-            .createSignedUrl(p.avatar_key, 3600);
-          if (!photo.error) p.avatarUrl = photo.data.signedUrl;
-        }),
+        people.map((p) => attachProfilePhoto(client.storage, p)),
       );
       const result = await client.rpc("get_workflow_state");
       if (result.error && result.error.code !== "PGRST202") checked(result);
@@ -283,7 +287,10 @@ const backend = {
           .upload(key, file, { contentType: file.type, upsert: false }),
       );
       await rpc("set_profile_photo", { object_key: key });
-      return { ok: true };
+      const photo = await attachProfilePhoto(client.storage, {
+        avatar_key: key,
+      });
+      return { ok: true, ...photo };
     }
     if (path === "profile") {
       const result = await client

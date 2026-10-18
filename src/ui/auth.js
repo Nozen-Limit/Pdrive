@@ -4,7 +4,7 @@ function login(error = "") {
     <div class="book-stage">
       <div class="book-art" aria-hidden="true"></div>
       <canvas class="book-dust" aria-hidden="true"></canvas>
-      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span>PROJECT SIKAP</span></div></section>
+      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></span></div></section>
       <section class="book-right" aria-label="School account"><div id="book-form-slot">${bookAuthForm(error)}</div></section>
     </div><div class="landing-appearance">${appearanceMenu()}</div>
   </main>`;

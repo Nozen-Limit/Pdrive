@@ -8,6 +8,16 @@ const appearanceThemes = {
     highlight: [0.82, 0.88, 0.98],
     waves: [0.09, 0.115, 0.16],
   },
+  white: {
+    label: "White",
+    background: "#f5f7fa",
+    accent: "#ffffff",
+    action: "#34475f",
+    light: true,
+    particles: [0.24, 0.32, 0.43],
+    highlight: [0.4, 0.49, 0.6],
+    waves: [0.15, 0.19, 0.25],
+  },
   ocean: {
     label: "Ocean",
     background: "#0a1722",
@@ -45,6 +55,7 @@ function setAppearance(key, persist = true) {
   if (!appearanceThemes[key]) return;
   appearanceChoice = key;
   const theme = appearanceThemes[key];
+  document.documentElement?.setAttribute?.("data-sikap-theme", key);
   const style = document.documentElement?.style;
   style?.setProperty("--sikap-bg", theme.background);
   style?.setProperty("--sikap-accent", theme.accent);

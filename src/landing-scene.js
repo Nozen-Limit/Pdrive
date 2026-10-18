@@ -55,6 +55,7 @@ function mount(host) {
   shared.waveTint = {
     value: new THREE.Vector3(...(palette?.waves || [0.09, 0.115, 0.16])),
   };
+  shared.lightMode = { value: palette?.light ? 1 : 0 };
   shared.aspect = { value: 1 };
   shared.bookFraming = { value: new THREE.Vector2(1, 0) };
   const waveGeometry = new THREE.PlaneGeometry(2, 2);
@@ -63,7 +64,7 @@ function mount(host) {
     depthTest: false,
     uniforms: shared,
     vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,.999,1.);}`,
-    fragmentShader: `precision highp float;varying vec2 vUv;uniform float time;uniform float aspect;uniform vec2 pointer;uniform vec3 waveTint;
+    fragmentShader: `precision highp float;varying vec2 vUv;uniform float time;uniform float aspect;uniform vec2 pointer;uniform vec3 waveTint;uniform float lightMode;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
       float fbm(vec2 p){float value=0.,a=.5;mat2 r=mat2(.8,-.6,.6,.8);for(int i=0;i<4;i++){value+=a*noise(p);p=r*p*2.03+vec2(3.7,2.1);a*=.5;}return value;}
@@ -74,7 +75,7 @@ function mount(host) {
         float fine=pow(1.-abs(sin(n*36.+p.x*2.-t*.4)),14.);
         float vignette=1.-smoothstep(.4,1.25,length(p*vec2(.7,1.)));
         vec3 color=vec3(.008,.011,.018)+waveTint*(pow(n,2.)*.9+bands*.55+fine*.22)*vignette;
-        color+=(hash(gl_FragCoord.xy)-.5)/600.;gl_FragColor=vec4(color,1.);}`,
+        color=mix(color,vec3(.965,.974,.985)-waveTint*(pow(n,2.)*.24+bands*.2+fine*.09)*vignette,lightMode);color+=(hash(gl_FragCoord.xy)-.5)/600.;gl_FragColor=vec4(color,1.);}`,
   });
   const waves = new THREE.Mesh(waveGeometry, waveMaterial);
   waves.frustumCulled = false;
@@ -130,7 +131,7 @@ function mount(host) {
   const material = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: palette?.light ? THREE.NormalBlending : THREE.AdditiveBlending,
     uniforms: shared,
     vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;varying float opacity;varying float brightness;
       void main(){
@@ -263,6 +264,11 @@ function mount(host) {
     shared.particleTint.value.set(...e.detail.particles);
     shared.particleHighlight.value.set(...e.detail.highlight);
     shared.waveTint.value.set(...e.detail.waves);
+    shared.lightMode.value = e.detail.light ? 1 : 0;
+    material.blending = e.detail.light
+      ? THREE.NormalBlending
+      : THREE.AdditiveBlending;
+    material.needsUpdate = true;
     render();
   };
   window.addEventListener("sikap-appearance", changePalette);

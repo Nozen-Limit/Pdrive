@@ -331,6 +331,16 @@ const appearanceThemes = {
     highlight: [0.82, 0.88, 0.98],
     waves: [0.09, 0.115, 0.16],
   },
+  white: {
+    label: "White",
+    background: "#f5f7fa",
+    accent: "#ffffff",
+    action: "#34475f",
+    light: true,
+    particles: [0.24, 0.32, 0.43],
+    highlight: [0.4, 0.49, 0.6],
+    waves: [0.15, 0.19, 0.25],
+  },
   ocean: {
     label: "Ocean",
     background: "#0a1722",
@@ -368,6 +378,7 @@ function setAppearance(key, persist = true) {
   if (!appearanceThemes[key]) return;
   appearanceChoice = key;
   const theme = appearanceThemes[key];
+  document.documentElement?.setAttribute?.("data-sikap-theme", key);
   const style = document.documentElement?.style;
   style?.setProperty("--sikap-bg", theme.background);
   style?.setProperty("--sikap-accent", theme.accent);
@@ -412,7 +423,7 @@ function login(error = "") {
     <div class="book-stage">
       <div class="book-art" aria-hidden="true"></div>
       <canvas class="book-dust" aria-hidden="true"></canvas>
-      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span>PROJECT SIKAP</span></div></section>
+      <section class="book-left" aria-label="Project Sikap introduction"><div class="book-wordmark">${ico("auto_stories")}<span class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></span></div></section>
       <section class="book-right" aria-label="School account"><div id="book-form-slot">${bookAuthForm(error)}</div></section>
     </div><div class="landing-appearance">${appearanceMenu()}</div>
   </main>`;
@@ -630,7 +641,7 @@ async function resetPassword(e) {
 
 function avatarContent(u) {
   return u.avatarUrl
-    ? `<img src="${esc(u.avatarUrl)}" alt="${esc(u.name)} profile picture" referrerpolicy="no-referrer">`
+    ? `<img src="${esc(u.avatarUrl)}" data-profile-id="${esc(u.id)}" alt="${esc(u.name)} profile picture" referrerpolicy="no-referrer" onerror="profilePhotoFailed(this)">`
     : esc(
         u.name
           .trim()
@@ -640,6 +651,25 @@ function avatarContent(u) {
           .join("")
           .toUpperCase(),
       );
+}
+function profilePhotoFailed(image) {
+  if (!data?.user) return;
+  const person = [data.user, ...(data.teachers || [])].find(
+    (u) => u.id === image.dataset.profileId,
+  );
+  if (!person) return;
+  delete person.avatarUrl;
+  person.avatarError =
+    "Your picture is saved, but the image could not load. Retry to renew its private link.";
+  if (image.parentElement)
+    image.parentElement.textContent = person.name
+      .trim()
+      .split(/\s+/)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  if (person.id === data.user.id && view === "profile") render();
 }
 async function uploadProfilePhoto(e) {
   if (busy) return;
@@ -683,11 +713,22 @@ async function uploadProfilePhoto(e) {
       throw Error("This image could not be processed. Choose another file.");
     const body = new FormData();
     body.set("file", new File([blob], "profile.jpg", { type: "image/jpeg" }));
-    await api("profile/photo", { method: "POST", body });
-    data = await api("state");
+    const saved = await api("profile/photo", { method: "POST", body });
+    Object.assign(data.user, saved);
     dirty = false;
     render();
-    toast("Profile picture updated.");
+    try {
+      const fresh = await api("state");
+      if (!fresh.user.avatar_key && saved.avatar_key)
+        Object.assign(fresh.user, saved);
+      data = fresh;
+    } catch {
+      toast("Picture saved. Other profile details could not refresh.");
+      return;
+    }
+    dirty = false;
+    render();
+    toast(data.user.avatarError || "Profile picture updated.");
   } catch (error) {
     toast(error.message);
   } finally {
@@ -724,7 +765,7 @@ function profilePage() {
       "Kindergarten",
       ...Array.from({ length: 12 }, (_, i) => "Grade " + (i + 1)),
     ];
-  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div></section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}</div><div class="profile-section-title teaching-title">${ico("auto_stories")}<div><h2>Teaching details</h2><p>Keep your teaching assignment up to date.</p></div></div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><fieldset class="profile-choices"><legend>Subjects handled</legend><div class="choice-grid">${subjects.map((subject) => `<label class="choice-chip"><input type="checkbox" name="subjects" value="${esc(subject)}" ${(u.subjects || []).includes(subject) ? "checked" : ""}><span>${esc(subject)}</span></label>`).join("")}</div></fieldset><fieldset class="profile-choices"><legend>Grade levels</legend><div class="choice-grid grades">${grades.map((grade) => `<label class="choice-chip"><input type="checkbox" name="grade_levels" value="${grade}" ${(u.grade_levels || []).includes(grade) ? "checked" : ""}><span>${grade}</span></label>`).join("")}</div></fieldset><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
+  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div>${u.avatarError ? `<p class="photo-error" role="alert">${esc(u.avatarError)} <button type="button" class="link-btn" onclick="load()">Retry</button></p>` : ""}</section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}</div><div class="profile-section-title teaching-title">${ico("auto_stories")}<div><h2>Teaching details</h2><p>Keep your teaching assignment up to date.</p></div></div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><fieldset class="profile-choices"><legend>Subjects handled</legend><div class="choice-grid">${subjects.map((subject) => `<label class="choice-chip"><input type="checkbox" name="subjects" value="${esc(subject)}" ${(u.subjects || []).includes(subject) ? "checked" : ""}><span>${esc(subject)}</span></label>`).join("")}</div></fieldset><fieldset class="profile-choices"><legend>Grade levels</legend><div class="choice-grid grades">${grades.map((grade) => `<label class="choice-chip"><input type="checkbox" name="grade_levels" value="${grade}" ${(u.grade_levels || []).includes(grade) ? "checked" : ""}><span>${grade}</span></label>`).join("")}</div></fieldset><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
 }
 async function saveProfile(e) {
   await formSave(e, async (form) => {
@@ -1200,19 +1241,19 @@ const subjects = [
   "Technology and Livelihood Education",
 ];
 const titles = {
-  dashboard: "Dashboard",
+  dashboard: "Overview",
   requirements: "Requirements",
-  modules: "My modules",
-  library: "Approved modules",
-  reviews: "Pending reviews",
+  modules: "My Modules",
+  library: "Approved Modules",
+  reviews: "Review Queue",
   submit: "Submit a module",
-  notes: "My notes",
+  notes: "Personal Notes",
   notifications: "Notifications",
   teachers: "Teachers",
   reports: "Reports",
   profile: "Profile",
   review: "Module details",
-  starred: "Starred modules",
+  starred: "Saved Modules",
 };
 async function api(path, options = {}) {
   return window.sikapBackend.api(path, options);
@@ -1260,7 +1301,7 @@ function render() {
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div>Project Sikap</div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "space_dashboard", "Dashboard")}${navItem("requirements", "event_note", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit module") : ""}${navItem("modules", "folder_open", head ? "All modules" : "My modules", active.length)}${head ? navItem("reviews", "fact_check", "Pending reviews", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "verified", "Approved modules")}${navItem("starred", "star", "Starred")}${navItem("notes", "edit_note", "My notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "group", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "analytics", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${navItem("modules", "folder_open", head ? "All Modules" : "My Modules", active.length)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("library", "task_alt", "Approved Modules")}${navItem("starred", "bookmark", "Saved Modules")}${navItem("notes", "description", "Personal Notes", data.notes.length)}${navItem("notifications", "notifications", "Notifications", unread)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) + navItem("reports", "bar_chart", "Reports") : ""}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");
