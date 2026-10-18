@@ -200,10 +200,10 @@ function mount(host) {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     if (w <= 700) {
-      shared.bookFraming.value.set((h - 150) / (0.85 * h), -30 / h);
+      shared.bookFraming.value.set(220 / h, 1 - 700 / h);
       shared.bookOpacity.value = 0.45;
-      camera.left = -0.73;
-      camera.right = 0.73;
+      camera.left = -1.05;
+      camera.right = 1.05;
     } else {
       shared.bookFraming.value.set(1, 0);
       shared.bookOpacity.value = 1;
