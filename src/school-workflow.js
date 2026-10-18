@@ -5,8 +5,7 @@ const workflowCriteria = {
   assessment: "Assessment and answer key",
 };
 let requirementChoice = "",
-  requirementFilter = "active",
-  complianceRequirement = "all";
+  requirementFilter = "active";
 const dueLabel = (s) =>
   new Date(s).toLocaleString(undefined, {
     dateStyle: "medium",
@@ -224,87 +223,6 @@ function reviewHistory(mid) {
         .join("")}</div>`
     : "";
 }
-function complianceRows() {
-  return (data.assignments || []).filter((a) => {
-    const r = data.requirements.find((r) => r.id === a.requirement_id);
-    return (
-      r &&
-      !r.cancelled &&
-      (complianceRequirement === "all" || r.id === complianceRequirement)
-    );
-  });
-}
-function complianceReport() {
-  if (!data.workflowReady) return workflowUnavailable();
-  const rows = complianceRows(),
-    submitted = rows.filter((a) => a.status !== "missing").length;
-  return `<section class="panel compliance-report"><div class="panel-head"><h2>Submission compliance</h2><button class="secondary" onclick="exportCompliance()">Export compliance CSV</button></div><div class="field"><label for="compliance-requirement">Requirement</label><select id="compliance-requirement" onchange="complianceRequirement=this.value;render()"><option value="all">All active requirements</option>${data.requirements
-    .filter((r) => !r.cancelled)
-    .map(
-      (r) =>
-        `<option value="${r.id}" ${complianceRequirement === r.id ? "selected" : ""}>${esc(r.title)}</option>`,
-    )
-    .join(
-      "",
-    )}</select></div><div class="compliance-summary"><span><strong>${rows.length}</strong> expected submissions</span><span><strong>${submitted}</strong> submitted</span><span><strong>${rows.filter((a) => a.status === "missing").length}</strong> missing</span><span><strong>${rows.filter((a) => a.overdue).length}</strong> overdue</span><span><strong>${rows.filter((a) => a.late).length}</strong> submitted late</span><span><strong>${rows.filter((a) => a.status === "approved").length}</strong> approved</span></div><p class="module-meta">Compliance: ${rows.length ? Math.round((submitted / rows.length) * 100) : 0}% submitted. Cancelled requirements and independent submissions are excluded.</p><div class="assignment-list">${
-    rows
-      .map((a) => {
-        const r = data.requirements.find((r) => r.id === a.requirement_id);
-        return `<div class="compliance-item"><strong>${esc(r.title)}</strong><p class="module-meta">Due ${esc(dueLabel(r.due_at))}</p>${assignmentRow(a, r)}</div>`;
-      })
-      .join("") || '<p class="muted">No assigned requirements.</p>'
-  }</div></section>`;
-}
-function exportCompliance() {
-  const rows = [
-      [
-        "Requirement",
-        "Teacher",
-        "Subject",
-        "Grade",
-        "Term",
-        "School year",
-        "Deadline UTC",
-        "Status",
-        "Submitted UTC",
-        "Late submission",
-        "Overdue",
-      ],
-      ...complianceRows().map((a) => {
-        const r = data.requirements.find((r) => r.id === a.requirement_id);
-        return [
-          r.title,
-          a.teacher,
-          r.subject,
-          r.grade,
-          r.term,
-          r.year,
-          r.due_at,
-          a.status,
-          a.submitted_at,
-          a.late ? "Yes" : "No",
-          a.overdue ? "Yes" : "No",
-        ];
-      }),
-    ],
-    quote = (v) =>
-      '"' +
-      String(v ?? "")
-        .replace(/^(\s*)([=+@-])/, "'$1$2")
-        .replace(/"/g, '""') +
-      '"',
-    url = URL.createObjectURL(
-      new Blob([rows.map((r) => r.map(quote).join(",")).join("\r\n")], {
-        type: "text/csv;charset=utf-8",
-      }),
-    ),
-    link = document.createElement("a");
-  link.href = url;
-  link.download = "submission-compliance.csv";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 function workflowModuleDue(m) {
   const r = (data.requirements || []).find((r) => r.id === m.requirement_id);
   if (!r)

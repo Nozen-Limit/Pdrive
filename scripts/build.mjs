@@ -10,18 +10,12 @@ await copyFile(
   "docs/assets/school-workspace-v2.webp",
 );
 await copyFile("src/assets/school-campus.png", "docs/assets/school-campus.png");
-await copyFile(
-  "src/assets/sikap-book-library.webp",
-  "docs/assets/sikap-book-library.webp",
-);
 for (const file of [
   "index.html",
-  "frontend.js",
   "styles.css",
   "book-landing.css",
   "workspace.css",
   "appearance.css",
-  "school-workflow.js",
 ])
   await copyFile("src/" + file, "docs/" + file);
 try {
@@ -74,7 +68,6 @@ const assets = [
   "book-landing.css",
   "workspace.css",
   "appearance.css",
-  "school-workflow.js",
   "head-desk.js",
   "landing-scene.js",
   "docx-preview.js",

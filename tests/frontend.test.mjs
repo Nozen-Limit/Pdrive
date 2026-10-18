@@ -33,7 +33,6 @@ test("Pages interface renders real login/signup and confirmation feedback withou
         recovery: false,
         async ready() {},
         async api(path) {
-          if (path === "auth/context") return {};
           if (path === "state")
             throw Object.assign(new Error("Sign in"), { status: 401 });
           if (path === "auth/register") {

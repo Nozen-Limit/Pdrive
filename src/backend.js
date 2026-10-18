@@ -121,7 +121,6 @@ export async function validateFile(file) {
     ? "application/pdf"
     : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 }
-// Provider boundary: upload and signed read URLs can later be implemented by a Drive integration.
 async function upload(file, mid) {
   const user = await current(),
     mime = await validateFile(file),
@@ -167,7 +166,6 @@ const backend = {
         typeof options.body === "string"
           ? JSON.parse(options.body)
           : options.body;
-    if (path === "auth/context") return { googleConfigured: true };
     if (path === "auth/login") {
       remember(body.remember);
       checked(
@@ -416,26 +414,6 @@ const backend = {
       return { ok: true };
     }
     fail("Unknown action.");
-  },
-  async google(link = false) {
-    await this.ready();
-    if (link) {
-      await current();
-      checked(
-        await client.auth.linkIdentity({
-          provider: "google",
-          options: { redirectTo: callbackUrl() },
-        }),
-      );
-    } else {
-      remember(true);
-      checked(
-        await client.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: callbackUrl() },
-        }),
-      );
-    }
   },
   async reset(email) {
     await this.ready();

@@ -166,13 +166,6 @@ document.addEventListener(
 );
 function profilePage() {
   const u = data.user,
-    initials = u.name
-      .trim()
-      .split(/\s+/)
-      .map((x) => x[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase(),
     grades = [
       "Kindergarten",
       ...Array.from({ length: 12 }, (_, i) => "Grade " + (i + 1)),

@@ -18,7 +18,7 @@ function bookAuthForm(error = "") {
     <div class="field"><label for="login-password">Password</label><div class="input-wrap"><input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
     ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
     <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
-    <p class="form-error" role="alert">${esc(error || googleError())}</p>
+    <p class="form-error" role="alert">${esc(error)}</p>
     <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign in"}</button>
     <div class="login-footer"><button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Create an account"}</button></div>
   </form>`;
@@ -37,28 +37,6 @@ function setAuthMode(mode) {
   slot.classList.remove("book-page-turn");
   void slot.offsetWidth;
   slot.classList.add("book-page-turn");
-}
-function googleError() {
-  const code = new URLSearchParams(location.search).get("auth_error");
-  return (
-    {
-      google_setup:
-        "Google sign-in is not configured yet. Ask the workspace owner to connect it.",
-      google_failed: "Google sign-in could not be completed. Please try again.",
-      google_cancelled: "Google sign-in was cancelled.",
-      google_link_required:
-        "This email already has a school login. Sign in with your password, then link Google from Profile.",
-    }[code] || ""
-  );
-}
-async function googleSignIn(link = false) {
-  try {
-    await window.sikapBackend.google(link);
-  } catch (e) {
-    const error = $(".school-login .form-error");
-    if (error) error.textContent = e.message;
-    else toast(e.message);
-  }
 }
 function togglePassword() {
   const input = $("#login-password"),
@@ -177,16 +155,10 @@ async function load() {
     render();
   } catch (e) {
     if (e.status === 503 && e.message.includes("config.js")) {
-      authContext = {};
       login(e.message);
       return;
     }
     if (e.status === 401) {
-      try {
-        authContext = await api("auth/context");
-      } catch {
-        authContext = null;
-      }
       login();
     } else
       $("#app").innerHTML =

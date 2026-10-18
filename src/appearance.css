@@ -422,7 +422,6 @@
     right: 0;
   }
 }
-/* Workspace surfaces share the landing page palette. */
 .app {
   --ink: #e2e6ed;
   --muted: #a4b1c3;
@@ -481,7 +480,6 @@
     .module-row,
     .workflow-attention,
     .requirement-card,
-    .compliance-item,
     .account-row,
     .note,
     .profile-card,
@@ -720,7 +718,6 @@
   color: var(--ink);
   border-color: var(--line);
 }
-/* One continuous hero image, blended across the whole banner. */
 .app .workspace-hero {
   display: block;
   position: relative;

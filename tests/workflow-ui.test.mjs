@@ -106,11 +106,6 @@ test("Requirement screens distinguish missing, returned and late submissions wit
   assert.match(html, /Submitted late/);
   assert.match(html, /&lt;script&gt;/);
   assert.doesNotMatch(html, /<script>/);
-  const report = vm.runInContext("complianceReport()", ctx);
-  assert.match(report, /50% submitted/);
-  assert.equal(vm.runInContext("complianceRows().length", ctx), 2);
-  vm.runInContext("complianceRequirement='r1'", ctx);
-  assert.equal(vm.runInContext("complianceRows().length", ctx), 2);
   vm.runInContext(
     "data.reviews=[{module:'m2',version:1,decision:'returned',reviewerName:'Head',created:'2026-01-01',checklist:{objectives:'met',content:'met',activities:'met',assessment:'revise'},feedback:'Add answer key'}]",
     ctx,

@@ -1,0 +1,70 @@
+Project Sikap
+
+Run locally
+  Node.js 22 or newer
+  npm ci
+  npm run build
+  npm run dev
+  Open http://127.0.0.1:4175/Pdrive/
+  Rebuild after editing source files.
+
+Check before pushing
+  npm run check
+  npm audit --omit=dev --audit-level=moderate
+  Commit source and generated docs files together.
+
+File structure
+  src/ui/             Authentication, accounts, profiles, modules, notes, themes
+  src/frontend.js     Shared state, navigation, page shell and filters
+  src/backend.js      Browser-side Supabase adapter and file validation
+  src/school-workflow.js  Requirements, assignments and review checklists
+  src/lib/            DOCX parsing and private profile-photo URLs
+  src/landing-scene.js    Three.js particles and GLSL waves
+  src/head-desk.js     Dashboard parallax and sidebar canvas waves
+  src/*.css           Base, landing, workspace and theme styles
+  src/assets/         Image assets used by styles
+  scripts/            Build, UI assembly and local server
+  supabase/           Database setup, migrations and access policies
+  tests/              Node tests, including PostgreSQL checks through PGlite
+  docs/               Generated GitHub Pages website; edit src, then rebuild
+  .github/workflows/  Build, test, format and dependency checks
+
+Architecture
+  Modular vanilla JavaScript application, suitable for an MVP.
+  Not strict Model-View-Presenter: UI files contain rendering and handlers;
+  shared state and navigation are in frontend.js. Database permissions and
+  workflow rules are enforced by Supabase SQL, not just browser controls.
+
+Configuration and hosting
+  docs/config.js contains the deployed public Supabase URL and publishable key.
+  The build preserves it. Root config.js is a blank template for a new checkout.
+  Never add a service-role key, database password or private token.
+  GitHub Pages publishes main /docs at https://nozen-limit.github.io/Pdrive/.
+  Authentication redirect URLs must include the deployed and local addresses.
+
+Database
+  Existing school database: do not rerun setup.sql. Check its applied changes
+  before executing migrations; the repository has no migration-history table.
+  New database order:
+    1. setup.sql
+    2. account-approval.sql
+    3. upgrade-school-workflow.sql
+    4. profile-details.sql (includes phone and location)
+    5. profile-pictures.sql
+  Register and confirm the intended owner account, then edit the email in
+  set-owner.sql and run it. This script does not create a password.
+  school-workflow.sql and teacher-alerts.sql are standalone parts already
+  included in upgrade-school-workflow.sql; they are not extra required steps.
+  fix-profile-photo-read.sql repairs older photo read policies only.
+  Profile fields and photo permissions still need verification on the actual
+  school database; local SQL tests do not prove live migrations were applied.
+
+Maintenance
+  Keep SQL migrations and tests. They protect existing records and permissions.
+  Test submit, return, revise and approve with separate live role accounts.
+  Supabase default email delivery remains in use; sender restrictions apply.
+  Back up both database records and private storage objects.
+  Uploaded documents are not malware-scanned; orphan uploads need admin cleanup.
+  Saved modules use the existing stars table and starred flag internally.
+  Future refactoring: extract shared controller state and consolidate overlapping
+  CSS rules. Keep behavior checks in place while changing those areas.

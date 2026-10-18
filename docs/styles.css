@@ -766,7 +766,6 @@ button {
   }
 }
 
-/* Professional institutional theme */
 :root {
   --blue: #648ed8;
   --blue-d: #315a9e;
@@ -1050,7 +1049,6 @@ h3,
   }
 }
 
-/* Reference-led minimal workspace */
 :root {
   --blue: #3978dd;
   --blue-d: #255bab;
@@ -1357,7 +1355,6 @@ body {
   }
 }
 
-/* Centered login over a replaceable future image */
 .centered-login {
   --login-background-image: none;
   min-height: 100vh;
@@ -1491,7 +1488,6 @@ body {
   height: 46px;
 }
 
-/* Resizable profile-first sidebar */
 .app {
   grid-template-columns: var(--sidebar-width, 238px) minmax(0, 1fr);
 }
@@ -1589,7 +1585,6 @@ body {
   }
 }
 
-/* Fast-check filters, counts, and session controls */
 .nav button {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -1778,7 +1773,6 @@ body {
     margin-top: 4px;
   }
 }
-/* Consistent Inter hierarchy for the working school portal. */
 .centered-login {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -1925,33 +1919,6 @@ body {
   height: 1px;
   background: var(--line);
   flex: 1;
-}
-.google-signin {
-  width: 100%;
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 10px;
-  height: 44px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  font-weight: 500;
-}
-.google-signin:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-.google-letter {
-  font-weight: 700;
-  color: #4285f4;
-  font-size: 19px;
-}
-.google-status {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  margin: 8px 0 18px;
 }
 .login-footer {
   font-size: 14px;
@@ -2353,7 +2320,6 @@ button:focus-visible {
     min-width: 100%;
   }
 }
-/* Clean login: typography and spacing follow the supplied reference. */
 .clean-login {
   min-height: 100svh;
   background: var(--login-background, #f5f6f8);
@@ -2529,24 +2495,6 @@ button:focus-visible {
 .clean-login .signin-divider:after {
   display: none;
 }
-.clean-login .google-signin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  height: 54px;
-  border: 1px solid #ebedef;
-  border-radius: 11px;
-  background: #fff;
-  color: #171b1c;
-  font-size: 14px;
-  font-weight: 500;
-}
-.clean-login .google-signin:hover {
-  background: #fafbfc;
-  border-color: #d4d9dd;
-}
 .clean-login .form-error {
   margin: 0 0 15px;
   font-size: 13px;
@@ -2570,7 +2518,6 @@ button:focus-visible {
     font-size: 12px;
   }
 }
-/* Mobile filters collapse into a tap-to-open dropdown; desktop stays inline. */
 .mobile-filter-bar,
 .mobile-filter-heading,
 .mobile-filter-actions {
@@ -2671,7 +2618,6 @@ button:focus-visible {
   }
 }
 
-/* Compact phone workspace: fewer surfaces and less whitespace, not smaller targets. */
 @media (max-width: 760px) {
   .topbar {
     height: 60px;
@@ -3174,10 +3120,6 @@ button:focus-visible {
     font-size: 0.875rem;
   }
   .clean-login .login-submit,
-  .clean-login .google-signin {
-    height: 46px;
-    font-size: 0.9375rem;
-  }
   .clean-login .login-footer {
     margin-top: 14px;
     font-size: 0.875rem;
@@ -3379,7 +3321,6 @@ button:disabled {
     font-size: 14px;
   }
 }
-/* Workspace identity and compact filters, shared across screen sizes. */
 :root {
   --bg: #f4f6fa;
   --shadow: 0 3px 16px #23395c05;
@@ -4000,7 +3941,6 @@ button:disabled {
     font-size: 18px;
   }
 }
-/* Original campus artwork for the public sign-in and registration screen. */
 .centered-login.clean-login {
   background:
     linear-gradient(
@@ -4025,7 +3965,6 @@ button:disabled {
     background: rgba(255, 255, 255, 0.97);
   }
 }
-/* Gentle interactions on the public entry page. */
 @keyframes landing-card-enter {
   from {
     opacity: 0;
@@ -4051,11 +3990,6 @@ button:disabled {
 }
 .clean-login .login-submit:active:not(:disabled) {
   transform: translateY(0);
-}
-.clean-login .google-signin:hover {
-  background: #f4f7fd;
-  border-color: #b6c8e6;
-  box-shadow: 0 3px 12px #344d7410;
 }
 .clean-login .input-wrap {
   transition:
@@ -4289,7 +4223,6 @@ button:disabled {
     opacity: 0.6;
   }
 }
-/* Editorial entry: architectural scene, expressive type, restrained form. */
 .centered-login.clean-login {
   background: radial-gradient(
     ellipse at 22% 62%,
@@ -4889,42 +4822,6 @@ button:disabled {
   color: #9a4653;
   font-weight: 600;
 }
-.compliance-report {
-  margin-bottom: 25px;
-}
-.compliance-report > .panel-head {
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.compliance-summary {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 20px 0;
-}
-.compliance-summary span {
-  font-size: 12px;
-  color: var(--muted);
-}
-.compliance-summary strong {
-  font-size: 23px;
-  display: block;
-  color: #3d536f;
-}
-.compliance-item {
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
-}
-.compliance-item > strong {
-  font-size: 14px;
-}
-.compliance-item p {
-  margin: 4px 0;
-}
-.compliance-item .assignment-row {
-  border: 0;
-  padding-bottom: 0;
-}
 .workflow-setup p {
   color: var(--muted);
   font-size: 14px;
@@ -4960,9 +4857,6 @@ button:disabled {
   }
   .requirement-card .badge {
     font-size: 12px;
-  }
-  .compliance-summary {
-    gap: 12px;
   }
   .compliance-summary span {
     flex-basis: calc(50% - 12px);
@@ -5018,7 +4912,6 @@ button:disabled {
   font-size: 11px;
   padding: 0;
 }
-/* Campus study: dusk greens, warm architecture and an unobstructed sign-in panel. */
 .centered-login.clean-login {
   background: radial-gradient(
     ellipse at 22% 80%,
