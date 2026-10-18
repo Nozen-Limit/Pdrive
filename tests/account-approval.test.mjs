@@ -55,9 +55,14 @@ test("Account approval is enforced by PostgreSQL, including direct API bypass at
   await as(teacher);
   let state = (await db.query("select get_state()")).rows[0].get_state;
   await db.query(
-    "update profiles set subjects=array['Science'],grade_levels=array['Grade 5'] where id=$1",
+    "update profiles set subjects=array['Science'],grade_levels=array['Grade 5'],phone='+63 912 345 6789',location='Quezon City' where id=$1",
     [teacher],
   );
+  const contact = (
+    await db.query("select phone,location from profiles where id=$1", [teacher])
+  ).rows[0];
+  assert.equal(contact.phone, "+63 912 345 6789");
+  assert.equal(contact.location, "Quezon City");
   assert.equal(
     (await db.query("select subjects from profiles where id=$1", [teacher]))
       .rows[0].subjects[0],

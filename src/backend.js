@@ -298,6 +298,8 @@ const backend = {
         .update({
           name: body.name,
           assignment: body.assignment,
+          phone: body.phone,
+          location: body.location,
           subjects: body.subjects,
           grade_levels: body.grade_levels,
         })
@@ -306,7 +308,7 @@ const backend = {
         .single();
       if (["PGRST204", "42703"].includes(result.error?.code))
         fail(
-          "Teaching details need a database update. Ask the administrator to run profile-details.sql.",
+          "Profile fields need a database update. Ask the administrator to run profile-details.sql.",
           503,
         );
       checked(result);

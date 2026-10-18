@@ -1322,3 +1322,13 @@ html[data-sikap-theme="white"] .landing-appearance .appearance-popover {
   top: auto;
   bottom: calc(100% + 6px);
 }
+
+.app .nav button .notification-count,
+.app .nav button.active .notification-count {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  color: inherit;
+}
