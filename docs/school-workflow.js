@@ -34,7 +34,7 @@ function requirementsPage() {
         requirementFilter === "all" ||
         (requirementFilter === "cancelled" ? r.cancelled : !r.cancelled),
     );
-  return `<div class="toolbar"><div class="filters">${["active", "cancelled", "all"].map((k) => `<button class="filter ${requirementFilter === k ? "active" : ""}" onclick="requirementFilter='${k}';render()">${k[0].toUpperCase() + k.slice(1)}</button>`).join("")}</div>${head ? '<button class="primary" onclick="requirementModal()">New requirement</button>' : ""}</div><p class="muted workflow-timezone">Deadlines are shown in ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}.</p><div class="requirements-list">${
+  return `<div class="toolbar"><div class="filters">${["active", "cancelled", "all"].map((k) => `<button class="filter ${requirementFilter === k ? "active" : ""}" onclick="requirementFilter='${k}';render()">${k[0].toUpperCase() + k.slice(1)}</button>`).join("")}</div>${head ? '<button class="primary" onclick="requirementModal()">New requirement</button>' : ""}</div><div class="requirements-list">${
     list
       .map((r) => {
         const rows = data.assignments.filter((a) => a.requirement_id === r.id),
