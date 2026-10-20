@@ -676,7 +676,7 @@
   color: var(--ink);
   border-color: var(--line);
 }
-#modalRoot .modal {
+#modalRoot:not(.workspace-dialogs) .modal {
   --ink: #e2e6ed;
   --muted: #a4b1c3;
   --line: #b7c7df26;
@@ -685,7 +685,7 @@
   color-scheme: dark;
   border: 1px solid var(--line);
 }
-#modalRoot
+#modalRoot:not(.workspace-dialogs)
   .modal
   :is(
     h2,
@@ -697,12 +697,14 @@
   ) {
   color: var(--ink);
 }
-#modalRoot .modal :is(input:not([type="checkbox"]), select, textarea) {
+#modalRoot:not(.workspace-dialogs)
+  .modal
+  :is(input:not([type="checkbox"]), select, textarea) {
   background: #080c1244;
   color: var(--ink);
   border-color: var(--line);
 }
-#modalRoot
+#modalRoot:not(.workspace-dialogs)
   .modal
   :is(
     .recipient-picker label,
@@ -713,7 +715,7 @@
   background: transparent;
   border-color: var(--line);
 }
-#modalRoot .modal :is(.secondary, .close) {
+#modalRoot:not(.workspace-dialogs) .modal :is(.secondary, .close) {
   background: transparent;
   color: var(--ink);
   border-color: var(--line);
@@ -780,7 +782,7 @@
   }
 }
 html[data-sikap-theme="white"] .app,
-html[data-sikap-theme="white"] #modalRoot .modal {
+html[data-sikap-theme="white"] #modalRoot:not(.workspace-dialogs) .modal {
   --ink: #243244;
   --muted: #5f6f83;
   --line: #34475f2b;
@@ -866,7 +868,7 @@ html[data-sikap-theme="white"] .app .avatar {
   color: #34475f;
 }
 html[data-sikap-theme="white"]
-  #modalRoot
+  #modalRoot:not(.workspace-dialogs)
   .modal
   :is(input:not([type="checkbox"]), select, textarea) {
   background: #fff;

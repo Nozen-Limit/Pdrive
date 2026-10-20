@@ -20,6 +20,7 @@ for (const file of [
   "workspace.css",
   "appearance.css",
   "digital-bank.css",
+  "workspace-ui.css",
 ])
   await copyFile("src/" + file, "docs/" + file);
 try {
@@ -73,6 +74,7 @@ const assets = [
   "workspace.css",
   "appearance.css",
   "digital-bank.css",
+  "workspace-ui.css",
   "head-desk.js",
   "landing-scene.js",
   "docx-preview.js",

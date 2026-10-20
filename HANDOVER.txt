@@ -15,7 +15,9 @@ Check before pushing
 
 File structure
   src/ui/             Authentication, accounts, profiles, modules, notes, themes
-  src/frontend.js     Shared state, navigation, page shell and filters
+  src/frontend.js     Shared state, navigation and filters
+  src/ui/workspace.js Shared signed-in shell, brand and account controls
+  src/workspace-ui.css Shared sizing, panels, forms and mobile layout
   src/backend.js      Browser-side Supabase adapter and file validation
   src/school-workflow.js  Requirements, assignments and review checklists
   src/lib/            DOCX parsing and private profile-photo URLs

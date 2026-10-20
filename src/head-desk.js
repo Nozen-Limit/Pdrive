@@ -123,7 +123,7 @@ function menuWaves(host) {
   };
 }
 function sync() {
-  const menu = document.querySelector(".app:not(.overview-app) .sidebar");
+  const menu = document.querySelector(".app:not(.workspace-app) .sidebar");
   if (menu !== activeMenu) {
     cleanupMenu?.();
     activeMenu = menu;

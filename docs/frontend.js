@@ -1028,6 +1028,25 @@ function overviewNew() {
   return `<details class="bank-new overview-new"><summary>${ico("add")}New</summary><div>${data.user.role === "teacher" ? `<button onclick="go('submit')">${ico("upload_file")}Submit module</button>` : ""}<button onclick="bankUploadPage()">${ico("upload_file")}Upload resource</button></div></details>`;
 }
 
+function workspaceBrand() {
+  return `<div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div>`;
+}
+function workspaceAccount() {
+  const user = data.user;
+  return `<button class="workspace-account" onclick="go('profile')" aria-label="Open profile"><span class="avatar">${avatarContent(user)}</span><span><strong>${esc(user.name)}</strong><small>${user.role === "head" ? "Head Teacher" : "Teacher"}</small></span></button><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button>`;
+}
+function workspaceRender({
+  classes = "",
+  navigation,
+  heading,
+  actions,
+  content,
+  bankPage = false,
+}) {
+  $("#app").innerHTML =
+    `<div class="app bank-app workspace-app ${classes}" style="${bankThemeStyle()}"><aside class="sidebar workspace-sidebar${bankPage ? " bank-sidebar" : ""}" id="side">${workspaceBrand()}${navigation}${workspaceAccount()}</aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main${bankPage ? " bank-main" : ""}"><header class="topbar${bankPage ? " bank-topbar" : ""}">${heading}<div class="top-actions${bankPage ? " bank-user-actions" : ""}">${actions}</div></header><section class="content${bankPage ? " bank-content" : ""}">${content}</section></main></div><div id="modalRoot" class="workspace-dialogs" style="${bankThemeStyle()}"></div>`;
+}
+
 function noteActions(n) {
   return `<button class="action-btn" onclick="pinNote('${n.id}')">${n.pinned ? "Unpin" : "Pin"}</button><button class="action-btn" onclick="noteModal('${n.id}')">Edit</button><button class="action-btn" onclick="deleteNote('${n.id}')">Delete</button>`;
 }
@@ -1438,8 +1457,9 @@ function bankSetTheme(value) {
   try {
     sessionStorage.setItem("sikap-bank-theme", value);
   } catch {}
-  const app = document.querySelector(".bank-app");
-  if (app) app.setAttribute("style", bankThemeStyle());
+  document
+    .querySelectorAll(".workspace-app, #modalRoot")
+    .forEach((element) => element.setAttribute("style", bankThemeStyle()));
   document
     .querySelectorAll('input[name="bank-theme"]')
     .forEach((input) => (input.checked = input.value === value));
@@ -1460,9 +1480,19 @@ function bankNavigation() {
     )}<span class="bank-nav-label">Workspace</span><button onclick="go('modules')">${ico("description")}<span>${head ? "All Modules" : "My Modules"}</span></button><button onclick="go('requirements')">${ico("assignment")}<span>Requirements</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
 }
 function bankRender() {
-  const user = data.user;
-  $("#app").innerHTML =
-    `<div class="app bank-app bank-layout-${bank.layout}" style="${bankThemeStyle()}"><aside class="bank-sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div>${bankNavigation()}<button class="bank-account" onclick="go('profile')"><span class="avatar">${avatarContent(user)}</span><span>${esc(user.name)}<small>${user.role === "head" ? "Head Teacher" : "Teacher"}</small></span></button></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="bank-main"><header class="bank-topbar"><button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div><div class="bank-user-actions">${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button></div></header><section class="bank-content content">${bank.screen === "list" ? bankListPage() : bank.screen === "upload" ? bankUploadForm() : bankDetailPage()}</section></main></div><div id="modalRoot"></div>`;
+  workspaceRender({
+    classes: `bank-layout-${bank.layout}`,
+    navigation: bankNavigation(),
+    heading: `<button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div>`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button>`,
+    content:
+      bank.screen === "list"
+        ? bankListPage()
+        : bank.screen === "upload"
+          ? bankUploadForm()
+          : bankDetailPage(),
+    bankPage: true,
+  });
 }
 function bankStatistics() {
   return data.user.role === "head" && bank.stats
@@ -2088,8 +2118,7 @@ const size = (n) =>
 let data = null,
   view = "dashboard",
   detail = null,
-  busy = false,
-  width = Number(localStorage.getItem("sikap-sidebar-width") || 238);
+  busy = false;
 let authMode = "login",
   dirty = false;
 let moduleNavOpen = false;
@@ -2200,29 +2229,17 @@ function render() {
     head = u.role === "head",
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
-  $("#app").innerHTML =
-    `<div class="app${view === "dashboard" ? " bank-app overview-app" : ""}" style="--sidebar-width:${width}px;${view === "dashboard" ? bankThemeStyle() : ""}"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button>${view === "dashboard" ? overviewNew() : ""}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${view === "dashboard" ? bankAppearanceMenu() : appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+  workspaceRender({
+    classes: view === "dashboard" ? "overview-app" : "",
+    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
+    heading: `<div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div>`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}`,
+    content: page(),
+  });
 }
 function menu() {
   $("#side").classList.toggle("open");
   $("#overlay").classList.toggle("show");
-}
-function resizeSide(e) {
-  if (innerWidth <= 760) return;
-  e.preventDefault();
-  document.body.classList.add("resizing-sidebar");
-  const move = (e) => {
-    width = Math.max(210, Math.min(360, e.clientX - 8));
-    $(".app").style.setProperty("--sidebar-width", width + "px");
-  };
-  const stop = () => {
-    localStorage.setItem("sikap-sidebar-width", width);
-    document.body.classList.remove("resizing-sidebar");
-    removeEventListener("pointermove", move);
-    removeEventListener("pointerup", stop);
-  };
-  addEventListener("pointermove", move);
-  addEventListener("pointerup", stop);
 }
 let filterOpen = false,
   filterDraft = null;

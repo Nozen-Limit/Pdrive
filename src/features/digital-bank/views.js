@@ -13,9 +13,19 @@ function bankNavigation() {
     )}<span class="bank-nav-label">Workspace</span><button onclick="go('modules')">${ico("description")}<span>${head ? "All Modules" : "My Modules"}</span></button><button onclick="go('requirements')">${ico("assignment")}<span>Requirements</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
 }
 function bankRender() {
-  const user = data.user;
-  $("#app").innerHTML =
-    `<div class="app bank-app bank-layout-${bank.layout}" style="${bankThemeStyle()}"><aside class="bank-sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div>${bankNavigation()}<button class="bank-account" onclick="go('profile')"><span class="avatar">${avatarContent(user)}</span><span>${esc(user.name)}<small>${user.role === "head" ? "Head Teacher" : "Teacher"}</small></span></button></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="bank-main"><header class="bank-topbar"><button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div><div class="bank-user-actions">${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button></div></header><section class="bank-content content">${bank.screen === "list" ? bankListPage() : bank.screen === "upload" ? bankUploadForm() : bankDetailPage()}</section></main></div><div id="modalRoot"></div>`;
+  workspaceRender({
+    classes: `bank-layout-${bank.layout}`,
+    navigation: bankNavigation(),
+    heading: `<button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div>`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button>`,
+    content:
+      bank.screen === "list"
+        ? bankListPage()
+        : bank.screen === "upload"
+          ? bankUploadForm()
+          : bankDetailPage(),
+    bankPage: true,
+  });
 }
 function bankStatistics() {
   return data.user.role === "head" && bank.stats

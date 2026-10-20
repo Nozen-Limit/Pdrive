@@ -319,8 +319,9 @@ function bankSetTheme(value) {
   try {
     sessionStorage.setItem("sikap-bank-theme", value);
   } catch {}
-  const app = document.querySelector(".bank-app");
-  if (app) app.setAttribute("style", bankThemeStyle());
+  document
+    .querySelectorAll(".workspace-app, #modalRoot")
+    .forEach((element) => element.setAttribute("style", bankThemeStyle()));
   document
     .querySelectorAll('input[name="bank-theme"]')
     .forEach((input) => (input.checked = input.value === value));

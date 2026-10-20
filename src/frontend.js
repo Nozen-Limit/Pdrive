@@ -30,8 +30,7 @@ const size = (n) =>
 let data = null,
   view = "dashboard",
   detail = null,
-  busy = false,
-  width = Number(localStorage.getItem("sikap-sidebar-width") || 238);
+  busy = false;
 let authMode = "login",
   dirty = false;
 let moduleNavOpen = false;
@@ -142,29 +141,17 @@ function render() {
     head = u.role === "head",
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
-  $("#app").innerHTML =
-    `<div class="app${view === "dashboard" ? " bank-app overview-app" : ""}" style="--sidebar-width:${width}px;${view === "dashboard" ? bankThemeStyle() : ""}"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button>${view === "dashboard" ? overviewNew() : ""}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${view === "dashboard" ? bankAppearanceMenu() : appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+  workspaceRender({
+    classes: view === "dashboard" ? "overview-app" : "",
+    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
+    heading: `<div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div>`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}`,
+    content: page(),
+  });
 }
 function menu() {
   $("#side").classList.toggle("open");
   $("#overlay").classList.toggle("show");
-}
-function resizeSide(e) {
-  if (innerWidth <= 760) return;
-  e.preventDefault();
-  document.body.classList.add("resizing-sidebar");
-  const move = (e) => {
-    width = Math.max(210, Math.min(360, e.clientX - 8));
-    $(".app").style.setProperty("--sidebar-width", width + "px");
-  };
-  const stop = () => {
-    localStorage.setItem("sikap-sidebar-width", width);
-    document.body.classList.remove("resizing-sidebar");
-    removeEventListener("pointermove", move);
-    removeEventListener("pointerup", stop);
-  };
-  addEventListener("pointermove", move);
-  addEventListener("pointerup", stop);
 }
 let filterOpen = false,
   filterDraft = null;

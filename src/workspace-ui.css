@@ -1,0 +1,688 @@
+html body .app.workspace-app {
+  --workspace-sidebar: 212px;
+  --workspace-control: 34px;
+  --workspace-radius: 4px;
+  --blue: var(--sikap-accent);
+  --blue-d: var(--ink);
+  --blue-l: color-mix(in srgb, var(--sikap-accent) 10%, transparent);
+  --shadow: none;
+  display: grid;
+  grid-template-columns: var(--workspace-sidebar) minmax(0, 1fr);
+  font:
+    12px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+  background: var(--sikap-bg);
+  color: var(--ink);
+}
+html body .app.workspace-app .workspace-sidebar {
+  position: sticky;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  top: 0;
+  width: auto;
+  height: 100dvh;
+  padding: 14px 10px 10px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bank-side);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+html body .app.workspace-app .workspace-brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 9px;
+  min-height: 34px;
+  margin: 0 10px 18px;
+  padding: 0;
+}
+html body .app.workspace-app .workspace-brand .brand-symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--sikap-action);
+  color: #fff;
+}
+html
+  body
+  .workspace-app
+  .workspace-brand
+  .brand-symbol
+  .material-symbols-rounded {
+  font-size: 22px;
+}
+html body .app.workspace-app .workspace-brand .brand-type {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+}
+html body .app.workspace-app .workspace-brand .brand-type small {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+html body .app.workspace-app .workspace-brand .brand-type strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  color: var(--ink);
+}
+html body .app.workspace-app .workspace-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  order: initial;
+}
+html body .app.workspace-app .workspace-sidebar nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 33px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  font:
+    400 12px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+  text-align: left;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+html body .app.workspace-app .workspace-sidebar nav button:is(:hover, .active) {
+  background: color-mix(in srgb, var(--sikap-accent) 10%, transparent);
+  color: var(--ink);
+  transform: none;
+}
+html body .app.workspace-app .workspace-sidebar nav .material-symbols-rounded {
+  font-size: 18px;
+  width: 18px;
+  flex-shrink: 0;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 20;
+}
+html body .app.workspace-app .nav-label {
+  font-size: inherit;
+  line-height: inherit;
+}
+html body .app.workspace-app .nav-ico {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+html body .app.workspace-app .nav-ico .material-symbols-rounded {
+  line-height: 18px;
+}
+html body .app.workspace-app .nav-count {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: 0;
+  font-size: 10px;
+}
+html body .app.workspace-app .nav-module-children {
+  margin-left: 14px;
+  padding-left: 4px;
+  border-left: 1px solid var(--line);
+}
+html body .app.workspace-app .workspace-sidebar .module-nav-toggle {
+  flex: 0 0 22px;
+  width: 22px;
+  min-width: 22px;
+  padding: 4px;
+  justify-content: center;
+}
+html body .app.workspace-app .bank-new {
+  order: initial;
+  margin: 0 10px 16px;
+  flex-shrink: 0;
+}
+html body .app.workspace-app .bank-new summary {
+  min-height: 34px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  color: var(--ink);
+}
+html body .app.workspace-app .workspace-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: auto;
+  padding: 18px 10px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  flex-shrink: 0;
+}
+html body .app.workspace-app .workspace-account > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html body .app.workspace-app .workspace-account strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+html body .app.workspace-app .workspace-account small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+}
+html body .app.workspace-app .workspace-account .avatar {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+  background: var(--blue-l);
+  color: var(--ink);
+}
+html body .app.workspace-app .logout-btn {
+  order: initial;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  font-size: 11px;
+  color: var(--muted);
+  background: transparent;
+}
+html body .app.workspace-app .logout-btn .material-symbols-rounded {
+  font-size: 18px;
+}
+html body .app.workspace-app .main {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+html body .app.workspace-app .topbar {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  height: 60px;
+  padding: 10px 24px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--sikap-bg);
+}
+html body .app.workspace-app .topbar h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+html body .app.workspace-app .top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+html body .app.workspace-app .content {
+  width: 100%;
+  max-width: none;
+  padding: 20px 24px 24px;
+  font-size: 12px;
+}
+html body .app.workspace-app .material-symbols-rounded {
+  font-size: 18px;
+}
+html body .app.workspace-app .icon-btn {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px;
+  border-radius: 4px;
+  color: var(--muted);
+  background: transparent;
+}
+html
+  body
+  .workspace-app
+  :is(.primary, .secondary, .action-btn, .filter, .mobile-filter-toggle),
+.workspace-dialogs :is(.primary, .secondary, .action-btn) {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font:
+    500 12px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+  box-shadow: none;
+  background: transparent;
+  color: var(--ink);
+}
+html body .app.workspace-app .primary,
+.workspace-dialogs .primary {
+  background: var(--sikap-action);
+  border-color: var(--sikap-action);
+  color: #fff;
+}
+html body .app.workspace-app .submit-plus {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 22px;
+}
+html body .app.workspace-app :is(.panel, .profile-banner) {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+html body .app.workspace-app :is(.panel, .profile-banner):hover {
+  box-shadow: none;
+  transform: none;
+}
+html body .app.workspace-app :is(h2, h3),
+.workspace-dialogs :is(h2, h3) {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+html body .app.workspace-app .bank-page-heading h1 {
+  font-size: 15px;
+  font-weight: 600;
+}
+html body .app.workspace-app :is(.form-panel, .bank-resource-form) {
+  max-width: 880px;
+  margin-left: 0;
+}
+html body .app.workspace-app :is(.approve-btn, .return-btn),
+.workspace-dialogs :is(.approve-btn, .return-btn) {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+html
+  body
+  .app.workspace-app
+  :is(.requirement-summary, .review-history article, .lock-message) {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+}
+html
+  body
+  .app.workspace-app
+  :is(.requirement-instructions, .workflow-setup p, .review-checklist label) {
+  font-size: 12px;
+}
+html
+  body
+  .app.workspace-app
+  :is(
+    .review-checklist select,
+    .bank-form-field input,
+    .bank-form-field select,
+    .bank-form-field textarea
+  ) {
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--sikap-bg) !important;
+  color: var(--ink) !important;
+  font-size: 13px;
+}
+html body .app.workspace-app .bank-form-field {
+  font-size: 12px;
+}
+html body .app.workspace-app :is(.panel-head, .toolbar) {
+  gap: 12px;
+  margin-bottom: 14px;
+}
+html body .app.workspace-app .panel-head h2 {
+  margin: 0;
+}
+html
+  body
+  .workspace-app
+  :is(.module-meta, .muted, .filter-caption, .filter-label) {
+  font-size: 11px;
+  color: var(--muted);
+}
+html
+  body
+  .workspace-app
+  :is(.module-title, .account-row strong, .assignment-row strong) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+html body .app.workspace-app .module-list {
+  gap: 0;
+}
+html body .app.workspace-app :is(.module-row, .account-row, .assignment-row) {
+  min-width: 0;
+  padding: 12px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  transform: none;
+}
+html
+  body
+  .app.workspace-app
+  :is(.module-row, .account-row, .assignment-row):hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  transform: none;
+}
+html body .app.workspace-app .badge {
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink);
+  background: transparent;
+  gap: 5px;
+}
+html body .app.workspace-app .badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+html body .app.workspace-app .badge.pending::before {
+  background: #b49c45;
+}
+html body .app.workspace-app .badge.returned::before {
+  background: #bb856b;
+}
+html body .app.workspace-app .badge.approved::before {
+  background: #6c9b83;
+}
+html
+  body
+  .app.workspace-app
+  :is(.field, .form-grid, .profile-teaching-selects) {
+  gap: 14px;
+  min-width: 0;
+}
+html body .app.workspace-app :is(.field > label, .profile-select-field legend),
+.workspace-dialogs .field > label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+html
+  body
+  .workspace-app
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .profile-multiselect > summary,
+    .filter-dropdown > summary
+  ),
+.workspace-dialogs :is(.field input, .field select, .field textarea) {
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font:
+    400 13px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ink);
+  background: var(--sikap-bg);
+  box-shadow: none;
+}
+html body .app.workspace-app :is(.field input, .field select, .field textarea),
+.workspace-dialogs :is(.field input, .field select, .field textarea) {
+  background: var(--sikap-bg) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+html
+  body
+  .workspace-app
+  :is(.field input, .field select, .field textarea):focus,
+.workspace-dialogs :is(input, select, textarea):focus {
+  outline: 2px solid var(--sikap-accent);
+  outline-offset: 1px;
+}
+html body .app.workspace-app :is(.field textarea, .note-body, .comment p) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+html
+  body
+  .workspace-app
+  :is(.upload, .module-requirement, .review-checklist, .recipient-picker) {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+}
+html
+  body
+  .workspace-app
+  :is(
+    .workspace-filters,
+    .filter-dropdown-options,
+    .profile-select-options,
+    .more-actions,
+    .appearance-popover
+  ) {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--sikap-bg);
+  color: var(--ink);
+  box-shadow: 0 4px 14px #0001;
+}
+html
+  body
+  .workspace-app
+  :is(.filter-dropdown-options button, .profile-select-options label) {
+  font-size: 12px;
+  color: var(--ink);
+}
+html body .app.workspace-app .filter.active {
+  background: var(--blue-l);
+  color: var(--ink);
+}
+html body .app.workspace-app :is(.cards, .notes-grid, .profile-layout) {
+  gap: 14px;
+}
+html body .app.workspace-app .profile-layout {
+  max-width: 880px;
+  margin: 0;
+}
+html body .app.workspace-app .profile-banner {
+  gap: 18px;
+}
+html body .app.workspace-app .profile-avatar {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--blue-l);
+  color: var(--ink);
+  font-size: 22px;
+  box-shadow: none;
+}
+html body .app.workspace-app .profile-identity h2 {
+  font-size: 18px;
+}
+html body .app.workspace-app .profile-identity p {
+  font-size: 12px;
+  color: var(--muted);
+}
+html body .app.workspace-app .profile-role {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  border-radius: 4px;
+}
+html
+  body
+  .app.workspace-app
+  .profile-section-title
+  > .material-symbols-rounded {
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+}
+html body .app.workspace-app .empty {
+  padding: 32px 16px;
+  font-size: 12px;
+}
+html body .app.workspace-app .activity-item p,
+html body .app.workspace-app .version-entry p {
+  font-size: 12px;
+}
+html body .app.workspace-app .detail-list :is(dt, dd) {
+  font-size: 12px;
+}
+.workspace-dialogs {
+  font:
+    12px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+}
+.workspace-dialogs > .overlay.show {
+  position: fixed;
+  inset: 0;
+  display: block;
+  background: #0005;
+  z-index: 90;
+}
+html body .workspace-dialogs .modal {
+  z-index: 100;
+  color-scheme: inherit;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--sikap-bg);
+  color: var(--ink);
+  box-shadow: 0 12px 48px #0003;
+}
+@media (min-width: 761px) {
+  html body .app.workspace-app :is(.mobile-menu, .bank-mobile-menu) {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  html body .app.workspace-app {
+    display: block;
+  }
+  html body .app.workspace-app .workspace-sidebar {
+    position: fixed;
+    left: 0;
+    width: 248px;
+    z-index: 80;
+    transform: translateX(-100%);
+  }
+  html body .app.workspace-app .workspace-sidebar.open {
+    transform: translateX(0);
+  }
+  html body .app.workspace-app .topbar {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  html body .app.workspace-app .content {
+    padding: 16px 14px 24px;
+  }
+  html body .app.workspace-app :is(.mobile-menu, .bank-mobile-menu) {
+    display: inline-flex;
+  }
+  html body .app.workspace-app .icon-btn,
+  html body .app.workspace-app :is(.primary, .secondary, .action-btn, .filter) {
+    min-height: 40px;
+  }
+  html body .app.workspace-app .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  html body .app.workspace-app .top-actions {
+    gap: 2px;
+  }
+  html body .app.workspace-app .topbar h1 {
+    font-size: 14px;
+  }
+  html
+    body
+    .app.workspace-app
+    :is(.field input, .field select, .field textarea) {
+    font-size: 16px;
+    min-height: 42px;
+  }
+  html body .app.workspace-app .toolbar {
+    flex-wrap: wrap;
+  }
+  html body .app.workspace-app .bank-workspace-tabs {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  html
+    body
+    .app.workspace-app
+    :is(
+      .bank-form-field input,
+      .bank-form-field select,
+      .bank-form-field textarea
+    ) {
+    font-size: 16px;
+    min-height: 42px;
+  }
+  html body .app.workspace-app :is(.module-row, .account-row, .assignment-row) {
+    gap: 10px;
+    padding: 12px 0;
+  }
+  html body .app.workspace-app .row-actions {
+    flex-wrap: wrap;
+  }
+}
