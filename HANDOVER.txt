@@ -68,3 +68,49 @@ Maintenance
   Saved modules use the existing stars table and starred flag internally.
   Future refactoring: extract shared controller state and consolidate overlapping
   CSS rules. Keep behavior checks in place while changing those areas.
+
+Digital Bank
+  Entry: Digital Bank in the existing navigation. Uses hash navigation so GitHub
+  Pages works without server rewrites. Existing module routes are preserved.
+  Source: src/features/digital-bank/ (state, service, views, board, forms, actions).
+  Styles: src/digital-bank.css. List is the default; Board and Grid are optional.
+  Bank appearance is session-scoped and defaults to White; other pages keep
+  their existing theme preferences.
+
+  Before enabling on the school Supabase project:
+    1. Back up the database and confirm the target school project.
+    2. Apply supabase/digital-bank.sql after account-approval.sql and
+       upgrade-school-workflow.sql. Do not rerun setup.sql on the existing DB.
+    3. Run npm run build. This synchronizes the upload validator files in
+       supabase/functions/_shared from src/lib.
+    4. Deploy the Edge Function with the Supabase CLI:
+         supabase functions deploy bank-upload --project-ref YOUR_PROJECT_REF
+       The CLI account must have access to the intended school project.
+       Keep JWT verification enabled. The function also verifies the bearer
+       token with Auth and checks the user's approval status on every request.
+       It uses Supabase's server-provided URL, anon key and service-role key;
+       never put the service-role key in docs/config.js or browser code.
+    5. Push source and rebuilt docs together. Test with separate approved
+       Teacher and Head Teacher accounts against the school project.
+
+  Data: same modules, versions, module_reviews, events, stars and notifications
+  tables. bank_category identifies Digital Bank resources. Old modules remain
+  private and are not automatically published or categorized.
+  bank_uploads contains server-issued file-verification receipts. Browser roles
+  cannot read or write it. Submit/revise functions consume receipts atomically.
+  PDF/DOCX only, 20 MB limit. Server validates file signatures and DOCX contents;
+  this does not provide antivirus scanning or guarantee pedagogical quality.
+  Drafts save structured metadata. The file is attached when submitting.
+  pending version > 1 is displayed as Resubmitted. archived and bank_draft are
+  existing-compatible flags, not additional public role or status vocabularies.
+  Archive removes shared access; signed links already issued can remain valid
+  until their one-hour expiry. Owner and Head Teachers retain private history.
+  Recent currently means recently approved resources, not tracked view counts.
+  Search/filter/sort/pagination run through SQL RPCs; each page has 25 resources.
+  Board counts describe the current result page, not the whole repository.
+  No official curriculum data or competency codes are seeded.
+
+  The SQL and Edge Function were tested locally with disposable school records.
+  They have not been applied to the live Supabase project by this change.
+  A real school deployment still needs upload, email/session and signed-link
+  checks after those two server-side steps are complete.

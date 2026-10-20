@@ -489,7 +489,16 @@ async function load() {
       return;
     }
     data = await api("state");
-    render();
+    const route = bankRoute();
+    if (route && data.user.approval_status === "approved") {
+      bank.filters = Object.fromEntries(
+        [...route.entries()].filter(
+          ([key]) => !["scope", "resource"].includes(key),
+        ),
+      );
+      await bankNavigate(route.get("scope") || "shared", "", true);
+      if (route.get("resource")) await bankOpen(route.get("resource"));
+    } else render();
   } catch (e) {
     if (e.status === 503 && e.message.includes("config.js")) {
       login(e.message);
@@ -1068,8 +1077,950 @@ async function markNotificationsRead() {
 }
 async function openNotification(nid) {
   const n = data.notifications.find((n) => n.id === nid);
-  if (n?.module) await openModule(n.module);
-  else if (n?.requirement_id) await go("requirements");
+  if (n?.module) {
+    if (data.modules.some((module) => module.id === n.module))
+      await openModule(n.module);
+    else await bankOpen(n.module);
+  } else if (n?.requirement_id) await go("requirements");
+}
+
+const bankCategories = {
+  METHODS: "Teaching Methods",
+  MODELS: "Strategic Innovations",
+  UNITS: "Media Materials",
+};
+const bankStates = {
+  draft: "Draft",
+  pending: "Pending Review",
+  returned: "Returned for Revision",
+  resubmitted: "Resubmitted",
+  approved: "Approved",
+  archived: "Archived",
+};
+const bankScopes = {
+  shared: "Digital Bank",
+  mine: "My Resources",
+  saved: "Saved Resources",
+  recent: "Recently Approved",
+  review: "Resource Review Queue",
+  archived: "Archived Resources",
+  all: "All Resources",
+};
+const bank = {
+  scope: "shared",
+  page: 1,
+  layout: "list",
+  boardHidden: ["approved"],
+  theme: "white",
+  screen: "list",
+  filters: {},
+  result: null,
+  detail: null,
+  loading: false,
+  error: "",
+  sequence: 0,
+  stats: null,
+  facets: { subjects: [], creators: [] },
+  file: null,
+  uploadKey: null,
+  uploadId: null,
+  editing: null,
+  scroll: 0,
+};
+try {
+  bank.theme = sessionStorage.getItem("sikap-bank-theme") || "white";
+  if (!appearanceThemes[bank.theme]) bank.theme = "white";
+  bank.layout = ["grid", "board"].includes(
+    sessionStorage.getItem("sikap-bank-layout"),
+  )
+    ? sessionStorage.getItem("sikap-bank-layout")
+    : "list";
+} catch {
+  /* Storage is optional. */
+}
+const bankApi = () => window.sikapBackend.bank;
+function bankState(resource) {
+  return (
+    resource.state ||
+    (resource.archived
+      ? "archived"
+      : resource.bank_draft
+        ? "draft"
+        : resource.status === "pending" && resource.version > 1
+          ? "resubmitted"
+          : resource.status)
+  );
+}
+function bankBadge(resource) {
+  const state = bankState(resource);
+  return `<span class="bank-status bank-status-${state}">${bankStates[state] || state}</span>`;
+}
+function bankUrl(id) {
+  if (typeof history === "undefined") return;
+  const query = new URLSearchParams({ scope: bank.scope, ...bank.filters });
+  if (id) query.set("resource", id);
+  history.replaceState(
+    null,
+    "",
+    "#bank=" + encodeURIComponent(query.toString()),
+  );
+}
+function bankRoute() {
+  if (typeof location === "undefined" || !location.hash.startsWith("#bank="))
+    return null;
+  try {
+    return new URLSearchParams(decodeURIComponent(location.hash.slice(6)));
+  } catch {
+    return null;
+  }
+}
+function bankMessage(error) {
+  const message = error?.message || "The request could not be completed.";
+  if (
+    /setup|required|Choose|Enter|Complete|Refresh|Only|resource|revision|School account|Sign in|Upload|upload|File |file |before|checklist|feedback/i.test(
+      message,
+    ) &&
+    !/column|relation|syntax|constraint|jwt|schema cache/i.test(message)
+  )
+    return message;
+  return "The request could not be completed. Refresh and try again, or contact the administrator.";
+}
+function bankDialog(title, body, action, confirmText = "Continue") {
+  return new Promise((resolve) => {
+    bankResolveDialog = resolve;
+    $("#modalRoot").innerHTML =
+      `<div class="overlay show"></div><section class="modal bank-dialog" style="${bankThemeStyle()}" role="dialog" aria-modal="true" aria-labelledby="bank-dialog-title"><h2 id="bank-dialog-title">${esc(title)}</h2><p>${esc(body)}</p><div class="form-actions"><button class="secondary" onclick="bankAnswerDialog(false)">Cancel</button><button class="primary" onclick="bankAnswerDialog(true)">${esc(confirmText)}</button></div></section>`;
+    $(".bank-dialog .secondary")?.focus();
+  }).then(async (answer) => {
+    if (answer && action) await action();
+    return answer;
+  });
+}
+let bankResolveDialog = null;
+function bankAnswerDialog(answer) {
+  $("#modalRoot").innerHTML = "";
+  bankResolveDialog?.(answer);
+  bankResolveDialog = null;
+}
+async function bankDiscard() {
+  if (!dirty) return true;
+  if (
+    !(await bankDialog(
+      "Discard changes?",
+      "Your unsaved resource changes will be lost.",
+      null,
+      "Discard changes",
+    ))
+  )
+    return false;
+  dirty = false;
+  return true;
+}
+async function bankNavigate(scope = "shared", category = "", restore = false) {
+  if (busy || !(await bankDiscard())) return;
+  if (!(scope in bankScopes)) scope = "shared";
+  if (
+    ["all", "review", "archived"].includes(scope) &&
+    data.user.role !== "head"
+  )
+    scope = "shared";
+  view = "bank";
+  bank.sequence++;
+  clearTimeout(bankSearchTimer);
+  bank.scope = scope;
+  bank.screen = "list";
+  bank.error = "";
+  bank.file = null;
+  bank.uploadKey = null;
+  bank.editing = null;
+  if (!restore) {
+    bank.filters = category ? { category } : {};
+    bank.page = 1;
+    bank.scroll = 0;
+  }
+  if (!bank.filters.sort)
+    bank.filters.sort =
+      scope === "review"
+        ? "oldest"
+        : ["shared", "recent"].includes(scope)
+          ? "approved"
+          : "updated";
+  bank.result = null;
+  bank.loading = true;
+  bankUrl();
+  render();
+  await bankRead();
+}
+async function bankRead() {
+  const sequence = ++bank.sequence;
+  bank.loading = true;
+  bank.error = "";
+  bankPaintResults();
+  try {
+    const result = await bankApi().list(
+      { scope: bank.scope, ...bank.filters },
+      bank.page,
+    );
+    if (sequence !== bank.sequence || view !== "bank" || bank.screen !== "list")
+      return;
+    bank.result = result;
+    if (data.user.role === "head") bank.stats = await bankApi().stats();
+    bank.facets = await bankApi().facets();
+  } catch (error) {
+    if (sequence !== bank.sequence) return;
+    bank.error = bankMessage(error);
+  } finally {
+    if (sequence === bank.sequence) {
+      bank.loading = false;
+      bankPaintResults();
+      const stats = $("#bank-stats");
+      if (stats) stats.innerHTML = bankStatistics();
+    }
+  }
+}
+function bankPaintResults() {
+  const target = $("#bank-results");
+  if (view === "bank" && bank.screen === "list" && target)
+    target.innerHTML = bankResults();
+}
+let bankSearchTimer;
+function bankSearch(input) {
+  bank.filters.q = input.value.slice(0, 300);
+  bank.page = 1;
+  bankUrl();
+  clearTimeout(bankSearchTimer);
+  bankSearchTimer = setTimeout(bankRead, 300);
+}
+function bankLayout(layout) {
+  bank.layout = ["grid", "board"].includes(layout) ? layout : "list";
+  try {
+    sessionStorage.setItem("sikap-bank-layout", bank.layout);
+  } catch {
+    /* Storage is optional. */
+  }
+  document
+    .querySelectorAll("[data-bank-layout]")
+    .forEach((button) =>
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.bankLayout === bank.layout),
+      ),
+    );
+  const app = document.querySelector(".bank-app");
+  if (app) {
+    for (const value of ["list", "grid", "board"])
+      app.classList.toggle("bank-layout-" + value, bank.layout === value);
+  }
+  bankPaintResults();
+}
+async function bankPage(number) {
+  bank.page = Math.max(1, number);
+  await bankRead();
+  $("#bank-results")?.scrollIntoView({ block: "start" });
+}
+async function bankFilter(event) {
+  event.preventDefault();
+  const form = new FormData(event.target),
+    q = bank.filters.q;
+  bank.filters = Object.fromEntries(
+    [...form.entries()].filter(([, value]) => value),
+  );
+  if (q) bank.filters.q = q;
+  bank.page = 1;
+  bankUrl();
+  render();
+  await bankRead();
+}
+async function bankClear() {
+  bank.filters = {};
+  bank.page = 1;
+  bankUrl();
+  render();
+  await bankRead();
+}
+function bankSort(value) {
+  bank.filters.sort = value;
+  bank.page = 1;
+  bankUrl();
+  bankRead();
+}
+async function bankOpen(id, internal = false) {
+  if ((busy && !internal) || !(await bankDiscard())) return;
+  bank.sequence++;
+  clearTimeout(bankSearchTimer);
+  bank.scroll = typeof scrollY === "number" ? scrollY : 0;
+  bank.loading = true;
+  bank.screen = "detail";
+  bank.detail = null;
+  bank.error = "";
+  view = "bank";
+  bankUrl(id);
+  render();
+  try {
+    bank.detail = await bankApi().details(id);
+  } catch (error) {
+    bank.error = bankMessage(error);
+  }
+  bank.loading = false;
+  render();
+  const file = bank.detail?.versions[0];
+  const target = $("#bank-docx-preview");
+  if (target && file?.url && window.previewDocx)
+    window.previewDocx(file.url, target);
+}
+async function bankBack() {
+  if (!(await bankDiscard())) return;
+  bank.screen = "list";
+  bankUrl();
+  render();
+  await bankRead();
+  window.scrollTo(0, bank.scroll);
+}
+
+function bankStatusFilter(value) {
+  bank.filters.status = value;
+  bank.page = 1;
+  bankUrl();
+  render();
+  bankRead();
+}
+
+function bankThemeStyle() {
+  const theme = appearanceThemes[bank.theme] || appearanceThemes.white;
+  return `--sikap-bg:${theme.light ? "#fcfcfd" : theme.background};--sikap-accent:${theme.light ? "#456958" : theme.accent};--sikap-action:${theme.action};--ink:${theme.light ? "#24272c" : "#e4e9f0"};--muted:${theme.light ? "#737980" : "#9caab9"};--line:${theme.light ? "#e7e9ec" : "#ffffff16"};--bank-side:${theme.light ? "#f7f8f9" : theme.background};color:var(--ink);color-scheme:${theme.light ? "light" : "dark"}`;
+}
+function bankAppearanceMenu() {
+  return `<details class="appearance-menu bank-palette"><summary class="icon-btn" aria-label="Choose color">${ico("palette")}</summary><div class="appearance-popover"><fieldset class="appearance-choices" aria-label="Digital Bank color theme">${Object.entries(
+    appearanceThemes,
+  )
+    .map(
+      ([key, theme]) =>
+        `<label class="appearance-choice"><input type="radio" name="bank-theme" value="${key}" ${bank.theme === key ? "checked" : ""} onchange="bankSetTheme(this.value)" aria-label="${theme.label}"><span class="appearance-swatch" style="--swatch:${theme.light ? "#e7e9ed" : theme.accent}"></span><span>${theme.label}</span></label>`,
+    )
+    .join("")}</fieldset></div></details>`;
+}
+function bankSetTheme(value) {
+  if (!appearanceThemes[value]) return;
+  bank.theme = value;
+  try {
+    sessionStorage.setItem("sikap-bank-theme", value);
+  } catch {}
+  const app = document.querySelector(".bank-app");
+  if (app) app.setAttribute("style", bankThemeStyle());
+  document
+    .querySelectorAll('input[name="bank-theme"]')
+    .forEach((input) => (input.checked = input.value === value));
+}
+
+function bankNavigation() {
+  const head = data.user.role === "head";
+  const item = (scope, icon, title, category = "") =>
+    `<button class="${bank.scope === scope && (bank.filters.category || "") === category ? "active" : ""}" onclick="bankNavigate('${scope}','${category}')">${ico(icon)}<span>${title}</span></button>`;
+  return `<details class="bank-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload Resource</button></div></details><nav aria-label="Digital Bank"><button onclick="go('dashboard')">${ico("home")}<span>Home</span></button>${item("shared", "database", "Digital Bank")}${item("mine", "folder_open", "My Resources")}${item("recent", "history", "Recent")}${item("saved", "bookmark", "Saved Resources")}${head ? item("review", "fact_check", "Resource Reviews") + item("all", "inventory_2", "All Resources") + item("archived", "archive", "Archived") : ""}<span class="bank-nav-label">Resource Bank</span>${Object.keys(
+    bankCategories,
+  )
+    .map((key) =>
+      item("shared", "folder", key[0] + key.slice(1).toLowerCase(), key),
+    )
+    .join(
+      "",
+    )}<span class="bank-nav-label">Workspace</span><button onclick="go('modules')">${ico("description")}<span>${head ? "All Modules" : "My Modules"}</span></button><button onclick="go('requirements')">${ico("assignment")}<span>Requirements</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
+}
+function bankRender() {
+  const user = data.user;
+  $("#app").innerHTML =
+    `<div class="app bank-app bank-layout-${bank.layout}" style="${bankThemeStyle()}"><aside class="bank-sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div>${bankNavigation()}<button class="bank-account" onclick="go('profile')"><span class="avatar">${avatarContent(user)}</span><span>${esc(user.name)}<small>${user.role === "head" ? "Head Teacher" : "Teacher"}</small></span></button></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="bank-main"><header class="bank-topbar"><button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div><div class="bank-user-actions">${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button></div></header><section class="bank-content content">${bank.screen === "list" ? bankListPage() : bank.screen === "upload" ? bankUploadForm() : bankDetailPage()}</section></main></div><div id="modalRoot"></div>`;
+}
+function bankStatistics() {
+  return data.user.role === "head" && bank.stats
+    ? `<div class="bank-statistics" aria-label="Repository statistics">${[
+        ["approved", "Approved"],
+        ["pending", "Pending"],
+        ["returned", "Returned"],
+        ["methods", "Methods"],
+        ["models", "Models"],
+        ["units", "Units"],
+      ]
+        .map(
+          ([key, title]) =>
+            `<span>${title}<strong>${bank.stats[key]}</strong></span>`,
+        )
+        .join("")}</div>`
+    : "";
+}
+function bankListPage() {
+  return `<div class="bank-page-heading bank-collection-heading"><h1>${ico("database")}${bankScopes[bank.scope]}</h1><span>${bank.scope === "recent" ? "Latest approved resources" : ""}</span></div><nav class="bank-workspace-tabs" aria-label="Resource collections">${[
+    ["shared", "database", "Digital Bank"],
+    ["mine", "folder_open", "My Resources"],
+    ...(data.user.role === "head"
+      ? [
+          ["all", "inventory_2", "All resources"],
+          ["review", "fact_check", "Review queue"],
+        ]
+      : []),
+    ["saved", "bookmark", "Saved"],
+  ]
+    .map(
+      ([scope, icon, title]) =>
+        `<button aria-current="${bank.scope === scope ? "page" : "false"}" onclick="bankNavigate('${scope}')">${ico(icon)}${title}</button>`,
+    )
+    .join("")}</nav><div id="bank-stats">${bankStatistics()}</div>${
+    bank.scope === "shared"
+      ? `<section class="bank-categories" aria-label="Resource categories">${Object.entries(
+          bankCategories,
+        )
+          .map(
+            ([key, title]) =>
+              `<button aria-pressed="${bank.filters.category === key}" onclick="bankNavigate('shared','${key}')">${ico("folder")}<span><strong>${key[0] + key.slice(1).toLowerCase()}</strong><small>${title}</small></span></button>`,
+          )
+          .join("")}</section>`
+      : ""
+  }<div class="bank-toolbar"><details id="bank-filter-menu" ontoggle="if(this.open)this.querySelector('.bank-filter-popover').innerHTML=bankFilters()"><summary>${ico("filter_list")}Filters${Object.keys(bank.filters).filter((key) => key !== "sort" && bank.filters[key]).length ? '<span class="bank-filter-dot"></span>' : ""}</summary><div class="bank-filter-popover">${bankFilters()}</div></details>${Object.keys(bank.filters).some((key) => key !== "sort" && bank.filters[key]) ? '<button class="bank-text-button" onclick="bankClear()">Clear filters</button>' : ""}<span class="bank-toolbar-space"></span><label class="bank-sort">Sort<select aria-label="Sort resources" onchange="bankSort(this.value)">${[
+    ["approved", "Recently approved"],
+    ["updated", "Recently modified"],
+    ["name", "Name"],
+    ["newest", "Newest"],
+    ["oldest", "Oldest"],
+    ["creator", "Creator"],
+  ]
+    .map(
+      ([key, title]) =>
+        `<option value="${key}" ${bank.filters.sort === key ? "selected" : ""}>${title}</option>`,
+    )
+    .join(
+      "",
+    )}</select></label><div class="bank-view-toggle" aria-label="Resource view"><button class="icon-btn" data-bank-layout="board" aria-label="Board view" aria-pressed="${bank.layout === "board"}" onclick="bankLayout('board')">${ico("view_kanban")}</button><button class="icon-btn" data-bank-layout="list" aria-label="List view" aria-pressed="${bank.layout === "list"}" onclick="bankLayout('list')">${ico("view_list")}</button><button class="icon-btn" data-bank-layout="grid" aria-label="Grid view" aria-pressed="${bank.layout === "grid"}" onclick="bankLayout('grid')">${ico("grid_view")}</button></div></div>${bank.filters.category ? `<div class="bank-breadcrumb">Digital Bank ${ico("chevron_right")} ${esc(bank.filters.category[0] + bank.filters.category.slice(1).toLowerCase())}</div>` : ""}${
+    bank.scope === "mine"
+      ? `<div class="bank-status-filters" aria-label="Submission status"><button onclick="bankStatusFilter('')" aria-pressed="${!bank.filters.status}">All</button>${Object.entries(
+          bankStates,
+        )
+          .filter(([key]) => key !== "archived")
+          .map(
+            ([key, title]) =>
+              `<button onclick="bankStatusFilter('${key}')" aria-pressed="${bank.filters.status === key}">${title}</button>`,
+          )
+          .join("")}</div>`
+      : ""
+  }<div id="bank-results" aria-live="polite">${bankResults()}</div>`;
+}
+function bankFilters() {
+  const select = (name, title, options) =>
+    `<label>${title}<select name="${name}"><option value="">All</option>${options
+      .map((option) => {
+        const [value, text] = Array.isArray(option) ? option : [option, option];
+        return `<option value="${esc(value)}" ${bank.filters[name] === value ? "selected" : ""}>${esc(text)}</option>`;
+      })
+      .join("")}</select></label>`;
+  return `<form onsubmit="bankFilter(event)"><div class="bank-filter-fields">${select("category", "Category", Object.keys(bankCategories))}${select("subject", "Learning area", bank.facets.subjects)}${select(
+    "grade",
+    "Grade level",
+    [7, 8, 9, 10].map((n) => "Grade " + n),
+  )}${select(
+    "term",
+    "Quarter",
+    [1, 2, 3, 4].map((n) => "Quarter " + n),
+  )}${select("creator", "Creator", bank.facets.creators)}${select(
+    "type",
+    "File type",
+    [
+      ["application/pdf", "PDF"],
+      [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "DOCX",
+      ],
+    ],
+  )}${["mine", "all"].includes(bank.scope) ? select("status", "Status", Object.entries(bankStates)) : ""}<label>Modified since<input type="date" name="date" value="${esc(bank.filters.date || "")}"></label></div><div class="form-actions"><button class="primary" type="submit">Apply filters</button></div></form>`;
+}
+function bankOpenFilters() {
+  if (bank.screen !== "list") {
+    bankBack().then(bankOpenFilters);
+    return;
+  }
+  const menu = $("#bank-filter-menu");
+  if (menu) {
+    menu.querySelector(".bank-filter-popover").innerHTML = bankFilters();
+    menu.open = true;
+    menu.querySelector("select")?.focus();
+  }
+}
+function bankActions(resource) {
+  const state = bankState(resource),
+    own = resource.owner === data.user.id,
+    head = data.user.role === "head";
+  return `<details class="bank-row-menu"><summary aria-label="Actions for ${esc(resource.title)}">${ico("more_vert")}</summary><div><button onclick="bankOpen('${resource.id}')">${ico("open_in_new")}Open details</button>${state !== "draft" ? `<button onclick="bankDownload('${resource.id}')">${ico("download")}Download</button><button onclick="bankSaveToggle('${resource.id}',${!resource.saved})">${ico(resource.saved ? "bookmark_remove" : "bookmark_add")}${resource.saved ? "Remove from saved" : "Save resource"}</button>` : ""}${own && state === "draft" ? `<button onclick="bankEditDraft('${resource.id}')">${ico("edit")}Edit draft</button><button onclick="bankDeleteDraft('${resource.id}',${resource.revision})">${ico("delete")}Delete draft</button>` : ""}${own && state === "returned" ? `<button onclick="bankOpen('${resource.id}')">${ico("upload_file")}Upload revision</button>` : ""}${head && !["draft", "archived"].includes(state) ? `<button onclick="bankArchive('${resource.id}',${resource.revision},true)">${ico("archive")}Archive</button>` : ""}${head && state === "archived" ? `<button onclick="bankArchive('${resource.id}',${resource.revision},false)">${ico("unarchive")}Restore</button>` : ""}</div></details>`;
+}
+function bankResults() {
+  if (bank.loading)
+    return `<div class="bank-skeleton" role="status" aria-label="Loading resources">${Array.from({ length: 6 }, () => "<div><span></span><span></span><span></span></div>").join("")}</div>`;
+  if (bank.error)
+    return `<div class="bank-empty" role="alert"><h2>Could not load resources</h2><p>${esc(bank.error)}</p><button class="secondary" onclick="bankRead()">Try again</button></div>`;
+  const result = bank.result;
+  if (!result?.items.length)
+    return `<div class="bank-empty"><h2>${bank.scope === "review" ? "No resources are waiting for review" : "No resources found"}</h2><p>${Object.keys(bank.filters).length ? "No resources match these filters." : bank.scope === "shared" ? "Approved Project SIKAP resources will appear here." : bank.scope === "mine" ? "Your resource submissions and drafts will appear here." : "Resources will appear here when available."}</p>${bank.scope === "mine" ? '<button class="secondary" onclick="bankUploadPage()">Upload resource</button>' : ""}</div>`;
+  const showStatus = !["shared", "recent"].includes(bank.scope);
+  const rows = result.items
+    .map(
+      (resource) =>
+        `<tr onclick="if(!event.target.closest('button,a,summary,details'))bankOpen('${resource.id}')"><td><div class="bank-file-name">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}<div><button onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button><small>${esc(resource.term)} · ${resource.filename ? esc(resource.filename) : "Draft"}${resource.saved ? " · Saved" : ""}</small></div></div></td><td data-label="Category">${esc(resource.category[0] + resource.category.slice(1).toLowerCase())}</td><td data-label="Learning area">${esc(resource.subject)}</td><td data-label="Grade">${esc(resource.grade)}</td><td data-label="Creator">${esc(resource.creator)}</td><td data-label="Modified">${date(resource.updated)}</td>${showStatus ? `<td>${bankBadge(resource)}</td>` : ""}<td>${bankActions(resource)}</td></tr>`,
+    )
+    .join("");
+  const grid = result.items
+    .map(
+      (resource) =>
+        `<article class="bank-grid-file"><div class="bank-grid-top">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}${bankActions(resource)}</div><button class="bank-grid-title" onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button><p>${esc(resource.category)} · ${esc(resource.subject)}</p><small>${esc(resource.creator)}</small>${showStatus ? bankBadge(resource) : ""}</article>`,
+    )
+    .join("");
+  return `${bank.layout === "board" ? bankBoard(result.items) : bank.layout === "grid" ? `<div class="bank-grid">${grid}</div>` : `<table class="bank-table"><thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Learning area</th><th scope="col">Grade</th><th scope="col">Creator</th><th scope="col">Modified</th>${showStatus ? '<th scope="col">Status</th>' : ""}<th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows}</tbody></table>`}<div class="bank-pagination"><span>${(result.page - 1) * 25 + 1}–${Math.min(result.page * 25, result.total)} of ${result.total}</span><button class="icon-btn" aria-label="Previous page" ${result.page === 1 ? "disabled" : ""} onclick="bankPage(${result.page - 1})">${ico("chevron_left")}</button><button class="icon-btn" aria-label="Next page" ${result.page * 25 >= result.total ? "disabled" : ""} onclick="bankPage(${result.page + 1})">${ico("chevron_right")}</button></div>`;
+}
+function bankDetailPage() {
+  if (bank.loading) return bankResults();
+  if (!bank.detail)
+    return `<button class="bank-text-button" onclick="bankBack()">Back to resources</button><div class="bank-empty" role="alert"><h2>Resource unavailable</h2><p>${esc(bank.error)}</p></div>`;
+  const detail = bank.detail,
+    resource = detail.resource,
+    state = bankState(resource),
+    head = data.user.role === "head",
+    own = resource.owner === data.user.id,
+    file = detail.versions[0];
+  return `<div class="bank-detail-heading"><button class="bank-text-button" onclick="bankBack()">${ico("arrow_back")} ${bankScopes[bank.scope]}</button><div><h1>${esc(resource.title)}</h1>${bankBadge(resource)}</div><p>Digital Bank / ${esc(resource.bank_category)} / ${esc(resource.title)}</p><div class="bank-detail-actions">${file && !file.unavailable ? `<a class="secondary" href="${esc(file.downloadUrl)}" download>${ico("download")}Download</a><button class="secondary" data-bank-save="${resource.id}" onclick="bankSaveToggle('${resource.id}',${!resource.saved})">${ico(resource.saved ? "bookmark" : "bookmark_add")}${resource.saved ? "Saved" : "Save"}</button>` : ""}${resource.bank_draft && own ? `<button class="primary" onclick="bankEditDraft('${resource.id}')">Edit draft</button>` : ""}${!resource.archived && !resource.bank_draft && (head || (own && state === "returned")) ? '<button class="secondary" onclick="bankMetadataPage()">Edit metadata</button>' : ""}${head && !resource.bank_draft ? `<button class="secondary" onclick="bankArchive('${resource.id}',${resource.revision},${!resource.archived})">${resource.archived ? "Restore" : "Archive"}</button>` : ""}</div></div><div class="bank-review-workspace"><div class="bank-document"><section><h2>Description</h2><p class="bank-prose">${esc(resource.bank_description)}</p><h2>Contextualization / Localization</h2><p class="bank-prose">${esc(resource.bank_localization)}</p></section><section><h2>File preview</h2>${!file ? "<p>No file attached to this draft.</p>" : file.unavailable ? '<p role="alert">File unavailable. Refresh the resource to renew access.</p>' : file.type === "application/pdf" ? `<iframe title="${esc(resource.title)} PDF preview" src="${esc(file.url)}"></iframe>` : '<div id="bank-docx-preview" class="bank-docx">Loading document text…</div>'}</section>${
+    detail.private
+      ? `<section><h2>Version history</h2>${
+          detail.versions
+            .map((version) => {
+              const review = detail.reviews.find(
+                (review) => review.version === version.version,
+              );
+              return `<div class="bank-history-entry"><strong>Version ${version.version}${resource.final_version === version.version ? " · Approved version" : ""}</strong><small>${date(version.created)} · ${esc(version.uploader)}</small><p>${esc(version.changes)}</p>${review ? `<p>${bankStates[review.decision]} · ${esc(review.reviewerName)} · ${date(review.created)}</p><p class="bank-prose">${esc(review.feedback)}</p>` : ""}${!version.unavailable ? `<a href="${esc(version.downloadUrl)}">Download version ${version.version}</a>` : "<span>File unavailable</span>"}</div>`;
+            })
+            .join("") || "<p>No submitted versions.</p>"
+        }</section><section><h2>Activity</h2>${detail.events.map((event) => `<p>${esc(event.body)}<small>${esc(event.actorName)} · ${date(event.created)}</small></p>`).join("")}</section>`
+      : ""
+  }</div><aside class="bank-metadata"><h2>Resource details</h2><dl>${[
+    ["Category", resource.bank_category],
+    ["Learning area", resource.subject],
+    ["Grade", resource.grade],
+    ["Quarter", resource.term],
+    ["Created by", resource.creator],
+    ["Original upload", date(resource.bank_submitted_at || resource.created)],
+    ["Approved by", resource.approverName || "—"],
+    ["Approved on", resource.approved ? date(resource.approved) : "—"],
+    ["Last updated", date(resource.updated)],
+  ]
+    .map(([name, value]) => `<div><dt>${name}</dt><dd>${esc(value)}</dd></div>`)
+    .join(
+      "",
+    )}</dl><h3>Learning competency</h3><p class="bank-prose">${esc(resource.bank_competency)}</p><h3>Tags</h3><div class="bank-tags">${resource.bank_tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>${resource.bank_source ? `<h3>Reference / Source</h3><p class="bank-prose">${esc(resource.bank_source)}</p>` : ""}${resource.bank_notes ? `<h3>Additional notes</h3><p class="bank-prose">${esc(resource.bank_notes)}</p>` : ""}${head && !own && ["pending", "resubmitted"].includes(state) ? bankReviewForm() : ""}${own && state === "returned" ? bankRevisionForm() : ""}</aside></div>`;
+}
+
+function bankBoard(items) {
+  const shared = ["shared", "recent", "saved"].includes(bank.scope);
+  const columns = shared
+    ? Object.entries(bankCategories).map(([key, title]) => ({
+        key,
+        title: key[0] + key.slice(1).toLowerCase(),
+        hint: title,
+        icon: "folder",
+        matches: (item) => item.category === key,
+      }))
+    : [
+        {
+          key: "draft",
+          title: "Draft",
+          icon: "radio_button_unchecked",
+          matches: (item) => bankState(item) === "draft",
+        },
+        {
+          key: "pending",
+          title: "Pending review",
+          icon: "schedule",
+          matches: (item) =>
+            ["pending", "resubmitted"].includes(bankState(item)),
+        },
+        {
+          key: "returned",
+          title: "Revision needed",
+          icon: "change_circle",
+          matches: (item) => bankState(item) === "returned",
+        },
+        {
+          key: "approved",
+          title: "Approved",
+          icon: "check_circle",
+          matches: (item) => bankState(item) === "approved",
+        },
+      ];
+  if (bank.scope === "archived")
+    columns.splice(0, columns.length, {
+      key: "archived",
+      title: "Archived",
+      icon: "archive",
+      matches: () => true,
+    });
+  return `<div class="bank-board" aria-label="Resource board">${columns
+    .filter((column) => !bank.boardHidden.includes(column.key))
+    .map((column) => {
+      const resources = items.filter(column.matches);
+      return `<section class="bank-board-column"><header><span class="bank-board-state bank-board-state-${column.key}">${ico(column.icon)}</span><h2>${column.title}</h2><span class="bank-board-count">${resources.length}</span><span class="bank-board-column-space"></span><details class="bank-column-menu"><summary aria-label="${column.title} column options">${ico("more_horiz")}</summary><div><button onclick="bankHideColumn('${column.key}')">Hide column</button><button onclick="bankLayout('list')">View as list</button></div></details>${bank.scope === "mine" ? `<button class="bank-board-add" aria-label="Upload resource" onclick="bankUploadPage()">${ico("add")}</button>` : ""}</header><div class="bank-board-stack">${resources.map(bankBoardCard).join("") || '<div class="bank-board-empty">No resources</div>'}</div></section>`;
+    })
+    .join("")}${
+    columns.some((column) => bank.boardHidden.includes(column.key))
+      ? `<aside class="bank-hidden-columns"><h2>${ico("arrow_drop_down")}Hidden columns</h2>${columns
+          .filter((column) => bank.boardHidden.includes(column.key))
+          .map(
+            (column) =>
+              `<button onclick="bankHideColumn('${column.key}')"><span class="bank-board-state bank-board-state-${column.key}">${ico(column.icon)}</span>${column.title}<span>${items.filter(column.matches).length}</span>${ico("more_horiz")}</button>`,
+          )
+          .join("")}</aside>`
+      : ""
+  }</div>`;
+}
+function bankBoardCard(resource) {
+  const initials = (resource.creator || "")
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("");
+  const categoryLabel =
+    resource.category[0] + resource.category.slice(1).toLowerCase();
+  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>SIK-${esc(resource.id.slice(-6).toUpperCase())}-${resource.version}</span><span class="bank-creator-mini" title="${esc(resource.creator)}" aria-label="Created by ${esc(resource.creator)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(bankState(resource) === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini" aria-label="${resource.type === "application/pdf" ? "PDF" : resource.type ? "DOCX" : "Draft"}">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}</span><span class="bank-board-label"><span class="bank-category-mark bank-category-${resource.category.toLowerCase()}"></span>${categoryLabel}</span><span class="bank-board-label bank-subject-label">${esc(resource.subject)}</span>${bankActions(resource)}</div></article>`;
+}
+
+function bankHideColumn(key) {
+  bank.boardHidden = bank.boardHidden.includes(key)
+    ? bank.boardHidden.filter((value) => value !== key)
+    : [...bank.boardHidden, key];
+  bankPaintResults();
+}
+
+function bankUploadForm() {
+  const resource = bank.editing || {},
+    edit = bank.editing && !resource.bank_draft;
+  const input = (name, title, value, max, multiline = false, required = true) =>
+    `<label class="bank-form-field ${multiline ? "bank-form-wide" : ""}">${title}${multiline ? `<textarea name="${name}" maxlength="${max}" ${required ? "required" : ""}>${esc(value || "")}</textarea>` : `<input name="${name}" maxlength="${max}" value="${esc(value || "")}" ${required ? "required" : ""}>`}</label>`;
+  const select = (name, title, value, options) =>
+    `<label class="bank-form-field">${title}<select name="${name}" required><option value="">Choose ${title.toLowerCase()}</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></label>`;
+  return `<button class="bank-text-button" onclick="bankBack()">${ico("arrow_back")}Back to resources</button><div class="bank-page-heading"><h1>${edit ? "Edit resource metadata" : resource.id ? "Edit draft" : "Upload resource"}</h1></div><form class="bank-resource-form" onsubmit="bankSubmitForm(event)"><div class="bank-form-grid">${input("title", "Resource title", resource.title, 200)}${select("category", "Category", resource.bank_category, Object.keys(bankCategories))}${input("subject", "Subject / Learning area", resource.subject, 200)}${select(
+    "grade",
+    "Grade level",
+    resource.grade,
+    [7, 8, 9, 10].map((n) => "Grade " + n),
+  )}${select(
+    "term",
+    "Quarter",
+    resource.term,
+    [1, 2, 3, 4].map((n) => "Quarter " + n),
+  )}<label class="bank-form-field">Creator<input value="${esc(resource.creator || data.user.name)}" readonly></label>${input("description", "Description", resource.bank_description, 5000, true)}${input("competency", "Learning competency", resource.bank_competency, 3000, true)}${input("localization", "Contextualization / Localization", resource.bank_localization, 5000, true)}${input("tags", "Keywords / Tags (comma separated)", resource.bank_tags?.join(", "), 1000)}${input("source", "Reference / Source (optional)", resource.bank_source, 2000, false, false)}${input("notes", "Additional notes (optional)", resource.bank_notes, 3000, true, false)}</div>${edit ? "" : bankFileInput()}<p class="form-error" role="alert"></p><div class="form-actions"><button type="button" class="secondary" onclick="bankBack()">Cancel</button>${edit ? '<button type="submit" class="primary" name="action" value="metadata">Save metadata</button>' : '<button type="submit" class="secondary" name="action" value="draft">Save draft</button><button type="submit" class="primary" name="action" value="submit">Submit for review</button>'}</div></form>`;
+}
+function bankFileInput() {
+  return `<div class="bank-drop-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="bankDrop(event)">${ico("upload_file")}<strong>Drag and drop your file here</strong><label class="bank-browse">or browse files<input id="bank-file" type="file" accept=".pdf,.docx" onchange="bankSelectFile(this.files[0])"></label><small>PDF or DOCX · up to 20 MB</small><div id="bank-file-summary">${bankFileSummary()}</div><div class="bank-upload-progress" hidden><label for="bank-progress">Uploading and verifying file…</label><progress id="bank-progress" max="100" value="0"></progress><span id="bank-progress-text" role="status">0%</span></div></div>`;
+}
+function bankFileSummary() {
+  return bank.file
+    ? `<div class="bank-selected-file">${ico(bank.file.name.toLowerCase().endsWith(".pdf") ? "picture_as_pdf" : "description")}<span>${esc(bank.file.name)}<small>${bank.file.name.split(".").pop().toUpperCase()} · ${size(bank.file.size)}</small></span><button class="icon-btn" type="button" aria-label="Remove selected file" onclick="bankSelectFile(null)">${ico("close")}</button></div>`
+    : "";
+}
+async function bankSelectFile(file) {
+  if (busy) return;
+  if (
+    bank.file &&
+    file !== bank.file &&
+    !(await bankDialog(
+      "Replace selected file?",
+      "The selected file will be removed from this form. Submitted versions remain unchanged.",
+      null,
+      file ? "Replace file" : "Remove file",
+    ))
+  )
+    return;
+  const error = $(
+    ".bank-resource-form .form-error, .bank-revision-form .form-error",
+  );
+  if (file) {
+    try {
+      await window.sikapBackend.validateBankFile(file);
+    } catch (failure) {
+      if (error) error.textContent = bankMessage(failure);
+      return;
+    }
+  }
+  bank.file = file || null;
+  bank.uploadKey = null;
+  dirty = true;
+  if (error) error.textContent = "";
+  const input = $("#bank-file");
+  if (input) input.value = "";
+  const summary = $("#bank-file-summary");
+  if (summary) summary.innerHTML = bankFileSummary();
+}
+function bankDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("drag-over");
+  if (event.dataTransfer.files.length !== 1) {
+    toast("Choose one PDF or DOCX file.");
+    return;
+  }
+  bankSelectFile(event.dataTransfer.files[0]);
+}
+async function bankUploadPage() {
+  if (busy || !(await bankDiscard())) return;
+  bank.sequence++;
+  clearTimeout(bankSearchTimer);
+  view = "bank";
+  bank.screen = "upload";
+  bank.editing = null;
+  bank.file = null;
+  bank.uploadKey = null;
+  bank.uploadId = crypto.randomUUID();
+  render();
+  $(".bank-resource-form input")?.focus();
+}
+async function bankEditDraft(id) {
+  if (busy || !(await bankDiscard())) return;
+  try {
+    bank.detail = await bankApi().details(id);
+    bank.editing = bank.detail.resource;
+    bank.uploadId = id;
+    bank.file = null;
+    bank.uploadKey = null;
+    bank.screen = "upload";
+    render();
+  } catch (error) {
+    toast(bankMessage(error));
+  }
+}
+function bankMetadataPage() {
+  bank.editing = bank.detail.resource;
+  bank.screen = "upload";
+  render();
+}
+function bankReviewForm() {
+  return `<form class="bank-review-form" onsubmit="bankReview(event)"><h2>Quality assurance</h2>${reviewChecklist()}<label class="bank-form-field">Revision feedback<textarea name="feedback" maxlength="5000"></textarea></label><p class="form-error" role="alert"></p><div class="form-actions"><button type="submit" class="secondary" name="decision" value="returned">Return for revision</button><button type="submit" class="primary" name="decision" value="approved">Approve</button></div></form>`;
+}
+function bankRevisionForm() {
+  return `<form class="bank-revision-form" onsubmit="bankRevise(event)"><h2>Upload revision</h2>${bankFileInput()}<label class="bank-form-field">Changes in this version<textarea name="changes" maxlength="3000" required></textarea></label><p class="form-error" role="alert"></p><button type="submit" class="primary">Resubmit for review</button></form>`;
+}
+
+async function bankRunForm(event, operation) {
+  event.preventDefault();
+  if (busy) return;
+  const form = event.target,
+    error = form.querySelector(".form-error"),
+    buttons = [...form.querySelectorAll("button")];
+  error.textContent = "";
+  busy = true;
+  buttons.forEach((button) => (button.disabled = true));
+  try {
+    await operation(form);
+  } catch (failure) {
+    error.textContent = bankMessage(failure);
+  } finally {
+    busy = false;
+    buttons.forEach((button) => (button.disabled = false));
+  }
+}
+async function bankUploadFile() {
+  if (!bank.file) throw Error("Choose a PDF or DOCX file before submitting.");
+  if (bank.uploadKey) return bank.uploadKey;
+  const host = $(".bank-upload-progress");
+  if (host) host.hidden = false;
+  bank.uploadKey = await bankApi().upload(
+    bank.uploadId,
+    bank.file,
+    (percent) => {
+      const progress = $("#bank-progress"),
+        text = $("#bank-progress-text");
+      if (progress) progress.value = percent;
+      if (text)
+        text.textContent = percent === 100 ? "Verifying file…" : percent + "%";
+    },
+  );
+  const text = $("#bank-progress-text");
+  if (text) text.textContent = "File verified";
+  return bank.uploadKey;
+}
+async function bankSubmitForm(event) {
+  const action = event.submitter?.value || "submit";
+  await bankRunForm(event, async (form) => {
+    const fields = Object.fromEntries(new FormData(form));
+    fields.tags = [
+      ...new Set(
+        fields.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (!fields.tags.length || fields.tags.length > 20)
+      throw Error("Enter 1 to 20 comma-separated tags.");
+    if (action === "metadata") {
+      await bankApi().edit({
+        mid: bank.editing.id,
+        d: fields,
+        expected_revision: bank.editing.revision,
+      });
+      dirty = false;
+      await bankOpen(bank.editing.id, true);
+      toast("Resource metadata updated.");
+      return;
+    }
+    const objectKey = action === "submit" ? await bankUploadFile() : null;
+    const id = await bankApi().save({
+      mid: bank.uploadId,
+      d: fields,
+      expected_revision: bank.editing?.revision || null,
+      object_key: objectKey,
+      submit: action === "submit",
+    });
+    dirty = false;
+    bank.file = null;
+    bank.uploadKey = null;
+    // Refreshing after a successful mutation cannot cause a duplicate submission.
+    bank.scope = "mine";
+    bank.screen = "list";
+    bank.filters = { sort: "updated" };
+    bank.page = 1;
+    bankUrl();
+    render();
+    await bankRead();
+    toast(
+      action === "submit" ? "Resource submitted for review." : "Draft saved.",
+    );
+    return id;
+  });
+}
+async function bankReview(event) {
+  const decision = event.submitter?.value,
+    form = event.target;
+  event.preventDefault();
+  const feedback = new FormData(form).get("feedback").trim();
+  if (decision === "returned" && !feedback) {
+    form.querySelector(".form-error").textContent =
+      "Write revision feedback before returning this resource.";
+    return;
+  }
+  if (
+    decision === "approved" &&
+    !(await bankDialog(
+      "Approve this resource?",
+      "This resource will become available to approved school accounts in the Project SIKAP Digital Bank.",
+      null,
+      "Approve resource",
+    ))
+  )
+    return;
+  await bankRunForm(event, async () => {
+    const resource = bank.detail.resource;
+    await bankApi().decide({
+      mid: resource.id,
+      expected_revision: resource.revision,
+      decision,
+      feedback,
+      checks: readChecklist(form),
+    });
+    dirty = false;
+    await bankOpen(resource.id, true);
+    toast(
+      decision === "approved"
+        ? "Resource approved and added to Digital Bank."
+        : "Resource returned with revision feedback.",
+    );
+  });
+}
+async function bankRevise(event) {
+  await bankRunForm(event, async (form) => {
+    const resource = bank.detail.resource;
+    bank.uploadId = resource.id;
+    const objectKey = await bankUploadFile();
+    await bankApi().revise({
+      mid: resource.id,
+      expected_revision: resource.revision,
+      object_key: objectKey,
+      changes: new FormData(form).get("changes").trim(),
+    });
+    bank.file = null;
+    bank.uploadKey = null;
+    dirty = false;
+    await bankOpen(resource.id, true);
+    toast("Revision submitted for review.");
+  });
+}
+async function bankSaveToggle(id, value) {
+  try {
+    await bankApi().saved(id, value);
+    if (bank.detail?.resource.id === id) bank.detail.resource.saved = value;
+    if (bank.screen === "list") await bankRead();
+    else {
+      const button = document.querySelector('[data-bank-save="' + id + '"]');
+      if (button) {
+        button.innerHTML =
+          ico(value ? "bookmark" : "bookmark_add") + (value ? "Saved" : "Save");
+        button.setAttribute(
+          "onclick",
+          "bankSaveToggle('" + id + "'," + !value + ")",
+        );
+      }
+    }
+    toast(value ? "Resource saved." : "Removed from saved resources.");
+  } catch (error) {
+    toast(bankMessage(error));
+  }
+}
+async function bankDownload(id) {
+  try {
+    const detail = await bankApi().details(id),
+      file = detail.versions[0];
+    if (!file?.downloadUrl || file.unavailable)
+      throw Error("File unavailable. Refresh the resource and try again.");
+    const link = document.createElement("a");
+    link.href = file.downloadUrl;
+    link.download = file.name;
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    toast(bankMessage(error));
+  }
+}
+async function bankArchive(id, revision, archive) {
+  await bankDialog(
+    archive ? "Archive resource?" : "Restore resource?",
+    archive
+      ? "This resource will leave the shared Digital Bank. Its files, creator attribution and review history will be preserved."
+      : "Approved resources will become available in the shared Digital Bank again.",
+    async () => {
+      try {
+        await bankApi().archive({
+          mid: id,
+          expected_revision: revision,
+          archive,
+        });
+        if (bank.screen === "detail") await bankOpen(id);
+        else await bankRead();
+        toast(archive ? "Resource archived." : "Resource restored.");
+      } catch (error) {
+        toast(bankMessage(error));
+      }
+    },
+    archive ? "Archive resource" : "Restore resource",
+  );
+}
+async function bankDeleteDraft(id, revision) {
+  await bankDialog(
+    "Delete draft?",
+    "This removes the unsubmitted draft. Submitted resources and version histories cannot be deleted here.",
+    async () => {
+      try {
+        await bankApi().deleteDraft({ mid: id, expected_revision: revision });
+        await bankRead();
+        toast("Draft deleted.");
+      } catch (error) {
+        toast(bankMessage(error));
+      }
+    },
+    "Delete draft",
+  );
 }
 
 const $ = (s) => document.querySelector(s);
@@ -1152,6 +2103,13 @@ function toast(message) {
   setTimeout(() => el.classList.remove("show"), 3500);
 }
 async function go(next) {
+  if (next === "bank") {
+    await bankNavigate();
+    return;
+  }
+  if (view === "bank" && !(await bankDiscard())) return;
+  if (view === "bank" && typeof history !== "undefined")
+    history.replaceState(null, "", location.pathname + location.search);
   if (busy) return;
   if (dirty && !confirm("Discard your unsaved changes?")) return;
   busy = true;
@@ -1201,12 +2159,16 @@ function toggleModuleSections(button) {
 }
 function render() {
   if (!data) return;
+  if (view === "bank") {
+    bankRender();
+    return;
+  }
   const u = data.user,
     head = u.role === "head",
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");
@@ -1450,6 +2412,7 @@ render = function () {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (filterOpen) closeFilters();
+    else if (bankResolveDialog) bankAnswerDialog(false);
     else if ($("#modalRoot")) closeModal();
   }
 });
@@ -1471,10 +2434,18 @@ $("#app").innerHTML =
 load();
 
 document.addEventListener("input", (e) => {
-  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+  if (
+    e.target.closest?.(".content form, #modalRoot form") &&
+    !e.target.closest?.(".bank-filter-popover")
+  )
+    dirty = true;
 });
 document.addEventListener("change", (e) => {
-  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+  if (
+    e.target.closest?.(".content form, #modalRoot form") &&
+    !e.target.closest?.(".bank-filter-popover")
+  )
+    dirty = true;
 });
 addEventListener("beforeunload", (e) => {
   if (dirty) {

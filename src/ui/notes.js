@@ -80,6 +80,9 @@ async function markNotificationsRead() {
 }
 async function openNotification(nid) {
   const n = data.notifications.find((n) => n.id === nid);
-  if (n?.module) await openModule(n.module);
-  else if (n?.requirement_id) await go("requirements");
+  if (n?.module) {
+    if (data.modules.some((module) => module.id === n.module))
+      await openModule(n.module);
+    else await bankOpen(n.module);
+  } else if (n?.requirement_id) await go("requirements");
 }

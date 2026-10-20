@@ -152,7 +152,16 @@ async function load() {
       return;
     }
     data = await api("state");
-    render();
+    const route = bankRoute();
+    if (route && data.user.approval_status === "approved") {
+      bank.filters = Object.fromEntries(
+        [...route.entries()].filter(
+          ([key]) => !["scope", "resource"].includes(key),
+        ),
+      );
+      await bankNavigate(route.get("scope") || "shared", "", true);
+      if (route.get("resource")) await bankOpen(route.get("resource"));
+    } else render();
   } catch (e) {
     if (e.status === 503 && e.message.includes("config.js")) {
       login(e.message);

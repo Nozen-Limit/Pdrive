@@ -1,4 +1,5 @@
-import { documentXml } from "./lib/docx.js";
+import { validateResourceFile } from "./lib/resource-file.js";
+import { createBankService } from "./features/digital-bank/service.js";
 import { attachProfilePhoto } from "./lib/profile-photo.js";
 import { createClient } from "@supabase/supabase-js";
 const config = window.SIKAP_CONFIG || {};
@@ -99,28 +100,7 @@ function remember(value) {
   localStorage.setItem("sikap-remember", value ? "yes" : "no");
   storage.removeItem("sikap-auth");
 }
-export async function validateFile(file) {
-  if (!file?.size || file.size > 20971520)
-    fail("Choose a PDF or DOCX up to 20 MB.");
-  const ext = file.name.split(".").pop().toLowerCase();
-  if (!["pdf", "docx"].includes(ext))
-    fail("Only PDF and DOCX files are supported.");
-  const bytes = new Uint8Array(await file.slice(0, 5).arrayBuffer());
-  if (ext === "pdf" && new TextDecoder().decode(bytes) !== "%PDF-")
-    fail("This is not a valid PDF.");
-  if (ext === "docx" && (bytes[0] !== 80 || bytes[1] !== 75))
-    fail("This is not a valid DOCX.");
-  if (ext === "docx") {
-    try {
-      await documentXml(await file.arrayBuffer());
-    } catch {
-      fail("Choose a valid Word DOCX document.");
-    }
-  }
-  return ext === "pdf"
-    ? "application/pdf"
-    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-}
+export const validateFile = validateResourceFile;
 async function upload(file, mid) {
   const user = await current(),
     mime = await validateFile(file),
@@ -430,4 +410,6 @@ const backend = {
     recovery = false;
   },
 };
+backend.validateBankFile = validateResourceFile;
+backend.bank = createBankService(client, config, checked, signedVersions);
 window.sikapBackend = backend;

@@ -78,6 +78,13 @@ function toast(message) {
   setTimeout(() => el.classList.remove("show"), 3500);
 }
 async function go(next) {
+  if (next === "bank") {
+    await bankNavigate();
+    return;
+  }
+  if (view === "bank" && !(await bankDiscard())) return;
+  if (view === "bank" && typeof history !== "undefined")
+    history.replaceState(null, "", location.pathname + location.search);
   if (busy) return;
   if (dirty && !confirm("Discard your unsaved changes?")) return;
   busy = true;
@@ -127,12 +134,16 @@ function toggleModuleSections(button) {
 }
 function render() {
   if (!data) return;
+  if (view === "bank") {
+    bankRender();
+    return;
+  }
   const u = data.user,
     head = u.role === "head",
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");
@@ -376,6 +387,7 @@ render = function () {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (filterOpen) closeFilters();
+    else if (bankResolveDialog) bankAnswerDialog(false);
     else if ($("#modalRoot")) closeModal();
   }
 });
@@ -397,10 +409,18 @@ $("#app").innerHTML =
 load();
 
 document.addEventListener("input", (e) => {
-  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+  if (
+    e.target.closest?.(".content form, #modalRoot form") &&
+    !e.target.closest?.(".bank-filter-popover")
+  )
+    dirty = true;
 });
 document.addEventListener("change", (e) => {
-  if (e.target.closest?.(".content form, #modalRoot form")) dirty = true;
+  if (
+    e.target.closest?.(".content form, #modalRoot form") &&
+    !e.target.closest?.(".bank-filter-popover")
+  )
+    dirty = true;
 });
 addEventListener("beforeunload", (e) => {
   if (dirty) {

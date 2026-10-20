@@ -7,8 +7,8 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
-    "format": "prettier --write src scripts tests package.json",
-    "format:check": "prettier --check src scripts tests package.json",
+    "format": "prettier --write src scripts tests supabase/functions package.json",
+    "format:check": "prettier --check src scripts tests supabase/functions package.json",
     "check": "npm run build && npm test && npm run format:check"
   },
   "dependencies": {

@@ -4,6 +4,9 @@ import { mkdir, copyFile, writeFile, access, readFile } from "node:fs/promises";
 import { build } from "esbuild";
 await mkdir("docs", { recursive: true });
 await mkdir("docs/assets", { recursive: true });
+await mkdir("supabase/functions/_shared", { recursive: true });
+for (const file of ["resource-file.js", "docx.js"])
+  await copyFile("src/lib/" + file, "supabase/functions/_shared/" + file);
 await copyFile("src/assets/school-desk.webp", "docs/assets/school-desk.webp");
 await copyFile(
   "src/assets/school-workspace-v2.webp",
@@ -16,6 +19,7 @@ for (const file of [
   "book-landing.css",
   "workspace.css",
   "appearance.css",
+  "digital-bank.css",
 ])
   await copyFile("src/" + file, "docs/" + file);
 try {
@@ -68,6 +72,7 @@ const assets = [
   "book-landing.css",
   "workspace.css",
   "appearance.css",
+  "digital-bank.css",
   "head-desk.js",
   "landing-scene.js",
   "docx-preview.js",

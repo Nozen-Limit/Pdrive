@@ -7,6 +7,11 @@ export const uiSources = [
   "ui/accounts.js",
   "ui/modules.js",
   "ui/notes.js",
+  "features/digital-bank/state.js",
+  "features/digital-bank/views.js",
+  "features/digital-bank/board.js",
+  "features/digital-bank/forms.js",
+  "features/digital-bank/actions.js",
   "frontend.js",
 ];
 export async function readUi() {
