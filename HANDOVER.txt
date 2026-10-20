@@ -114,3 +114,10 @@ Digital Bank
   They have not been applied to the live Supabase project by this change.
   A real school deployment still needs upload, email/session and signed-link
   checks after those two server-side steps are complete.
+
+Overview interface
+  src/ui/overview.js renders the Teacher and Head Teacher module overview.
+  It shares the Digital Bank card, typography, palette and board styles.
+  Module search, status tabs, filters and Board/List toggle use existing state.
+  Requirements, notes, activity, module permissions and review rules remain
+  connected to the existing data. This interface update requires no new SQL.

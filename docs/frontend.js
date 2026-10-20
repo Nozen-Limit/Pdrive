@@ -14,17 +14,6 @@ const dueLabel = (s) =>
 function workflowUnavailable() {
   return '<div class="panel workflow-setup"><h2>School workflow setup required</h2><p>The administrator must apply the school workflow database update before requirements and review checklists can be used.</p></div>';
 }
-function workflowAttention() {
-  if (!data.workflowReady) return "";
-  const rows = (data.assignments || []).filter(
-      (a) =>
-        !data.requirements.find((r) => r.id === a.requirement_id)?.cancelled,
-    ),
-    missing = rows.filter((a) => a.status === "missing").length,
-    returned = rows.filter((a) => a.status === "returned").length,
-    overdue = rows.filter((a) => a.overdue).length;
-  return `<div class="workflow-attention"><div><strong>Requirements</strong><span>${missing} not submitted · ${returned} need revision${overdue ? " · " + overdue + " overdue" : ""}</span></div><button class="action-btn" onclick="go('requirements')">View requirements</button></div>`;
-}
 function requirementsPage() {
   if (!data.workflowReady) return workflowUnavailable();
   const head = data.user.role === "head",
@@ -799,51 +788,8 @@ function moduleResults() {
   const list = filtered();
   return `<div class="panel-head"><span class="muted">${list.length} module${list.length === 1 ? "" : "s"}</span>${view === "dashboard" ? '<button class="link-btn" onclick="go(\'modules\')">View all</button>' : ""}</div><div class="module-list">${list.map((m) => `<div class="module-row"><div><button class="module-title text-button" onclick="openModule('${m.id}')">${esc(m.title)}</button><div class="module-meta">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · v${m.version}</div><div class="module-meta">${esc(m.teacher)} · Updated ${date(m.updated)}${m.file ? " · " + size(m.size) : ""}</div>${workflowModuleDue(m)}</div><div class="row-actions"><button class="icon-btn star-btn" aria-label="${m.starred ? "Unstar" : "Star"} ${esc(m.title)}" onclick="starModule('${m.id}')">${ico(m.starred ? "star" : "star_outline")}</button>${badge(m.status)}<button class="action-btn" onclick="openModule('${m.id}')">${view === "reviews" ? "Review" : "Open"}</button></div></div>`).join("") || '<div class="empty"><h3>No modules here yet</h3><p>Try changing the filters. New submissions appear here.</p></div>'}</div>`;
 }
-function workspaceBanner(head) {
-  const modules = data.modules.filter((m) => !m.archived);
-  const pending = modules.filter((m) => m.status === "pending").length;
-  const returned = modules.filter((m) => m.status === "returned").length;
-  const approved = modules.filter((m) => m.status === "approved").length;
-  const actions = head
-    ? [
-        ["reviews", "Pending reviews", pending],
-        ["library", "Approved modules", approved],
-        [
-          "teachers",
-          "Teachers",
-          data.teachers.filter(
-            (t) => t.role === "teacher" && t.approval_status === "approved",
-          ).length,
-        ],
-      ]
-    : [
-        ["submit", "Submit module", null],
-        ["modules", "My modules", modules.length],
-        ["requirements", "Requirements", null],
-      ];
-  return `<section class="workspace-hero"><div class="workspace-hero-copy"><span class="workspace-role">${head ? "Head Teacher" : "Teacher"}</span><h2>${head ? "Review queue" : "Your modules"}</h2><p>${head ? (pending ? pending + " submission" + (pending === 1 ? "" : "s") + " awaiting review." : "No submissions awaiting review.") : returned ? returned + " module" + (returned === 1 ? "" : "s") + " need" + (returned === 1 ? "s" : "") + " revision." : "No revisions requested."}</p><div class="workspace-actions">${actions.map(([route, label, count], i) => `<button class="${i === 0 ? "workspace-action-primary" : ""}" aria-label="${label}" title="${label}" onclick="go('${route}')">${label}${count !== null ? `<span>${count}</span>` : ico("north_east")}</button>`).join("")}</div></div><div id="head-desk" data-desk-role="${head ? "head" : "teacher"}" class="workspace-desk" aria-label="School desk"><div class="real-desk-art" aria-hidden="true"></div></div></section>`;
-}
-function headDesk() {
-  return workspaceBanner(true);
-}
-function teacherDesk() {
-  return workspaceBanner(false);
-}
 function modulePage() {
-  const total = filtered();
-  return `${view === "dashboard" ? (data.user.role === "head" ? headDesk() : teacherDesk()) : ""}${view === "dashboard" ? workflowAttention() : ""}${filterPanel()}${view === "dashboard" ? `<div class="cards">${stat("Total modules", total.length, "#e8f1ff")}${stat("Pending review", total.filter((m) => m.status === "pending").length, "#fff3cf")}${stat("Approved", total.filter((m) => m.status === "approved").length, "#e4f3e9")}${stat("Needs revision", total.filter((m) => m.status === "returned").length, "#f9e7ea")}</div>` : ""}${view === "library" ? '<p class="muted">Final approved versions, accessible to their submitting teacher and head teachers.</p>' : ""}<div class="${view === "dashboard" ? "grid-2" : ""}"><div class="panel" id="module-results">${moduleResults()}</div>${
-    view === "dashboard"
-      ? `<aside><div class="panel"><div class="panel-head"><h3>Pinned notes</h3><button class="link-btn" onclick="go('notes')">Manage</button></div>${
-          data.notes
-            .filter((n) => n.pinned)
-            .map(
-              (n) =>
-                `<div class="note"><strong>${esc(n.title)}</strong><p>${esc(n.body)}</p></div>`,
-            )
-            .join("") || '<p class="muted">No pinned notes.</p>'
-        }</div><div class="panel activity-panel"><h3>Recent activity</h3>${activity(data.events.slice(0, 5))}</div></aside>`
-      : ""
-  }</div>`;
+  return `${filterPanel()}${view === "library" ? '<p class="muted">Final approved versions, accessible to their submitting teacher and head teachers.</p>' : ""}<div class="panel" id="module-results">${moduleResults()}</div>`;
 }
 function activity(events) {
   return `<div class="activity">${events.map((e) => `<div class="activity-item"><i class="dot"></i><div><p>${esc(e.body)}${e.title ? ` · ${esc(e.title)}` : ""}</p><small>${esc(e.actorName)} · ${date(e.created)}</small></div></div>`).join("") || '<p class="muted">Activity appears after a submission or review.</p>'}</div>`;
@@ -993,6 +939,93 @@ async function starModule(mid) {
   } catch (e) {
     toast(e.message);
   }
+}
+
+let overviewLayout = "board";
+function overviewPage() {
+  return `<nav class="bank-workspace-tabs" aria-label="Module status">${[
+    ["all", "All modules", "folder_open"],
+    ["pending", "Pending review", "schedule"],
+    ["returned", "Revision needed", "change_circle"],
+    ["approved", "Approved", "check_circle"],
+  ]
+    .map(
+      ([key, title, icon]) =>
+        `<button aria-current="${filters.status === key ? "page" : "false"}" onclick="overviewStatus('${key}')">${ico(icon)}${title}</button>`,
+    )
+    .join(
+      "",
+    )}</nav><div class="overview-toolbar"><div class="overview-search">${ico("search")}<input type="search" aria-label="Search modules" placeholder="Search modules" value="${esc(filters.search)}" oninput="overviewSearch(this.value)"></div><div class="bank-view-toggle" aria-label="Module view"><button class="icon-btn" aria-label="Board view" aria-pressed="${overviewLayout === "board"}" onclick="overviewView('board')">${ico("view_kanban")}</button><button class="icon-btn" aria-label="List view" aria-pressed="${overviewLayout === "list"}" onclick="overviewView('list')">${ico("view_list")}</button></div></div>${filterPanel()}<div id="module-results">${overviewResults()}</div><div class="overview-support"><section><header><h2>${ico("assignment")}Requirements</h2><button class="bank-text-button" onclick="go('requirements')">Open requirements</button></header>${overviewRequirements()}</section><section><header><h2>${ico("description")}Pinned notes</h2><button class="bank-text-button" onclick="go('notes')">Manage notes</button></header>${
+    data.notes
+      .filter((note) => note.pinned)
+      .slice(0, 3)
+      .map(
+        (note) =>
+          `<article class="overview-note"><strong>${esc(note.title)}</strong><p>${esc(note.body)}</p></article>`,
+      )
+      .join("") || '<p class="overview-muted">No pinned notes.</p>'
+  }</section><section><header><h2>${ico("history")}Recent activity</h2></header>${data.events.length ? activity(data.events.slice(0, 4)) : '<p class="overview-muted">No recent activity.</p>'}</section></div>`;
+}
+function overviewRequirements() {
+  const assignments = (data.assignments || []).filter(
+    (assignment) =>
+      !(data.requirements || []).find(
+        (requirement) => requirement.id === assignment.requirement_id,
+      )?.cancelled,
+  );
+  if (!data.workflowReady)
+    return '<p class="overview-muted">Requirements setup is needed.</p>';
+  return `<div class="overview-requirement-counts"><span><strong>${assignments.filter((assignment) => assignment.status === "missing").length}</strong> Not submitted</span><span><strong>${assignments.filter((assignment) => assignment.status === "returned").length}</strong> Need revision</span><span><strong>${assignments.filter((assignment) => assignment.overdue).length}</strong> Overdue</span></div>`;
+}
+function overviewResults() {
+  if (overviewLayout === "list") return moduleResults();
+  const modules = filtered();
+  return `<div class="bank-board overview-board" aria-label="Module board">${[
+    ["pending", "Pending review", "schedule"],
+    ["returned", "Revision needed", "change_circle"],
+    ["approved", "Approved", "check_circle"],
+  ]
+    .map(([status, title, icon]) => {
+      const items = modules.filter((module) => module.status === status);
+      return `<section class="bank-board-column"><header><span class="bank-board-state bank-board-state-${status}">${ico(icon)}</span><h2>${title}</h2><span class="bank-board-count">${items.length}</span><span class="bank-board-column-space"></span><button class="bank-board-add" aria-label="Open ${title.toLowerCase()} modules" onclick="overviewOpenCollection('${status}')">${ico("open_in_new")}</button></header><div class="bank-board-stack">${items.map(overviewCard).join("") || '<div class="bank-board-empty">No modules</div>'}</div></section>`;
+    })
+    .join("")}</div>`;
+}
+function overviewCard(module) {
+  const teacher = module.teacher || data.user.name;
+  const initials = teacher
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("");
+  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>MODULE · v${module.version}</span><span class="bank-creator-mini" aria-label="Created by ${esc(teacher)}" title="${esc(teacher)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(module.status === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="openModule('${module.id}')">${esc(module.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini">${ico("description")}</span><span class="bank-board-label">${esc(module.subject)}</span><span class="bank-board-label">${esc(module.grade)}</span><span class="bank-board-label">${esc(module.term)}</span><details class="bank-row-menu"><summary aria-label="Actions for ${esc(module.title)}">${ico("more_vert")}</summary><div><button onclick="openModule('${module.id}')">${ico("open_in_new")}Open module</button><button onclick="starModule('${module.id}')">${ico(module.starred ? "bookmark_remove" : "bookmark_add")}${module.starred ? "Remove from saved" : "Save module"}</button></div></details></div>${workflowModuleDue(module)}</article>`;
+}
+function overviewStatus(status) {
+  filters.status = status;
+  render();
+}
+function overviewView(layout) {
+  overviewLayout = layout === "list" ? "list" : "board";
+  render();
+}
+function overviewSearch(value) {
+  filters.search = value;
+  const target = $("#module-results");
+  if (target) target.innerHTML = overviewResults();
+}
+async function overviewOpenCollection(status) {
+  filters.status = status;
+  await go(
+    status === "approved"
+      ? "library"
+      : status === "pending" && data.user.role === "head"
+        ? "reviews"
+        : "modules",
+  );
+}
+function overviewNew() {
+  return `<details class="bank-new overview-new"><summary>${ico("add")}New</summary><div>${data.user.role === "teacher" ? `<button onclick="go('submit')">${ico("upload_file")}Submit module</button>` : ""}<button onclick="bankUploadPage()">${ico("upload_file")}Upload resource</button></div></details>`;
 }
 
 function noteActions(n) {
@@ -1390,7 +1423,7 @@ function bankThemeStyle() {
   return `--sikap-bg:${theme.light ? "#fcfcfd" : theme.background};--sikap-accent:${theme.light ? "#456958" : theme.accent};--sikap-action:${theme.action};--ink:${theme.light ? "#24272c" : "#e4e9f0"};--muted:${theme.light ? "#737980" : "#9caab9"};--line:${theme.light ? "#e7e9ec" : "#ffffff16"};--bank-side:${theme.light ? "#f7f8f9" : theme.background};color:var(--ink);color-scheme:${theme.light ? "light" : "dark"}`;
 }
 function bankAppearanceMenu() {
-  return `<details class="appearance-menu bank-palette"><summary class="icon-btn" aria-label="Choose color">${ico("palette")}</summary><div class="appearance-popover"><fieldset class="appearance-choices" aria-label="Digital Bank color theme">${Object.entries(
+  return `<details class="appearance-menu bank-palette"><summary class="icon-btn" aria-label="Choose color">${ico("palette")}</summary><div class="appearance-popover"><fieldset class="appearance-choices" aria-label="Workspace color theme">${Object.entries(
     appearanceThemes,
   )
     .map(
@@ -2168,7 +2201,7 @@ function render() {
     active = data.modules.filter((m) => !m.archived),
     unread = data.notifications.filter((n) => !n.read).length;
   $("#app").innerHTML =
-    `<div class="app" style="--sidebar-width:${width}px"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button><nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
+    `<div class="app${view === "dashboard" ? " bank-app overview-app" : ""}" style="--sidebar-width:${width}px;${view === "dashboard" ? bankThemeStyle() : ""}"><aside class="sidebar" id="side"><div class="workspace-brand"><span class="brand-symbol">${ico("auto_stories")}</span><div class="brand-type"><small>PROJECT</small><strong>SIKAP</strong></div></div><button class="profile-head" onclick="go('profile')" aria-label="Open profile"><div class="avatar">${avatarContent(u)}</div><div><strong>${esc(u.name)}</strong><small>${head ? "Head Teacher" : "Teacher"}${u.assignment ? " · " + esc(u.assignment) : ""}</small></div>${ico("chevron_right")}</button>${view === "dashboard" ? overviewNew() : ""}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav><button class="logout-btn" onclick="logout()">${ico("logout")}<span>Log out</span></button><div class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" onpointerdown="resizeSide(event)"></div></aside><div class="overlay" id="overlay" onclick="menu()"></div><main class="main"><header class="topbar"><div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div><div class="top-actions">${view === "dashboard" ? bankAppearanceMenu() : appearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}</div></header><section class="content">${page()}</section></main></div><div id="modalRoot"></div>`;
 }
 function menu() {
   $("#side").classList.toggle("open");
@@ -2334,7 +2367,9 @@ function searchModules(value) {
   }
   filters.search = value;
   const result = $("#module-results");
-  if (result) result.innerHTML = moduleResults();
+  if (result)
+    result.innerHTML =
+      view === "dashboard" ? overviewResults() : moduleResults();
   else render();
 }
 function filtered() {
@@ -2362,20 +2397,9 @@ function filtered() {
         : b.updated.localeCompare(a.updated),
   );
 }
-function stat(title, n, tint) {
-  const icon =
-    {
-      "Total modules": "folder_open",
-      "Pending review": "schedule",
-      Approved: "task_alt",
-      "Needs revision": "edit_note",
-      "Approval rate": "donut_large",
-      "Submitting teachers": "groups",
-    }[title] || "description";
-  return `<div class="stat" style="--tint:${tint}"><div class="stat-icon">${ico(icon)}</div><div class="stat-copy"><div class="label">${title}</div><div class="value">${n}</div></div></div>`;
-}
 function page() {
-  if (["dashboard", "modules", "library", "reviews", "starred"].includes(view))
+  if (view === "dashboard") return overviewPage();
+  if (["modules", "library", "reviews", "starred"].includes(view))
     return modulePage();
   return (
     {

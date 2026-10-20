@@ -2,51 +2,8 @@ function moduleResults() {
   const list = filtered();
   return `<div class="panel-head"><span class="muted">${list.length} module${list.length === 1 ? "" : "s"}</span>${view === "dashboard" ? '<button class="link-btn" onclick="go(\'modules\')">View all</button>' : ""}</div><div class="module-list">${list.map((m) => `<div class="module-row"><div><button class="module-title text-button" onclick="openModule('${m.id}')">${esc(m.title)}</button><div class="module-meta">${esc(m.subject)} · ${esc(m.grade)} · ${esc(m.term)} · v${m.version}</div><div class="module-meta">${esc(m.teacher)} · Updated ${date(m.updated)}${m.file ? " · " + size(m.size) : ""}</div>${workflowModuleDue(m)}</div><div class="row-actions"><button class="icon-btn star-btn" aria-label="${m.starred ? "Unstar" : "Star"} ${esc(m.title)}" onclick="starModule('${m.id}')">${ico(m.starred ? "star" : "star_outline")}</button>${badge(m.status)}<button class="action-btn" onclick="openModule('${m.id}')">${view === "reviews" ? "Review" : "Open"}</button></div></div>`).join("") || '<div class="empty"><h3>No modules here yet</h3><p>Try changing the filters. New submissions appear here.</p></div>'}</div>`;
 }
-function workspaceBanner(head) {
-  const modules = data.modules.filter((m) => !m.archived);
-  const pending = modules.filter((m) => m.status === "pending").length;
-  const returned = modules.filter((m) => m.status === "returned").length;
-  const approved = modules.filter((m) => m.status === "approved").length;
-  const actions = head
-    ? [
-        ["reviews", "Pending reviews", pending],
-        ["library", "Approved modules", approved],
-        [
-          "teachers",
-          "Teachers",
-          data.teachers.filter(
-            (t) => t.role === "teacher" && t.approval_status === "approved",
-          ).length,
-        ],
-      ]
-    : [
-        ["submit", "Submit module", null],
-        ["modules", "My modules", modules.length],
-        ["requirements", "Requirements", null],
-      ];
-  return `<section class="workspace-hero"><div class="workspace-hero-copy"><span class="workspace-role">${head ? "Head Teacher" : "Teacher"}</span><h2>${head ? "Review queue" : "Your modules"}</h2><p>${head ? (pending ? pending + " submission" + (pending === 1 ? "" : "s") + " awaiting review." : "No submissions awaiting review.") : returned ? returned + " module" + (returned === 1 ? "" : "s") + " need" + (returned === 1 ? "s" : "") + " revision." : "No revisions requested."}</p><div class="workspace-actions">${actions.map(([route, label, count], i) => `<button class="${i === 0 ? "workspace-action-primary" : ""}" aria-label="${label}" title="${label}" onclick="go('${route}')">${label}${count !== null ? `<span>${count}</span>` : ico("north_east")}</button>`).join("")}</div></div><div id="head-desk" data-desk-role="${head ? "head" : "teacher"}" class="workspace-desk" aria-label="School desk"><div class="real-desk-art" aria-hidden="true"></div></div></section>`;
-}
-function headDesk() {
-  return workspaceBanner(true);
-}
-function teacherDesk() {
-  return workspaceBanner(false);
-}
 function modulePage() {
-  const total = filtered();
-  return `${view === "dashboard" ? (data.user.role === "head" ? headDesk() : teacherDesk()) : ""}${view === "dashboard" ? workflowAttention() : ""}${filterPanel()}${view === "dashboard" ? `<div class="cards">${stat("Total modules", total.length, "#e8f1ff")}${stat("Pending review", total.filter((m) => m.status === "pending").length, "#fff3cf")}${stat("Approved", total.filter((m) => m.status === "approved").length, "#e4f3e9")}${stat("Needs revision", total.filter((m) => m.status === "returned").length, "#f9e7ea")}</div>` : ""}${view === "library" ? '<p class="muted">Final approved versions, accessible to their submitting teacher and head teachers.</p>' : ""}<div class="${view === "dashboard" ? "grid-2" : ""}"><div class="panel" id="module-results">${moduleResults()}</div>${
-    view === "dashboard"
-      ? `<aside><div class="panel"><div class="panel-head"><h3>Pinned notes</h3><button class="link-btn" onclick="go('notes')">Manage</button></div>${
-          data.notes
-            .filter((n) => n.pinned)
-            .map(
-              (n) =>
-                `<div class="note"><strong>${esc(n.title)}</strong><p>${esc(n.body)}</p></div>`,
-            )
-            .join("") || '<p class="muted">No pinned notes.</p>'
-        }</div><div class="panel activity-panel"><h3>Recent activity</h3>${activity(data.events.slice(0, 5))}</div></aside>`
-      : ""
-  }</div>`;
+  return `${filterPanel()}${view === "library" ? '<p class="muted">Final approved versions, accessible to their submitting teacher and head teachers.</p>' : ""}<div class="panel" id="module-results">${moduleResults()}</div>`;
 }
 function activity(events) {
   return `<div class="activity">${events.map((e) => `<div class="activity-item"><i class="dot"></i><div><p>${esc(e.body)}${e.title ? ` · ${esc(e.title)}` : ""}</p><small>${esc(e.actorName)} · ${date(e.created)}</small></div></div>`).join("") || '<p class="muted">Activity appears after a submission or review.</p>'}</div>`;

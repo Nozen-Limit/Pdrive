@@ -1585,3 +1585,380 @@ html .bank-app .brand-symbol {
 html body .app.bank-app .brand-symbol .material-symbols-rounded {
   color: #fff;
 }
+
+.overview-app .sidebar {
+  position: sticky;
+  top: 0;
+  left: auto;
+  width: auto;
+  height: 100dvh;
+  min-height: 0;
+  padding: 14px 10px 10px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bank-side);
+  color: var(--ink);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.overview-app .main {
+  margin: 0;
+  min-width: 0;
+  width: auto;
+  padding: 0;
+}
+.overview-app .workspace-brand {
+  order: 0;
+  flex-shrink: 0;
+  margin: 0 10px 18px;
+  min-height: 34px;
+  gap: 9px;
+}
+.overview-app .workspace-brand .brand-symbol {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 5px;
+  background: var(--sikap-action);
+  color: #fff;
+}
+.overview-app .workspace-brand .brand-symbol .material-symbols-rounded {
+  font-size: 22px;
+}
+.overview-app .workspace-brand .brand-type {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: baseline;
+}
+.overview-app .workspace-brand .brand-type small {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.overview-app .workspace-brand .brand-type strong {
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.overview-new {
+  order: 1;
+  flex-shrink: 0;
+}
+.overview-app .nav {
+  order: 2;
+  padding: 0;
+  gap: 2px;
+}
+.overview-app .profile-head {
+  order: 3;
+  margin-top: auto;
+  padding: 18px 10px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  color: var(--ink);
+}
+.overview-app .profile-head .avatar {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  font-size: 10px;
+}
+.overview-app .profile-head strong {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.overview-app .profile-head small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.overview-app .logout-btn {
+  order: 4;
+  padding: 8px 10px;
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  margin: 0;
+}
+.overview-app .sidebar-resizer {
+  display: none;
+}
+.overview-app .nav button {
+  min-height: 33px;
+  height: auto;
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 400;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+.overview-app .nav button.active {
+  color: var(--ink);
+  border: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--sikap-accent) 12%, transparent);
+}
+.overview-app .nav button:hover {
+  background: color-mix(in srgb, var(--sikap-accent) 8%, transparent);
+}
+.overview-app .nav-ico {
+  width: 18px;
+  height: 18px;
+}
+.overview-app .nav-ico .material-symbols-rounded {
+  font-size: 18px;
+}
+.overview-app .nav-label {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.overview-app .nav-count {
+  background: transparent;
+  color: inherit;
+  min-width: 15px;
+  height: 18px;
+  font-size: 10px;
+}
+.overview-app .topbar {
+  position: static;
+  padding: 14px 24px;
+  min-height: 60px;
+  height: auto;
+  border-radius: 0;
+  background: var(--sikap-bg);
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.overview-app .page-heading h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.overview-app .top-actions {
+  gap: 8px;
+}
+.overview-app .content {
+  max-width: none;
+  width: 100%;
+  padding: 14px 24px 24px;
+}
+.overview-app .bank-workspace-tabs {
+  margin-top: 0;
+}
+.overview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+}
+.overview-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 400px;
+  width: 100%;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  border-radius: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+}
+.overview-search > .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--muted);
+}
+.overview-search input {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--ink) !important;
+  font-size: 12px;
+  width: 100%;
+  height: 34px;
+  min-width: 0;
+  outline: none;
+  box-shadow: none !important;
+}
+.overview-app .filter-shell {
+  margin-bottom: 12px;
+}
+.overview-app .mobile-filter-bar {
+  min-height: 32px;
+}
+.overview-app .filter-caption {
+  font-size: 11px;
+}
+.overview-app .overview-board {
+  min-height: 270px;
+}
+.overview-app .bank-board-card .module-meta {
+  margin: 8px 0 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.overview-support {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.overview-support > section {
+  min-width: 0;
+}
+.overview-support header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.overview-support h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+.overview-support h2 .material-symbols-rounded {
+  font-size: 16px;
+  color: var(--muted);
+}
+.overview-support .bank-text-button {
+  font-size: 10px;
+}
+.overview-muted {
+  font-size: 11px;
+  color: var(--muted);
+}
+.overview-note {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+.overview-note strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.overview-note p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+.overview-requirement-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.overview-requirement-counts strong {
+  font-size: 14px;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.overview-support .activity-item p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.overview-support .activity-item small {
+  font-size: 10px;
+}
+.overview-support .activity .muted {
+  font-size: 11px;
+}
+@media (max-width: 1100px) {
+  .overview-support {
+    grid-template-columns: 1fr 1fr;
+  }
+  .overview-support > section:last-child {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 760px) {
+  .overview-app .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 248px;
+    transform: translateX(-100%);
+    z-index: 80;
+  }
+  .overview-app .sidebar.open {
+    transform: translateX(0);
+  }
+  .overview-app .main {
+    width: 100%;
+  }
+  .overview-app .topbar {
+    padding: 12px 14px;
+  }
+  .overview-app .content {
+    padding: 12px 14px 24px;
+  }
+  .overview-support {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .overview-support > section:last-child {
+    grid-column: auto;
+  }
+  .overview-app .bank-board-column {
+    margin-bottom: 16px;
+  }
+  .overview-app .overview-board {
+    min-height: 0;
+  }
+  .overview-toolbar {
+    gap: 8px;
+  }
+  .overview-app .bank-workspace-tabs {
+    overflow: auto;
+  }
+  .overview-app .top-actions .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+html body .app.overview-app .sidebar {
+  background: var(--bank-side);
+  color: var(--ink);
+}
+html body .app.overview-app .nav button.active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--sikap-accent) 12%, transparent);
+  box-shadow: none;
+  border: 0;
+}
+html body .app.overview-app .topbar {
+  background: var(--sikap-bg);
+}
+
+html body .app.overview-app .main {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.overview-app .overview-board {
+  min-height: 0;
+}

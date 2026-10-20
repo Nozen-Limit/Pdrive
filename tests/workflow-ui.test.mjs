@@ -142,6 +142,9 @@ test("Published dashboard renders an existing module from the single UI asset", 
     ctx,
   );
   assert.match(app.innerHTML, /Existing module/);
+  assert.match(app.innerHTML, /overview-app/);
+  assert.match(app.innerHTML, /Module board/);
+  assert.doesNotMatch(app.innerHTML, /workspace-hero|real-desk-art/);
   assert.match(app.innerHTML, /Due/);
   assert.equal(vm.runInContext("typeof workflowModuleDue", ctx), "function");
   const profile = vm.runInContext("profilePage()", ctx);
@@ -152,6 +155,12 @@ test("Published dashboard renders an existing module from the single UI asset", 
     ctx,
   );
   assert.match(app.innerHTML, /profile picture/);
+  vm.runInContext("data.user.role='head';render()", ctx);
+  assert.match(app.innerHTML, /Upload resource/);
+  assert.doesNotMatch(app.innerHTML, /onclick="go\('submit'\)"/);
+  vm.runInContext("overviewLayout='list';render()", ctx);
+  assert.match(app.innerHTML, /Existing module/);
+  assert.match(app.innerHTML, /module-row/);
   const html = await readFile("docs/index.html", "utf8");
   assert.doesNotMatch(html, /src="school-workflow\.js/);
 });

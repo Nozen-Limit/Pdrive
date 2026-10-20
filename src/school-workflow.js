@@ -14,17 +14,6 @@ const dueLabel = (s) =>
 function workflowUnavailable() {
   return '<div class="panel workflow-setup"><h2>School workflow setup required</h2><p>The administrator must apply the school workflow database update before requirements and review checklists can be used.</p></div>';
 }
-function workflowAttention() {
-  if (!data.workflowReady) return "";
-  const rows = (data.assignments || []).filter(
-      (a) =>
-        !data.requirements.find((r) => r.id === a.requirement_id)?.cancelled,
-    ),
-    missing = rows.filter((a) => a.status === "missing").length,
-    returned = rows.filter((a) => a.status === "returned").length,
-    overdue = rows.filter((a) => a.overdue).length;
-  return `<div class="workflow-attention"><div><strong>Requirements</strong><span>${missing} not submitted · ${returned} need revision${overdue ? " · " + overdue + " overdue" : ""}</span></div><button class="action-btn" onclick="go('requirements')">View requirements</button></div>`;
-}
 function requirementsPage() {
   if (!data.workflowReady) return workflowUnavailable();
   const head = data.user.role === "head",
