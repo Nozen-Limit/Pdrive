@@ -393,14 +393,16 @@ load();
 document.addEventListener("input", (e) => {
   if (
     e.target.closest?.(".content form, #modalRoot form") &&
-    !e.target.closest?.(".bank-filter-popover")
+    !e.target.closest?.(".bank-filter-popover") &&
+    !e.target.closest?.("#bank-collaboration-preview")
   )
     dirty = true;
 });
 document.addEventListener("change", (e) => {
   if (
     e.target.closest?.(".content form, #modalRoot form") &&
-    !e.target.closest?.(".bank-filter-popover")
+    !e.target.closest?.(".bank-filter-popover") &&
+    !e.target.closest?.("#bank-collaboration-preview")
   )
     dirty = true;
 });

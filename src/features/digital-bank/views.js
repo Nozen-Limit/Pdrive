@@ -1,8 +1,8 @@
 function bankNavigation() {
   const head = data.user.role === "head";
   const item = (scope, icon, title, category = "") =>
-    `<button class="${bank.scope === scope && (bank.filters.category || "") === category ? "active" : ""}" onclick="bankNavigate('${scope}','${category}')">${ico(icon)}<span>${title}</span></button>`;
-  return `<details class="bank-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload Resource</button></div></details><nav aria-label="Digital Bank"><button onclick="go('dashboard')">${ico("home")}<span>Home</span></button>${item("shared", "database", "Digital Bank")}${item("mine", "folder_open", "My Resources")}${item("recent", "history", "Recent")}${item("saved", "bookmark", "Saved Resources")}${head ? item("review", "fact_check", "Resource Reviews") + item("all", "inventory_2", "All Resources") + item("archived", "archive", "Archived") : ""}<span class="bank-nav-label">Resource Bank</span>${Object.keys(
+    `<button class="${bank.screen !== "collaboration" && bank.scope === scope && (bank.filters.category || "") === category ? "active" : ""}" onclick="bankNavigate('${scope}','${category}')">${ico(icon)}<span>${title}</span></button>`;
+  return `<details class="bank-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload Resource</button></div></details><nav aria-label="Digital Bank"><button onclick="go('dashboard')">${ico("home")}<span>Home</span></button>${item("shared", "database", "Digital Bank")}${bankLocalPreviewAvailable() ? '<button class="' + (bank.screen === "collaboration" ? "active" : "") + '" onclick="bankCollaborationPage()">' + ico("group_work") + "<span>Collaboration</span></button>" : ""}${item("mine", "folder_open", "My Resources")}${item("recent", "history", "Recent")}${item("saved", "bookmark", "Saved Resources")}${head ? item("review", "fact_check", "Resource Reviews") + item("all", "inventory_2", "All Resources") + item("archived", "archive", "Archived") : ""}<span class="bank-nav-label">Resource Bank</span>${Object.keys(
     bankCategories,
   )
     .map((key) =>
@@ -19,13 +19,18 @@ function bankRender() {
     heading: `<button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div>`,
     actions: `${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button>`,
     content:
-      bank.screen === "list"
-        ? bankListPage()
-        : bank.screen === "upload"
-          ? bankUploadForm()
-          : bankDetailPage(),
+      bank.screen === "collaboration"
+        ? '<div id="bank-collaboration-preview" role="region" aria-label="Collaboration preview"></div>'
+        : bank.screen === "list"
+          ? bankListPage()
+          : bank.screen === "upload"
+            ? bankUploadForm()
+            : bankDetailPage(),
     bankPage: true,
   });
+  if (bank.screen === "collaboration")
+    window.sikapCollaboration?.mount(data.user.role);
+  else if (bank.screen === "list") bankPaintCollaboration();
 }
 function bankStatistics() {
   return data.user.role === "head" && bank.stats
@@ -97,7 +102,7 @@ function bankListPage() {
           )
           .join("")}</div>`
       : ""
-  }<div id="bank-results" aria-live="polite">${bankResults()}</div>`;
+  }<div id="bank-results" aria-live="polite">${bankResults()}</div><div id="bank-collaboration-published" class="muted" role="status"></div>`;
 }
 function bankFilters() {
   const select = (name, title, options) =>
@@ -140,6 +145,8 @@ function bankOpenFilters() {
   }
 }
 function bankActions(resource) {
+  if (resource.localCollaboration)
+    return `<details class="bank-row-menu"><summary aria-label="Actions for ${esc(resource.title)}">${ico("more_vert")}</summary><div><button onclick="bankOpen('${resource.id}')">${ico("open_in_new")}Open details</button></div></details>`;
   const state = bankState(resource),
     own = resource.owner === data.user.id,
     head = data.user.role === "head";
@@ -150,14 +157,41 @@ function bankResults() {
     return `<div class="bank-skeleton" role="status" aria-label="Loading resources">${Array.from({ length: 6 }, () => "<div><span></span><span></span><span></span></div>").join("")}</div>`;
   if (bank.error)
     return `<div class="bank-empty" role="alert"><h2>Could not load resources</h2><p>${esc(bank.error)}</p><button class="secondary" onclick="bankRead()">Try again</button></div>`;
-  const result = bank.result;
+  const schoolResult = bank.result;
+  const localRows =
+    bankLocalPreviewAvailable() &&
+    ["shared", "recent"].includes(bank.scope) &&
+    schoolResult?.page === 1
+      ? (window.sikapCollaboration?.published(bank.filters) || []).map((r) => ({
+          ...r,
+          id: "collaboration:" + r.id,
+          localCollaboration: true,
+          creator: r.credits[0],
+          state: "approved",
+          filename: r.filename + " (preview)",
+          type: {
+            pdf: "application/pdf",
+            mp4: "video/mp4",
+            mp3: "audio/mpeg",
+            pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          }[r.type],
+        }))
+      : [];
+  const result = schoolResult
+    ? {
+        ...schoolResult,
+        items: [...schoolResult.items, ...localRows],
+        total: schoolResult.total + localRows.length,
+      }
+    : null;
   if (!result?.items.length)
     return `<div class="bank-empty"><h2>${bank.scope === "review" ? "No resources are waiting for review" : "No resources found"}</h2><p>${Object.keys(bank.filters).length ? "No resources match these filters." : bank.scope === "shared" ? "Approved Project SIKAP resources will appear here." : bank.scope === "mine" ? "Your resource submissions and drafts will appear here." : "Resources will appear here when available."}</p>${bank.scope === "mine" ? '<button class="secondary" onclick="bankUploadPage()">Upload resource</button>' : ""}</div>`;
   const showStatus = !["shared", "recent"].includes(bank.scope);
   const rows = result.items
     .map(
       (resource) =>
-        `<tr onclick="if(!event.target.closest('button,a,summary,details'))bankOpen('${resource.id}')"><td><div class="bank-file-name">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}<div><button onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button><small>${esc(resource.term)} · ${resource.filename ? esc(resource.filename) : "Draft"}${resource.saved ? " · Saved" : ""}</small></div></div></td><td data-label="Category">${esc(resource.category[0] + resource.category.slice(1).toLowerCase())}</td><td data-label="Learning area">${esc(resource.subject)}</td><td data-label="Grade">${esc(resource.grade)}</td><td data-label="Creator">${esc(resource.creator)}</td><td data-label="Modified">${date(resource.updated)}</td>${showStatus ? `<td>${bankBadge(resource)}</td>` : ""}<td>${bankActions(resource)}</td></tr>`,
+        `<tr onclick="if(!event.target.closest('button,a,summary,details'))bankOpen('${resource.id}')"><td><div class="bank-file-name">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}<div><button onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button><small>${esc(resource.term)} · ${resource.filename ? esc(resource.filename) : "Draft"}${resource.saved ? " · Saved" : ""}</small></div></div></td><td data-label="Category">${esc(resource.category[0] + resource.category.slice(1).toLowerCase())}</td><td data-label="Learning area">${esc(resource.subject)}</td><td data-label="Grade">${esc(resource.grade)}</td><td data-label="Creator">${esc(resource.creator)}${resource.credits?.length ? `<small class="bank-contributor-credit">Contributors: ${esc(resource.credits.join(", "))}</small>` : ""}</td><td data-label="Modified">${date(resource.updated)}</td>${showStatus ? `<td>${bankBadge(resource)}</td>` : ""}<td>${bankActions(resource)}</td></tr>`,
     )
     .join("");
   const grid = result.items
@@ -166,7 +200,7 @@ function bankResults() {
         `<article class="bank-grid-file"><div class="bank-grid-top">${ico(resource.type === "application/pdf" ? "picture_as_pdf" : "description")}${bankActions(resource)}</div><button class="bank-grid-title" onclick="bankOpen('${resource.id}')">${esc(resource.title)}</button><p>${esc(resource.category)} · ${esc(resource.subject)}</p><small>${esc(resource.creator)}</small>${showStatus ? bankBadge(resource) : ""}</article>`,
     )
     .join("");
-  return `${bank.layout === "board" ? bankBoard(result.items) : bank.layout === "grid" ? `<div class="bank-grid">${grid}</div>` : `<table class="bank-table"><thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Learning area</th><th scope="col">Grade</th><th scope="col">Creator</th><th scope="col">Modified</th>${showStatus ? '<th scope="col">Status</th>' : ""}<th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows}</tbody></table>`}<div class="bank-pagination"><span>${(result.page - 1) * 25 + 1}–${Math.min(result.page * 25, result.total)} of ${result.total}</span><button class="icon-btn" aria-label="Previous page" ${result.page === 1 ? "disabled" : ""} onclick="bankPage(${result.page - 1})">${ico("chevron_left")}</button><button class="icon-btn" aria-label="Next page" ${result.page * 25 >= result.total ? "disabled" : ""} onclick="bankPage(${result.page + 1})">${ico("chevron_right")}</button></div>`;
+  return `${bank.layout === "board" ? bankBoard(result.items) : bank.layout === "grid" ? `<div class="bank-grid">${grid}</div>` : `<table class="bank-table"><thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Learning area</th><th scope="col">Grade</th><th scope="col">Creator</th><th scope="col">Modified</th>${showStatus ? '<th scope="col">Status</th>' : ""}<th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows}</tbody></table>`}<div class="bank-pagination"><span>${(result.page - 1) * 25 + 1}–${Math.min(result.page * 25, result.total)} of ${result.total}</span><button class="icon-btn" aria-label="Previous page" ${result.page === 1 ? "disabled" : ""} onclick="bankPage(${result.page - 1})">${ico("chevron_left")}</button><button class="icon-btn" aria-label="Next page" ${result.page * 25 >= schoolResult.total ? "disabled" : ""} onclick="bankPage(${result.page + 1})">${ico("chevron_right")}</button></div>`;
 }
 function bankDetailPage() {
   if (bank.loading) return bankResults();
@@ -206,4 +240,68 @@ function bankDetailPage() {
     .join(
       "",
     )}</dl><h3>Learning competency</h3><p class="bank-prose">${esc(resource.bank_competency)}</p><h3>Tags</h3><div class="bank-tags">${resource.bank_tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>${resource.bank_source ? `<h3>Reference / Source</h3><p class="bank-prose">${esc(resource.bank_source)}</p>` : ""}${resource.bank_notes ? `<h3>Additional notes</h3><p class="bank-prose">${esc(resource.bank_notes)}</p>` : ""}${head && !own && ["pending", "resubmitted"].includes(state) ? bankReviewForm() : ""}${own && state === "returned" ? bankRevisionForm() : ""}</aside></div>`;
+}
+
+function bankLocalPreviewAvailable() {
+  return (
+    typeof location !== "undefined" &&
+    ["127.0.0.1", "localhost", "[::1]"].includes(location.hostname)
+  );
+}
+async function bankCollaborationPage(resourceId = null, published = false) {
+  if (!bankLocalPreviewAvailable() || !(await bankDiscard())) return;
+  try {
+    await bankLoadCollaboration();
+    view = "bank";
+    bank.screen = "collaboration";
+    bankRender();
+    if (resourceId) window.sikapCollaboration.open(resourceId, published);
+    window.scrollTo(0, 0);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+let bankCollaborationLoading = null;
+function bankLoadCollaboration() {
+  if (window.sikapCollaboration) return Promise.resolve();
+  if (!bankCollaborationLoading)
+    bankCollaborationLoading = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "collaboration-preview.js";
+      script.onload = resolve;
+      script.onerror = () => {
+        script.remove();
+        bankCollaborationLoading = null;
+        reject(
+          new Error(
+            "The collaboration preview could not load. Refresh and try again.",
+          ),
+        );
+      };
+      document.head.append(script);
+    });
+  return bankCollaborationLoading;
+}
+async function bankPaintCollaboration() {
+  if (!bankLocalPreviewAvailable()) return;
+  const target = document.querySelector("#bank-collaboration-published");
+  if (!target || !["shared", "recent"].includes(bank.scope)) {
+    if (target) target.textContent = "";
+    return;
+  }
+  try {
+    await bankLoadCollaboration();
+    if (!target.isConnected || bank.screen !== "list") return;
+    const rows = window.sikapCollaboration.published(bank.filters);
+    target.textContent = rows.length
+      ? "Local preview: sample collaboration resources are included in this list. They reset on reload."
+      : "";
+    const results = document.querySelector("#bank-results");
+    if (results) results.innerHTML = bankResults();
+  } catch {
+    if (target.isConnected)
+      target.textContent =
+        "Collaboration preview unavailable. Open Collaboration to try again.";
+  }
 }

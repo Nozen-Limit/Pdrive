@@ -1,0 +1,488 @@
+html {
+  --sikap-bg: #fcfcfd;
+  --sikap-accent: #456958;
+  --sikap-action: #34475f;
+  --ink: #24272c;
+  --muted: #737980;
+  --line: #e7e9ec;
+  --bank-side: #f7f8f9;
+  color-scheme: light;
+}
+.mock-menu {
+  display: none;
+}
+.mock-nav-scrim {
+  display: none;
+}
+.mock-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 20px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bank-side);
+  color: var(--muted);
+  font:
+    11px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+}
+.mock-banner strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+.mock-banner div {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.mock-banner a,
+.mock-banner button {
+  color: var(--muted);
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+html body .app.workspace-app .workspace-sidebar {
+  height: calc(100dvh - 39px);
+  top: 39px;
+}
+.mock-account {
+  margin-top: auto;
+  padding-top: 24px;
+}
+.mock-role {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+.mock-role select {
+  max-width: 200px;
+  font-size: 11px;
+  padding: 7px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink);
+}
+.collab-table-wrap {
+  overflow-x: auto;
+}
+.collab-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 11px;
+  min-width: 680px;
+}
+.collab-table th,
+.collab-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 15px 12px;
+  vertical-align: middle;
+}
+.collab-table th {
+  font-weight: 500;
+  color: var(--muted);
+}
+.collab-table th:first-child {
+  width: 32%;
+}
+.collab-table td:first-child button {
+  text-align: left;
+  font-weight: 500;
+}
+.collab-table small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.collab-table tbody tr:hover {
+  background: var(--bank-side);
+}
+.collab-person {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0;
+}
+.collab-person .avatar {
+  width: 27px;
+  height: 27px;
+  min-width: 27px;
+  font-size: 10px;
+  background: #e7edeb;
+  color: #456958;
+}
+.collab-person small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.collab-person strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.collab-person .bank-text-button {
+  margin-left: auto;
+}
+.collab-meta-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+.collab-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.collab-detail-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.collab-section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 24px;
+}
+.collab-section h2 {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+.collab-section textarea {
+  width: 100%;
+  min-height: 78px;
+}
+.collab-comment {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.collab-comment strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.collab-comment small {
+  color: var(--muted);
+  margin-left: 12px;
+  font-size: 10px;
+}
+.collab-comment p {
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: 7px 0;
+}
+.collab-file {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.collab-file .material-symbols-rounded {
+  color: var(--muted);
+  font-size: 20px;
+}
+.collab-file strong {
+  font-weight: 500;
+  font-size: 11px;
+}
+.collab-file small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.collab-file a {
+  margin-left: auto;
+  font-size: 11px;
+}
+.collab-media {
+  width: 100%;
+  max-height: 380px;
+  background: #1b2025;
+  border-radius: 3px;
+}
+audio.collab-media {
+  background: transparent;
+  height: 48px;
+  margin: 16px 0;
+}
+.collab-pdf {
+  width: 100%;
+  height: 450px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.collab-transcript {
+  margin-top: 16px;
+  font-size: 11px;
+}
+.collab-transcript p {
+  white-space: pre-wrap;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.collab-lock {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  margin: 16px 0;
+}
+.collab-lock .material-symbols-rounded {
+  font-size: 16px;
+}
+.collab-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: 88dvh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 26px;
+  background: var(--sikap-bg);
+  color: var(--ink);
+  font:
+    12px/1.5 Inter,
+    "Segoe UI",
+    sans-serif;
+}
+.collab-dialog::backdrop {
+  background: #17203055;
+}
+.collab-dialog h2 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 18px;
+}
+.collab-dialog input:not([type="checkbox"]),
+.collab-dialog select,
+.collab-dialog textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 9px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+.collab-dialog textarea {
+  min-height: 75px;
+}
+.collab-dialog .bank-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+  font-size: 11px;
+}
+.collab-dialog .bank-form-grid {
+  gap: 0 20px;
+}
+.collab-dialog input[type="file"] {
+  margin: 5px 0;
+}
+.collab-dialog .form-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-top: 18px;
+}
+.collab-dialog small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.collab-dialog .collab-consent {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 18px 0;
+  font-size: 11px;
+}
+.collab-dialog [hidden] {
+  display: none !important;
+}
+.collab-dialog .form-error {
+  color: #a54838;
+}
+.collab-review label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.collab-review select {
+  max-width: 130px;
+}
+.collab-empty {
+  padding: 45px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.collab-invite {
+  border-bottom: 1px solid var(--line);
+  padding: 22px 0;
+}
+.collab-invite h2 {
+  font-size: 13px;
+  font-weight: 500;
+}
+.collab-limit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 14px 0;
+}
+.collab-limit-table th,
+.collab-limit-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.collab-limit-table input {
+  max-width: 90px;
+}
+@media (max-width: 800px) {
+  .mock-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  html body .app.workspace-app {
+    --workspace-sidebar: 180px;
+  }
+  .mock-role span {
+    display: none;
+  }
+  .mock-role select {
+    max-width: 160px;
+  }
+  .bank-review-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .mock-menu {
+    display: inline-flex;
+  }
+  html body .app.workspace-app.mock-nav-open .workspace-sidebar {
+    transform: none;
+    visibility: visible;
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    width: 212px;
+    z-index: 150;
+  }
+  .mock-nav-open .mock-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #17203055;
+    z-index: 140;
+    border: 0;
+  }
+  .mock-role select {
+    max-width: 145px;
+  }
+  .collab-table {
+    min-width: 0;
+  }
+  .collab-table,
+  .collab-table tbody {
+    display: block;
+  }
+  .collab-table thead {
+    display: none;
+  }
+  .collab-table tr {
+    display: block;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+  }
+  .collab-table td {
+    display: flex;
+    gap: 10px;
+    border: 0;
+    padding: 5px 0;
+  }
+  .collab-table td:first-child {
+    display: block;
+    margin-bottom: 7px;
+  }
+  .collab-table td[data-label]::before {
+    content: attr(data-label);
+    min-width: 76px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+  html body .app.workspace-app {
+    grid-template-columns: 1fr;
+  }
+  html body .app.workspace-app .workspace-sidebar {
+    display: none;
+  }
+  .collab-dialog .bank-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .mock-role select {
+    max-width: 180px;
+  }
+  .collab-pdf {
+    height: 340px;
+  }
+  .mock-banner {
+    padding: 8px 12px;
+  }
+}
+
+.collab-pdf-viewer {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  padding: 12px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+.collab-pdf-viewer canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 14px auto 0;
+}
+.collab-pdf-viewer button {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  background: var(--bank-side);
+  font: inherit;
+}
+.collab-pdf-viewer [role="status"] {
+  font-size: 11px;
+}
+
+.workspace-sidebar > .mock-menu {
+  display: none;
+}
+@media (max-width: 760px) {
+  .workspace-sidebar > .mock-menu {
+    display: block;
+    margin: 0 12px 12px;
+  }
+}

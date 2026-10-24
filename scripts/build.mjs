@@ -90,3 +90,6 @@ await writeFile(
     (_, start, name, end) => start + name + "?v=" + version + end,
   ),
 );
+
+// Generate the localhost-only collaboration preview alongside the current app.
+await import("./build-collaboration-preview.mjs");

@@ -1829,3 +1829,15 @@ html body .app.bank-app .brand-symbol .material-symbols-rounded {
 .overview-summary-table tbody tr:hover {
   background: var(--bank-side);
 }
+
+.bank-contributor-credit {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.bank-status {
+  white-space: nowrap;
+  word-break: normal;
+}

@@ -14,9 +14,18 @@ http
       const content = await readFile(file);
       res.setHeader(
         "Content-Type",
-        { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" }[
-          extname(file)
-        ] || "application/octet-stream",
+        {
+          ".html": "text/html",
+          ".js": "text/javascript",
+          ".mjs": "text/javascript",
+          ".css": "text/css",
+          ".pdf": "application/pdf",
+          ".pptx":
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          ".mp4": "video/mp4",
+          ".mp3": "audio/mpeg",
+          ".vtt": "text/vtt",
+        }[extname(file)] || "application/octet-stream",
       );
       res.end(content);
     } catch {
