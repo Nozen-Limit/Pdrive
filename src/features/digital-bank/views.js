@@ -10,7 +10,7 @@ function bankNavigation() {
     )
     .join(
       "",
-    )}<span class="bank-nav-label">Workspace</span><button onclick="go('modules')">${ico("description")}<span>${head ? "All Modules" : "My Modules"}</span></button><button onclick="go('requirements')">${ico("assignment")}<span>Requirements</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
+    )}<span class="bank-nav-label">Workspace</span><button onclick="go('notes')">${ico("description")}<span>Personal Notes</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
 }
 function bankRender() {
   workspaceRender({

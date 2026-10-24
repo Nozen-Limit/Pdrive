@@ -117,7 +117,7 @@ test("Requirement screens distinguish missing, returned and late submissions wit
   );
 });
 
-test("Published dashboard renders an existing module from the single UI asset", async () => {
+test("Published dashboard uses Digital Bank resources while keeping its original workspace styling", async () => {
   const app = { innerHTML: "" };
   const ctx = vm.createContext({
     console,
@@ -141,11 +141,16 @@ test("Published dashboard renders an existing module from the single UI asset", 
     "data={user:{id:'t',role:'teacher',name:'Teacher',approval_status:'approved'},workflowReady:true,modules:[{id:'m',title:'Existing module',teacher:'Teacher',subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026',status:'pending',version:1,created:'2026-10-17',updated:'2026-10-17',deadline:'2026-10-20'}],notes:[],teachers:[],notifications:[],events:[],requirements:[],assignments:[]};render()",
     ctx,
   );
-  assert.match(app.innerHTML, /Existing module/);
+  vm.runInContext(
+    "overview.ready=true;overview.items=[{id:'bank-resource',title:'Bank resource',owner:'t',creator:'Teacher',teacher:'Teacher',category:'UNITS',subject:'Science',grade:'Grade 7',term:'Quarter 1',status:'pending',version:1,created:'2026-10-17',updated:'2026-10-17'}];render()",
+    ctx,
+  );
+  assert.match(app.innerHTML, /Bank resource/);
+  assert.doesNotMatch(app.innerHTML, /Existing module/);
   assert.match(app.innerHTML, /overview-app/);
-  assert.match(app.innerHTML, /Module board/);
+  assert.match(app.innerHTML, /Resource board/);
   assert.doesNotMatch(app.innerHTML, /workspace-hero|real-desk-art/);
-  assert.match(app.innerHTML, /Due/);
+  assert.match(app.innerHTML, /Updated/);
   assert.equal(vm.runInContext("typeof workflowModuleDue", ctx), "function");
   const profile = vm.runInContext("profilePage()", ctx);
   assert.doesNotMatch(profile, /Google|Link Google/);
@@ -159,7 +164,7 @@ test("Published dashboard renders an existing module from the single UI asset", 
   assert.match(app.innerHTML, /Upload resource/);
   assert.doesNotMatch(app.innerHTML, /onclick="go\('submit'\)"/);
   vm.runInContext("overviewLayout='list';render()", ctx);
-  assert.match(app.innerHTML, /Existing module/);
+  assert.match(app.innerHTML, /Bank resource/);
   assert.match(app.innerHTML, /module-row/);
   const html = await readFile("docs/index.html", "utf8");
   assert.doesNotMatch(html, /src="school-workflow\.js/);

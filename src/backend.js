@@ -1,6 +1,14 @@
 import { validateResourceFile } from "./lib/resource-file.js";
 import { createBankService } from "./features/digital-bank/service.js";
 import { attachProfilePhoto } from "./lib/profile-photo.js";
+import {
+  normalizePhilippinePhone,
+  formatPhilippinePhone,
+} from "./lib/philippine-phone.js";
+import {
+  recoveryRoute,
+  createResetRequester,
+} from "./lib/password-recovery.js";
 import { createClient } from "@supabase/supabase-js";
 const config = window.SIKAP_CONFIG || {};
 const fail = (message, status = 400) => {
@@ -47,8 +55,12 @@ const storage = {
 };
 let client = null,
   initError = null;
-let recovery =
-  new URLSearchParams(location.hash.slice(1)).get("type") === "recovery";
+const initialRecovery = recoveryRoute(
+  location.href || "http://localhost/" + (location.hash || ""),
+);
+let recovery = initialRecovery.requested;
+let recoveryError = initialRecovery.error;
+let recoveryVerification = null;
 try {
   validateConfig();
   client = createClient(config.supabaseUrl, config.supabasePublishableKey, {
@@ -61,8 +73,20 @@ try {
       detectSessionInUrl: true,
     },
   });
+  if (initialRecovery.requested)
+    recoveryVerification = client.auth.initialize();
   client.auth.onAuthStateChange((event) => {
-    if (event === "PASSWORD_RECOVERY") recovery = true;
+    if (event === "PASSWORD_RECOVERY") {
+      recovery = true;
+      recoveryError = "";
+      // Do not call Supabase auth methods from inside its auth callback.
+      setTimeout(() => {
+        const url = new URL(location.href);
+        url.searchParams.set("recovery", "1");
+        history.replaceState(null, "", url.pathname + url.search);
+        window.dispatchEvent(new Event("sikap:password-recovery"));
+      }, 0);
+    }
   });
 } catch (e) {
   initError = e;
@@ -132,12 +156,40 @@ async function signedVersions(versions) {
   );
 }
 const backend = {
+  phone: { normalize: normalizePhilippinePhone, format: formatPhilippinePhone },
   get recovery() {
     return recovery;
   },
+  get recoveryError() {
+    return recoveryError;
+  },
+  clearRecovery() {
+    recovery = false;
+    recoveryError = "";
+    recoveryVerification = null;
+    const url = new URL(location.href);
+    url.searchParams.delete("recovery");
+    url.searchParams.delete("code");
+    url.searchParams.delete("error");
+    url.searchParams.delete("error_code");
+    url.searchParams.delete("error_description");
+    history.replaceState(null, "", url.pathname + url.search);
+  },
   async ready() {
     if (initError) throw initError;
-    checked(await client.auth.getSession());
+    if (recoveryError) fail(recoveryError);
+    if (recoveryVerification) {
+      const result = await recoveryVerification;
+      if (result.error)
+        fail(
+          "This password reset link has expired or cannot be verified. Request a new link and open it in the same browser where you requested it.",
+        );
+    }
+    const { session } = checked(await client.auth.getSession());
+    if (recovery && !session)
+      fail(
+        "This password reset link has expired or cannot be verified. Request a new link and open it in the same browser where you requested it.",
+      );
   },
   async api(path, options = {}) {
     await this.ready();
@@ -276,7 +328,7 @@ const backend = {
         .update({
           name: body.name,
           assignment: body.assignment,
-          phone: body.phone,
+          phone: normalizePhilippinePhone(body.phone),
           location: body.location,
           subjects: body.subjects,
           grade_levels: body.grade_levels,
@@ -396,20 +448,23 @@ const backend = {
     fail("Unknown action.");
   },
   async reset(email) {
-    await this.ready();
-    checked(
-      await client.auth.resetPasswordForEmail(email, {
-        redirectTo: callbackUrl(),
-      }),
-    );
+    if (initError) throw initError;
+    return requestPasswordReset(email);
   },
   async updatePassword(password) {
     await this.ready();
+    if (!recovery)
+      fail(
+        "Open the password reset link from your email before changing your password.",
+      );
     if (password.length < 12) fail("Use at least 12 characters.");
     checked(await client.auth.updateUser({ password }));
     recovery = false;
   },
 };
+const requestPasswordReset = client
+  ? createResetRequester(client.auth, location.href, sessionStorage)
+  : null;
 backend.validateBankFile = validateResourceFile;
 backend.bank = createBankService(client, config, checked, signedVersions);
 window.sikapBackend = backend;

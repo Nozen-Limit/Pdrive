@@ -17,7 +17,7 @@ function bookAuthForm(error = "") {
     <div class="field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your email" required></div>
     <div class="field"><label for="login-password">Password</label><div class="input-wrap"><input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
     ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
-    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
+    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" id="forgot-password" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
     <p class="form-error" role="alert">${esc(error)}</p>
     <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign in"}</button>
     <div class="login-footer"><button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Create an account"}</button></div>
@@ -47,18 +47,45 @@ function togglePassword() {
   button.innerHTML = ico(show ? "visibility_off" : "visibility");
 }
 async function passwordHelp() {
-  const email = $("#login-email").value.trim();
-  if (!email) {
-    $(".form-error").textContent = "Enter your email above first.";
+  if (busy) return;
+  const emailInput = $("#login-email"),
+    email = emailInput.value.trim();
+  if (!email || !emailInput.reportValidity()) {
+    $(".form-error").textContent = "Enter a valid email above first.";
     $("#login-email").focus();
     return;
   }
+  const button = $("#forgot-password"),
+    error = $(".form-error");
+  busy = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Sending reset link…";
+  }
+  let retryAfter = 0;
   try {
-    await window.sikapBackend.reset(email);
+    const result = await window.sikapBackend.reset(email);
+    retryAfter = result?.retryAfter || 60;
     $(".form-error").textContent =
-      "If the account exists, a reset link will arrive by email.";
+      "If the account exists, a reset link will arrive by email. Check Spam too, then open the link in this browser to set your new password.";
   } catch (e) {
-    $(".form-error").textContent = e.message;
+    error.textContent = e.message;
+    retryAfter = e.retryAfter || 0;
+  } finally {
+    busy = false;
+    if (button) {
+      button.textContent = retryAfter
+        ? "Wait before requesting another link"
+        : "Forgot password?";
+      button.disabled = retryAfter > 0;
+      if (retryAfter) {
+        const timer = setTimeout(() => {
+          button.disabled = false;
+          button.textContent = "Forgot password?";
+        }, retryAfter * 1000);
+        timer?.unref?.();
+      }
+    }
   }
 }
 async function resendConfirmation() {
@@ -152,6 +179,10 @@ async function load() {
       return;
     }
     data = await api("state");
+    if (window.sikapBackend.recovery) {
+      resetPage();
+      return;
+    }
     const route = bankRoute();
     if (route && data.user.approval_status === "approved") {
       bank.filters = Object.fromEntries(
@@ -161,8 +192,19 @@ async function load() {
       );
       await bankNavigate(route.get("scope") || "shared", "", true);
       if (route.get("resource")) await bankOpen(route.get("resource"));
-    } else render();
+    } else {
+      render();
+      if (data.user.approval_status === "approved" && view === "dashboard")
+        await overviewRead();
+    }
   } catch (e) {
+    if (window.sikapBackend.recovery || window.sikapBackend.recoveryError) {
+      window.sikapBackend.clearRecovery();
+      authMode = "login";
+      data = null;
+      login(e.message);
+      return;
+    }
     if (e.status === 503 && e.message.includes("config.js")) {
       login(e.message);
       return;
@@ -181,22 +223,38 @@ function resetPage() {
 }
 async function resetPassword(e) {
   e.preventDefault();
+  if (busy) return;
   const f = new FormData(e.target),
-    button = e.target.querySelector("button");
+    button = e.target.querySelector('button[type="submit"]');
   if (f.get("password") !== f.get("confirm")) {
     e.target.querySelector(".form-error").textContent =
       "Passwords do not match.";
     return;
   }
+  if (f.get("password").length < 12) {
+    e.target.querySelector(".form-error").textContent =
+      "Use at least 12 characters.";
+    return;
+  }
+  busy = true;
   button.disabled = true;
   try {
     await window.sikapBackend.updatePassword(f.get("password"));
+    dirty = false;
+    window.sikapBackend.clearRecovery();
     history.replaceState(null, "", location.pathname);
     await load();
     toast("Password updated.");
   } catch (error) {
     e.target.querySelector(".form-error").textContent = error.message;
   } finally {
+    busy = false;
     button.disabled = false;
   }
 }
+addEventListener("sikap:password-recovery", () => {
+  data = null;
+  detail = null;
+  dirty = false;
+  resetPage();
+});

@@ -102,6 +102,7 @@ async function go(next) {
     filterOpen = false;
     filterDraft = null;
     render();
+    if (view === "dashboard") await overviewRead();
     window.scrollTo(0, 0);
   } catch (e) {
     if (e.status === 401) await load();
@@ -143,9 +144,9 @@ function render() {
     unread = data.notifications.filter((n) => !n.read).length;
   workspaceRender({
     classes: view === "dashboard" ? "overview-app" : "",
-    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
+    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${head ? `<button onclick="bankNavigate('review')"><span class="nav-ico">${ico("fact_check")}</span><span class="nav-label">Review Queue</span></button>` : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
     heading: `<div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div>`,
-    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Upload resource" title="Upload resource" onclick="bankUploadPage()">+</button>' : ""}`,
     content: page(),
   });
 }
@@ -231,8 +232,8 @@ function chooseFilter(button) {
 }
 function filterPanel() {
   const current = editingFilters(),
-    active = data.modules.filter((m) =>
-      view === "archive" ? m.archived : !m.archived,
+    active = (view === "dashboard" ? overview.items : data.modules).filter(
+      (m) => (view === "archive" ? m.archived : !m.archived),
     ),
     count =
       ["subject", "grade", "term", "year", "status"].filter(
@@ -244,7 +245,7 @@ function filterPanel() {
     [...new Set(active.map((m) => m[k]))].sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true }),
     );
-  return `<div class="filter-shell ${filterOpen ? "is-open" : ""}"><div class="mobile-filter-bar"><span class="filter-caption">${count ? `${count} active filter${count === 1 ? "" : "s"}` : "All submissions"}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count ? `, ${count} active` : ""}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico("tune")}<span>Filters</span>${ico("expand_more")}${count ? `<span class="filter-count">${count}</span>` : ""}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico("close")}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select("subject", "Subject", unique("subject"))}${select("grade", "Grade / Year level", unique("grade"))}${select("term", "Quarter / Semester", unique("term"))}${select("year", "School year", unique("year"))}${filterDropdown("status", "Status", [{ value: "all", text: "All statuses" }, ...["pending", "approved", "returned"].map((value) => ({ value, text: label(value) }))])}${filterDropdown(
+  return `<div class="filter-shell ${filterOpen ? "is-open" : ""}"><div class="mobile-filter-bar"><span class="filter-caption">${count ? `${count} active filter${count === 1 ? "" : "s"}` : "All submissions"}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count ? `, ${count} active` : ""}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico("tune")}<span>Filters</span>${ico("expand_more")}${count ? `<span class="filter-count">${count}</span>` : ""}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico("close")}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select("subject", "Subject", unique("subject"))}${select("grade", "Grade / Year level", unique("grade"))}${select("term", "Quarter / Semester", unique("term"))}${view === "dashboard" ? "" : select("year", "School year", unique("year"))}${filterDropdown("status", "Status", [{ value: "all", text: "All statuses" }, ...["pending", "approved", "returned"].map((value) => ({ value, text: label(value) }))])}${filterDropdown(
     "sort",
     "Sort by",
     [
@@ -302,8 +303,8 @@ function searchModules(value) {
   else render();
 }
 function filtered() {
-  let list = data.modules.filter((m) =>
-    view === "archive" ? m.archived : !m.archived,
+  let list = (view === "dashboard" ? overview.items : data.modules).filter(
+    (m) => (view === "archive" ? m.archived : !m.archived),
   );
   if (view === "library") list = list.filter((m) => m.status === "approved");
   if (view === "reviews") list = list.filter((m) => m.status === "pending");
@@ -311,7 +312,10 @@ function filtered() {
   list = list.filter(
     (m) =>
       ["subject", "grade", "term", "year"].every(
-        (k) => filters[k] === "all" || m[k] === filters[k],
+        (k) =>
+          (view === "dashboard" && k === "year") ||
+          filters[k] === "all" ||
+          m[k] === filters[k],
       ) &&
       (filters.status === "all" || m.status === filters.status) &&
       `${m.title} ${m.teacher}`

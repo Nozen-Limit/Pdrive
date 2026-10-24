@@ -23,7 +23,7 @@ test("Academic filters use in-page dropdowns and preserve mobile drafts", async 
     });
   vm.runInContext((await readUi()).replace(/^load\(\);\s*$/m, ""), context);
   vm.runInContext(
-    "data={modules:[{subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026–2027'}]};filterOpen=true;filterDraft={...filters};setFilter('subject','Science')",
+    "view='modules';data={modules:[{subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026–2027'}]};filterOpen=true;filterDraft={...filters};setFilter('subject','Science')",
     context,
   );
   const html = vm.runInContext("filterPanel()", context);

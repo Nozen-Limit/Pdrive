@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readUi } from "../scripts/ui-source.mjs";
 
-test("Module collections are nested for both roles and disclosure preserves the current page", async () => {
+test("Digital Bank replaces duplicate module navigation for both roles", async () => {
   const app = { innerHTML: "" },
     children = { hidden: true },
     attributes = {};
@@ -59,14 +59,18 @@ test("Module collections are nested for both roles and disclosure preserves the 
     vm.runInContext("render()", ctx);
     const nav = app.innerHTML.split('<nav class="nav">')[1].split("</nav>")[0];
     assert.doesNotMatch(nav, /go\('reports'\)/);
-    assert.match(nav, role === "head" ? /All Modules/ : /My Modules/);
-    const nested = nav.match(/<div id="module-subnav"[^>]*>([\s\S]*?)<\/div>/);
-    assert.ok(nested);
-    assert.match(nested[1], /go\('library'\)/);
-    assert.match(nested[1], /go\('starred'\)/);
     assert.doesNotMatch(
-      nav.replace(nested[0], ""),
-      /go\('library'\)|go\('starred'\)/,
+      nav,
+      /Requirements|Submit Module|My Modules|All Modules|module-subnav/,
+    );
+    assert.match(nav, /Digital Bank/);
+    assert.doesNotMatch(
+      vm.runInContext("overviewNew()", ctx),
+      /go\('submit'\)/,
+    );
+    assert.doesNotMatch(
+      vm.runInContext("bankNavigation()", ctx),
+      /Requirements|My Modules|All Modules/,
     );
     if (role === "head")
       assert.ok(

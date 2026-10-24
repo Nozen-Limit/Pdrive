@@ -1786,3 +1786,46 @@ html body .app.bank-app .brand-symbol .material-symbols-rounded {
 .overview-app .overview-board {
   min-height: 0;
 }
+.overview-summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0 24px;
+}
+.overview-summary-section {
+  margin: 24px 0 32px;
+}
+.overview-summary-section h2 {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+.overview-summary-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+}
+.overview-summary-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 11px;
+}
+.overview-summary-table th,
+.overview-summary-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.overview-summary-table th {
+  font-weight: 500;
+}
+.overview-summary-table thead {
+  color: var(--muted);
+}
+.overview-summary-table tbody th {
+  width: 40%;
+}
+.overview-summary-table tbody tr:hover {
+  background: var(--bank-side);
+}

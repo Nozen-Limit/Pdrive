@@ -6,6 +6,7 @@ export const uiSources = [
   "ui/profile.js",
   "ui/accounts.js",
   "ui/modules.js",
+  "ui/overview-bank.js",
   "ui/overview.js",
   "ui/workspace.js",
   "ui/notes.js",

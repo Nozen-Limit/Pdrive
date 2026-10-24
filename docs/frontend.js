@@ -343,7 +343,7 @@ function bookAuthForm(error = "") {
     <div class="field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="Enter your email" required></div>
     <div class="field"><label for="login-password">Password</label><div class="input-wrap"><input id="login-password" name="password" type="password" autocomplete="${setup ? "new-password" : "current-password"}" ${setup ? 'minlength="12"' : ""} maxlength="200" placeholder="${setup ? "At least 12 characters" : "Enter your password"}" required><button class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">${ico("visibility")}</button></div></div>
     ${setup ? '<div class="field"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="12" maxlength="200" required></div>' : ""}
-    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
+    <div class="login-options"><label><input name="remember" type="checkbox">Remember me</label>${!setup ? '<button type="button" id="forgot-password" class="link-btn" onclick="passwordHelp()">Forgot password?</button>' : ""}</div>
     <p class="form-error" role="alert">${esc(error)}</p>
     <button class="primary login-submit" type="submit">${setup ? "Sign Up" : "Sign in"}</button>
     <div class="login-footer"><button type="button" class="link-btn" onclick="setAuthMode('${setup ? "login" : "register"}')">${setup ? "Sign In" : "Create an account"}</button></div>
@@ -373,18 +373,45 @@ function togglePassword() {
   button.innerHTML = ico(show ? "visibility_off" : "visibility");
 }
 async function passwordHelp() {
-  const email = $("#login-email").value.trim();
-  if (!email) {
-    $(".form-error").textContent = "Enter your email above first.";
+  if (busy) return;
+  const emailInput = $("#login-email"),
+    email = emailInput.value.trim();
+  if (!email || !emailInput.reportValidity()) {
+    $(".form-error").textContent = "Enter a valid email above first.";
     $("#login-email").focus();
     return;
   }
+  const button = $("#forgot-password"),
+    error = $(".form-error");
+  busy = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Sending reset link…";
+  }
+  let retryAfter = 0;
   try {
-    await window.sikapBackend.reset(email);
+    const result = await window.sikapBackend.reset(email);
+    retryAfter = result?.retryAfter || 60;
     $(".form-error").textContent =
-      "If the account exists, a reset link will arrive by email.";
+      "If the account exists, a reset link will arrive by email. Check Spam too, then open the link in this browser to set your new password.";
   } catch (e) {
-    $(".form-error").textContent = e.message;
+    error.textContent = e.message;
+    retryAfter = e.retryAfter || 0;
+  } finally {
+    busy = false;
+    if (button) {
+      button.textContent = retryAfter
+        ? "Wait before requesting another link"
+        : "Forgot password?";
+      button.disabled = retryAfter > 0;
+      if (retryAfter) {
+        const timer = setTimeout(() => {
+          button.disabled = false;
+          button.textContent = "Forgot password?";
+        }, retryAfter * 1000);
+        timer?.unref?.();
+      }
+    }
   }
 }
 async function resendConfirmation() {
@@ -478,6 +505,10 @@ async function load() {
       return;
     }
     data = await api("state");
+    if (window.sikapBackend.recovery) {
+      resetPage();
+      return;
+    }
     const route = bankRoute();
     if (route && data.user.approval_status === "approved") {
       bank.filters = Object.fromEntries(
@@ -487,8 +518,19 @@ async function load() {
       );
       await bankNavigate(route.get("scope") || "shared", "", true);
       if (route.get("resource")) await bankOpen(route.get("resource"));
-    } else render();
+    } else {
+      render();
+      if (data.user.approval_status === "approved" && view === "dashboard")
+        await overviewRead();
+    }
   } catch (e) {
+    if (window.sikapBackend.recovery || window.sikapBackend.recoveryError) {
+      window.sikapBackend.clearRecovery();
+      authMode = "login";
+      data = null;
+      login(e.message);
+      return;
+    }
     if (e.status === 503 && e.message.includes("config.js")) {
       login(e.message);
       return;
@@ -507,25 +549,41 @@ function resetPage() {
 }
 async function resetPassword(e) {
   e.preventDefault();
+  if (busy) return;
   const f = new FormData(e.target),
-    button = e.target.querySelector("button");
+    button = e.target.querySelector('button[type="submit"]');
   if (f.get("password") !== f.get("confirm")) {
     e.target.querySelector(".form-error").textContent =
       "Passwords do not match.";
     return;
   }
+  if (f.get("password").length < 12) {
+    e.target.querySelector(".form-error").textContent =
+      "Use at least 12 characters.";
+    return;
+  }
+  busy = true;
   button.disabled = true;
   try {
     await window.sikapBackend.updatePassword(f.get("password"));
+    dirty = false;
+    window.sikapBackend.clearRecovery();
     history.replaceState(null, "", location.pathname);
     await load();
     toast("Password updated.");
   } catch (error) {
     e.target.querySelector(".form-error").textContent = error.message;
   } finally {
+    busy = false;
     button.disabled = false;
   }
 }
+addEventListener("sikap:password-recovery", () => {
+  data = null;
+  detail = null;
+  dirty = false;
+  resetPage();
+});
 
 function avatarContent(u) {
   return u.avatarUrl
@@ -699,7 +757,7 @@ function profilePage() {
       "Kindergarten",
       ...Array.from({ length: 12 }, (_, i) => "Grade " + (i + 1)),
     ];
-  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div>${u.avatarError ? `<p class="photo-error" role="alert">${esc(u.avatarError)} <button type="button" class="link-btn" onclick="load()">Retry</button></p>` : ""}</section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}${field("phone", "Phone number", `<input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40" value="${esc(u.phone || "")}">`)}${field("location", "Location", `<input id="location" name="location" autocomplete="address-level2" maxlength="200" value="${esc(u.location || "")}" placeholder="City or municipality">`)}</div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><div class="profile-teaching-selects">${profileMultiSelect("subjects", "Subjects handled", subjects, u.subjects || [])}${profileMultiSelect("grade_levels", "Grade levels", grades, u.grade_levels || [])}</div><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
+  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div>${u.avatarError ? `<p class="photo-error" role="alert">${esc(u.avatarError)} <button type="button" class="link-btn" onclick="load()">Retry</button></p>` : ""}</section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}${field("phone", "Phone number", `<input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="0912 345 6789" aria-describedby="phone-format" oninput="profilePhoneInput(this)" onblur="profilePhoneInput(this,true)" value="${esc(window.sikapBackend?.phone?.format(u.phone) ?? u.phone ?? "")}"><small id="phone-format">Philippine mobile or landline. Example: 0912 345 6789 or (02) 8123 4567.</small>`)}${field("location", "Location", `<input id="location" name="location" autocomplete="address-level2" maxlength="200" value="${esc(u.location || "")}" placeholder="City or municipality">`)}</div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><div class="profile-teaching-selects">${profileMultiSelect("subjects", "Subjects handled", subjects, u.subjects || [])}${profileMultiSelect("grade_levels", "Grade levels", grades, u.grade_levels || [])}</div><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
 }
 async function saveProfile(e) {
   await formSave(e, async (form) => {
@@ -709,7 +767,7 @@ async function saveProfile(e) {
       body: JSON.stringify({
         name: f.get("name").trim(),
         assignment: f.get("assignment").trim(),
-        phone: f.get("phone").trim(),
+        phone: window.sikapBackend.phone.normalize(f.get("phone")),
         location: f.get("location").trim(),
         subjects: f.getAll("subjects"),
         grade_levels: f.getAll("grade_levels"),
@@ -717,6 +775,16 @@ async function saveProfile(e) {
     });
     toast("Profile saved.");
   });
+}
+
+function profilePhoneInput(input, format = false) {
+  try {
+    window.sikapBackend.phone.normalize(input.value);
+    input.setCustomValidity("");
+    if (format) input.value = window.sikapBackend.phone.format(input.value);
+  } catch (error) {
+    input.setCustomValidity(error.message);
+  }
 }
 
 let accountFilter = "all";
@@ -941,10 +1009,182 @@ async function starModule(mid) {
   }
 }
 
+const overview = {
+  items: [],
+  ready: false,
+  loading: false,
+  error: "",
+  sequence: 0,
+  screen: "resources",
+};
+async function overviewRead() {
+  if (!data || data.user.approval_status !== "approved") return;
+  const sequence = ++overview.sequence,
+    account = data.user.id + ":" + data.user.role;
+  overview.items = [];
+  overview.ready = false;
+  overview.error = "";
+  overview.loading = true;
+  render();
+  try {
+    const items = new Map();
+    let result,
+      page = 1;
+    do {
+      result = await bankApi().list(
+        { scope: data.user.role === "head" ? "all" : "mine", sort: "oldest" },
+        page,
+      );
+      if (
+        sequence !== overview.sequence ||
+        !data ||
+        account !== data.user.id + ":" + data.user.role
+      )
+        return;
+      for (const row of result.items) items.set(row.id, row);
+      if (items.size < result.total && (!result.items.length || page >= 100000))
+        throw Error(
+          "Resources changed while loading. Refresh the overview to try again.",
+        );
+      page++;
+    } while (items.size < result.total);
+    overview.items = [...items.values()]
+      .filter(
+        (r) =>
+          !r.archived &&
+          !r.bank_draft &&
+          !["draft", "archived"].includes(r.state),
+      )
+      .map((r) => ({
+        ...r,
+        status: r.state === "resubmitted" ? "pending" : r.state,
+        teacher: r.creator || "Teacher",
+      }));
+    overview.ready = true;
+  } catch (error) {
+    if (sequence === overview.sequence) overview.error = bankMessage(error);
+  } finally {
+    if (sequence === overview.sequence) {
+      overview.loading = false;
+      if (view === "dashboard") render();
+    }
+  }
+}
+function overviewState() {
+  if (overview.loading || (!overview.ready && !overview.error))
+    return '<p class="overview-muted" role="status">Loading Digital Bank resources…</p>';
+  if (overview.error)
+    return `<p class="overview-muted" role="alert">${esc(overview.error)}</p><button class="bank-text-button" onclick="overviewRead()">Try again</button>`;
+  return "";
+}
+function overviewSummaryData() {
+  const teachers = new Map(),
+    areas = new Map();
+  for (const t of data.teachers || [])
+    if (t.role !== "head" && t.approval_status === "approved")
+      teachers.set(t.id, {
+        id: t.id,
+        name: t.name,
+        submitted: 0,
+        approved: 0,
+        pending: 0,
+        returned: 0,
+      });
+  for (const r of overview.items) {
+    if (!teachers.has(r.owner))
+      teachers.set(r.owner, {
+        id: r.owner,
+        name: r.creator || "Teacher",
+        submitted: 0,
+        approved: 0,
+        pending: 0,
+        returned: 0,
+      });
+    const t = teachers.get(r.owner);
+    t.submitted++;
+    if (["approved", "pending", "returned"].includes(r.status)) t[r.status]++;
+    if (!areas.has(r.subject)) areas.set(r.subject, 0);
+    if (r.status === "approved") areas.set(r.subject, areas.get(r.subject) + 1);
+  }
+  return {
+    teachers: [...teachers.values()].sort(
+      (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+    ),
+    areas: [...areas.entries()].sort(([a], [b]) => a.localeCompare(b)),
+  };
+}
+function overviewSummaryPage() {
+  if (data.user.role !== "head") return;
+  overview.screen = "summary";
+  render();
+}
+function overviewSummaryContent() {
+  if (data.user.role !== "head") return "";
+  const state = overviewState();
+  if (state) return state;
+  const summary = overviewSummaryData();
+  const table = (headers, rows) =>
+    `<div class="overview-summary-scroll"><table class="overview-summary-table"><thead><tr>${headers.map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${rows.map((cells) => `<tr>${cells.map((cell, i) => (i ? `<td>${esc(cell)}</td>` : `<th scope="row">${esc(cell)}</th>`)).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}">No submitted resources yet.</td></tr>`}</tbody></table></div>`;
+  return `<div class="overview-summary-heading"><p class="overview-muted">Digital Bank submissions. Drafts and archived resources are excluded. Pending includes resubmissions.</p><button class="bank-text-button" onclick="overviewRead()">${ico("refresh")}Refresh</button></div><section class="overview-summary-section"><h2>Resources per teacher</h2>${table(
+    ["Teacher", "Submitted", "Approved", "Pending", "Returned"],
+    summary.teachers.map((t) => [
+      t.name,
+      t.submitted,
+      t.approved,
+      t.pending,
+      t.returned,
+    ]),
+  )}</section><section class="overview-summary-section"><h2>Approved resources per learning area</h2>${table(
+    ["Learning area", "Approved"],
+    summary.areas.map(([name, count]) => [name, count]),
+  )}</section>`;
+}
+async function overviewOpen(id) {
+  bank.scope = data.user.role === "head" ? "all" : "mine";
+  bank.filters = {};
+  await bankOpen(id);
+}
+function overviewList() {
+  const resources = filtered();
+  return `<div class="panel-head"><span class="muted">${resources.length} resources</span></div><div class="module-list">${resources.map((r) => `<div class="module-row"><div><button class="module-title text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><div class="module-meta">${esc(r.category)} · ${esc(r.subject)} · ${esc(r.grade)} · ${esc(r.term)} · v${r.version}</div><div class="module-meta">${esc(r.creator)} · Updated ${date(r.updated)}</div></div><div class="row-actions">${badge(r.status)}<button class="action-btn" onclick="overviewOpen('${r.id}')">Open</button></div></div>`).join("") || '<div class="empty"><h3>No resources here yet</h3><p>Digital Bank submissions will appear here.</p></div>'}</div>`;
+}
+function overviewBankCounts() {
+  const ready = overview.ready && !overview.loading && !overview.error;
+  return `<div class="overview-requirement-counts">${[
+    ["", "Submitted"],
+    ["pending", "Pending"],
+    ["returned", "Returned"],
+    ["approved", "Approved"],
+  ]
+    .map(
+      ([state, title]) =>
+        `<span><strong>${ready ? overview.items.filter((r) => !state || r.status === state).length : "—"}</strong>${title}</span>`,
+    )
+    .join(
+      "",
+    )}</div>${data.user.role === "head" ? '<button class="bank-text-button" onclick="overviewSummaryPage()">View teacher summary</button>' : ""}`;
+}
+function overviewRecent() {
+  if (!overview.ready || overview.loading || overview.error)
+    return '<p class="overview-muted">No resource updates.</p>';
+  return (
+    [...overview.items]
+      .sort((a, b) => b.updated.localeCompare(a.updated))
+      .slice(0, 4)
+      .map(
+        (r) =>
+          `<article class="overview-note"><button class="bank-text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><p>${esc(r.creator)} · ${esc(label(r.status))} · ${date(r.updated)}</p></article>`,
+      )
+      .join("") || '<p class="overview-muted">No resource updates.</p>'
+  );
+}
+
 let overviewLayout = "board";
 function overviewPage() {
-  return `<nav class="bank-workspace-tabs" aria-label="Module status">${[
-    ["all", "All modules", "folder_open"],
+  if (overview.screen === "summary" && data.user.role === "head")
+    return `<nav class="bank-workspace-tabs" aria-label="Overview pages"><button onclick="overviewStatus('all')">${ico("arrow_back")}All resources</button><button aria-current="page">${ico("groups")}Summary</button></nav>${overviewSummaryContent()}`;
+  return `<nav class="bank-workspace-tabs" aria-label="Resource status">${[
+    ["all", "All resources", "folder_open"],
     ["pending", "Pending review", "schedule"],
     ["returned", "Revision needed", "change_circle"],
     ["approved", "Approved", "check_circle"],
@@ -955,7 +1195,7 @@ function overviewPage() {
     )
     .join(
       "",
-    )}</nav><div class="overview-toolbar"><div class="overview-search">${ico("search")}<input type="search" aria-label="Search modules" placeholder="Search modules" value="${esc(filters.search)}" oninput="overviewSearch(this.value)"></div><div class="bank-view-toggle" aria-label="Module view"><button class="icon-btn" aria-label="Board view" aria-pressed="${overviewLayout === "board"}" onclick="overviewView('board')">${ico("view_kanban")}</button><button class="icon-btn" aria-label="List view" aria-pressed="${overviewLayout === "list"}" onclick="overviewView('list')">${ico("view_list")}</button></div></div>${filterPanel()}<div id="module-results">${overviewResults()}</div><div class="overview-support"><section><header><h2>${ico("assignment")}Requirements</h2><button class="bank-text-button" onclick="go('requirements')">Open requirements</button></header>${overviewRequirements()}</section><section><header><h2>${ico("description")}Pinned notes</h2><button class="bank-text-button" onclick="go('notes')">Manage notes</button></header>${
+    )}${data.user.role === "head" ? `<button onclick="overviewSummaryPage()">${ico("groups")}Summary</button>` : ""}</nav><div class="overview-toolbar"><div class="overview-search">${ico("search")}<input type="search" aria-label="Search resources" placeholder="Search resources" value="${esc(filters.search)}" oninput="overviewSearch(this.value)"></div><div class="bank-view-toggle" aria-label="Resource view"><button class="icon-btn" aria-label="Board view" aria-pressed="${overviewLayout === "board"}" onclick="overviewView('board')">${ico("view_kanban")}</button><button class="icon-btn" aria-label="List view" aria-pressed="${overviewLayout === "list"}" onclick="overviewView('list')">${ico("view_list")}</button></div></div>${filterPanel()}<div id="module-results">${overviewResults()}</div><div class="overview-support"><section><header><h2>${ico("database")}Digital Bank</h2><button class="bank-text-button" onclick="bankNavigate(data.user.role === 'head' ? 'all' : 'mine')">Open resources</button></header>${overviewBankCounts()}</section><section><header><h2>${ico("description")}Pinned notes</h2><button class="bank-text-button" onclick="go('notes')">Manage notes</button></header>${
     data.notes
       .filter((note) => note.pinned)
       .slice(0, 3)
@@ -964,30 +1204,21 @@ function overviewPage() {
           `<article class="overview-note"><strong>${esc(note.title)}</strong><p>${esc(note.body)}</p></article>`,
       )
       .join("") || '<p class="overview-muted">No pinned notes.</p>'
-  }</section><section><header><h2>${ico("history")}Recent activity</h2></header>${data.events.length ? activity(data.events.slice(0, 4)) : '<p class="overview-muted">No recent activity.</p>'}</section></div>`;
-}
-function overviewRequirements() {
-  const assignments = (data.assignments || []).filter(
-    (assignment) =>
-      !(data.requirements || []).find(
-        (requirement) => requirement.id === assignment.requirement_id,
-      )?.cancelled,
-  );
-  if (!data.workflowReady)
-    return '<p class="overview-muted">Requirements setup is needed.</p>';
-  return `<div class="overview-requirement-counts"><span><strong>${assignments.filter((assignment) => assignment.status === "missing").length}</strong> Not submitted</span><span><strong>${assignments.filter((assignment) => assignment.status === "returned").length}</strong> Need revision</span><span><strong>${assignments.filter((assignment) => assignment.overdue).length}</strong> Overdue</span></div>`;
+  }</section><section><header><h2>${ico("history")}Recent resource updates</h2></header>${overviewRecent()}</section></div>`;
 }
 function overviewResults() {
-  if (overviewLayout === "list") return moduleResults();
+  const state = overviewState();
+  if (state) return state;
+  if (overviewLayout === "list") return overviewList();
   const modules = filtered();
-  return `<div class="bank-board overview-board" aria-label="Module board">${[
+  return `<div class="bank-board overview-board" aria-label="Resource board">${[
     ["pending", "Pending review", "schedule"],
     ["returned", "Revision needed", "change_circle"],
     ["approved", "Approved", "check_circle"],
   ]
     .map(([status, title, icon]) => {
       const items = modules.filter((module) => module.status === status);
-      return `<section class="bank-board-column"><header><span class="bank-board-state bank-board-state-${status}">${ico(icon)}</span><h2>${title}</h2><span class="bank-board-count">${items.length}</span><span class="bank-board-column-space"></span><button class="bank-board-add" aria-label="Open ${title.toLowerCase()} modules" onclick="overviewOpenCollection('${status}')">${ico("open_in_new")}</button></header><div class="bank-board-stack">${items.map(overviewCard).join("") || '<div class="bank-board-empty">No modules</div>'}</div></section>`;
+      return `<section class="bank-board-column"><header><span class="bank-board-state bank-board-state-${status}">${ico(icon)}</span><h2>${title}</h2><span class="bank-board-count">${items.length}</span><span class="bank-board-column-space"></span><button class="bank-board-add" aria-label="Open ${title.toLowerCase()} resources" onclick="overviewStatus('${status}')">${ico("open_in_new")}</button></header><div class="bank-board-stack">${items.map(overviewCard).join("") || '<div class="bank-board-empty">No resources</div>'}</div></section>`;
     })
     .join("")}</div>`;
 }
@@ -999,9 +1230,10 @@ function overviewCard(module) {
     .map((part) => part[0])
     .slice(0, 2)
     .join("");
-  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>MODULE · v${module.version}</span><span class="bank-creator-mini" aria-label="Created by ${esc(teacher)}" title="${esc(teacher)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(module.status === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="openModule('${module.id}')">${esc(module.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini">${ico("description")}</span><span class="bank-board-label">${esc(module.subject)}</span><span class="bank-board-label">${esc(module.grade)}</span><span class="bank-board-label">${esc(module.term)}</span><details class="bank-row-menu"><summary aria-label="Actions for ${esc(module.title)}">${ico("more_vert")}</summary><div><button onclick="openModule('${module.id}')">${ico("open_in_new")}Open module</button><button onclick="starModule('${module.id}')">${ico(module.starred ? "bookmark_remove" : "bookmark_add")}${module.starred ? "Remove from saved" : "Save module"}</button></div></details></div>${workflowModuleDue(module)}</article>`;
+  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>${esc(module.category)} · v${module.version}</span><span class="bank-creator-mini" aria-label="Created by ${esc(teacher)}" title="${esc(teacher)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(module.status === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="overviewOpen('${module.id}')">${esc(module.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini">${ico("description")}</span><span class="bank-board-label">${esc(module.subject)}</span><span class="bank-board-label">${esc(module.grade)}</span><span class="bank-board-label">${esc(module.term)}</span><details class="bank-row-menu"><summary aria-label="Actions for ${esc(module.title)}">${ico("more_vert")}</summary><div><button onclick="overviewOpen('${module.id}')">${ico("open_in_new")}Open resource</button><button onclick="bankDownload('${module.id}')">${ico("download")}Download</button></div></details></div><p class="module-meta">Updated ${date(module.updated)}</p></article>`;
 }
 function overviewStatus(status) {
+  overview.screen = "resources";
   filters.status = status;
   render();
 }
@@ -1014,18 +1246,8 @@ function overviewSearch(value) {
   const target = $("#module-results");
   if (target) target.innerHTML = overviewResults();
 }
-async function overviewOpenCollection(status) {
-  filters.status = status;
-  await go(
-    status === "approved"
-      ? "library"
-      : status === "pending" && data.user.role === "head"
-        ? "reviews"
-        : "modules",
-  );
-}
 function overviewNew() {
-  return `<details class="bank-new overview-new"><summary>${ico("add")}New</summary><div>${data.user.role === "teacher" ? `<button onclick="go('submit')">${ico("upload_file")}Submit module</button>` : ""}<button onclick="bankUploadPage()">${ico("upload_file")}Upload resource</button></div></details>`;
+  return `<details class="bank-new overview-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload resource</button></div></details>`;
 }
 
 function workspaceBrand() {
@@ -1477,7 +1699,7 @@ function bankNavigation() {
     )
     .join(
       "",
-    )}<span class="bank-nav-label">Workspace</span><button onclick="go('modules')">${ico("description")}<span>${head ? "All Modules" : "My Modules"}</span></button><button onclick="go('requirements')">${ico("assignment")}<span>Requirements</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
+    )}<span class="bank-nav-label">Workspace</span><button onclick="go('notes')">${ico("description")}<span>Personal Notes</span></button>${head ? "<button onclick=\"go('teachers')\">" + ico("groups") + "<span>Teachers</span></button>" : ""}<button onclick="go('notifications')">${ico("notifications")}<span>Notifications</span></button></nav>`;
 }
 function bankRender() {
   workspaceRender({
@@ -2190,6 +2412,7 @@ async function go(next) {
     filterOpen = false;
     filterDraft = null;
     render();
+    if (view === "dashboard") await overviewRead();
     window.scrollTo(0, 0);
   } catch (e) {
     if (e.status === 401) await load();
@@ -2231,9 +2454,9 @@ function render() {
     unread = data.notifications.filter((n) => !n.read).length;
   workspaceRender({
     classes: view === "dashboard" ? "overview-app" : "",
-    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${navItem("requirements", "assignment", "Requirements")}${!head ? navItem("submit", "upload_file", "Submit Module") : ""}${modulesNav(head, active)}${head ? navItem("reviews", "fact_check", "Review Queue", active.filter((m) => m.status === "pending").length) : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
+    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${head ? `<button onclick="bankNavigate('review')"><span class="nav-ico">${ico("fact_check")}</span><span class="nav-label">Review Queue</span></button>` : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
     heading: `<div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div>`,
-    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Submit module" title="Submit module" onclick="go(\'submit\')">+</button>' : ""}`,
+    actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Upload resource" title="Upload resource" onclick="bankUploadPage()">+</button>' : ""}`,
     content: page(),
   });
 }
@@ -2319,8 +2542,8 @@ function chooseFilter(button) {
 }
 function filterPanel() {
   const current = editingFilters(),
-    active = data.modules.filter((m) =>
-      view === "archive" ? m.archived : !m.archived,
+    active = (view === "dashboard" ? overview.items : data.modules).filter(
+      (m) => (view === "archive" ? m.archived : !m.archived),
     ),
     count =
       ["subject", "grade", "term", "year", "status"].filter(
@@ -2332,7 +2555,7 @@ function filterPanel() {
     [...new Set(active.map((m) => m[k]))].sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true }),
     );
-  return `<div class="filter-shell ${filterOpen ? "is-open" : ""}"><div class="mobile-filter-bar"><span class="filter-caption">${count ? `${count} active filter${count === 1 ? "" : "s"}` : "All submissions"}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count ? `, ${count} active` : ""}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico("tune")}<span>Filters</span>${ico("expand_more")}${count ? `<span class="filter-count">${count}</span>` : ""}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico("close")}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select("subject", "Subject", unique("subject"))}${select("grade", "Grade / Year level", unique("grade"))}${select("term", "Quarter / Semester", unique("term"))}${select("year", "School year", unique("year"))}${filterDropdown("status", "Status", [{ value: "all", text: "All statuses" }, ...["pending", "approved", "returned"].map((value) => ({ value, text: label(value) }))])}${filterDropdown(
+  return `<div class="filter-shell ${filterOpen ? "is-open" : ""}"><div class="mobile-filter-bar"><span class="filter-caption">${count ? `${count} active filter${count === 1 ? "" : "s"}` : "All submissions"}</span><button id="mobile-filter-toggle" class="icon-btn mobile-filter-toggle" aria-label="Filters${count ? `, ${count} active` : ""}" title="Filters" aria-expanded="${filterOpen}" aria-controls="workspace-filter-panel" onclick="toggleFilters()">${ico("tune")}<span>Filters</span>${ico("expand_more")}${count ? `<span class="filter-count">${count}</span>` : ""}</button></div><div id="workspace-filter-panel" class="academic-filters workspace-filters" role="region" aria-label="Module filters"><div class="mobile-filter-heading"><h3>Filters</h3><button class="icon-btn" aria-label="Close filters" onclick="closeFilters()">${ico("close")}</button></div><div class="academic-filter search-filter"><label for="search">Search modules</label><input id="search" placeholder="Title or teacher name" value="${esc(current.search)}" oninput="searchModules(this.value)"></div>${select("subject", "Subject", unique("subject"))}${select("grade", "Grade / Year level", unique("grade"))}${select("term", "Quarter / Semester", unique("term"))}${view === "dashboard" ? "" : select("year", "School year", unique("year"))}${filterDropdown("status", "Status", [{ value: "all", text: "All statuses" }, ...["pending", "approved", "returned"].map((value) => ({ value, text: label(value) }))])}${filterDropdown(
     "sort",
     "Sort by",
     [
@@ -2390,8 +2613,8 @@ function searchModules(value) {
   else render();
 }
 function filtered() {
-  let list = data.modules.filter((m) =>
-    view === "archive" ? m.archived : !m.archived,
+  let list = (view === "dashboard" ? overview.items : data.modules).filter(
+    (m) => (view === "archive" ? m.archived : !m.archived),
   );
   if (view === "library") list = list.filter((m) => m.status === "approved");
   if (view === "reviews") list = list.filter((m) => m.status === "pending");
@@ -2399,7 +2622,10 @@ function filtered() {
   list = list.filter(
     (m) =>
       ["subject", "grade", "term", "year"].every(
-        (k) => filters[k] === "all" || m[k] === filters[k],
+        (k) =>
+          (view === "dashboard" && k === "year") ||
+          filters[k] === "all" ||
+          m[k] === filters[k],
       ) &&
       (filters.status === "all" || m.status === filters.status) &&
       `${m.title} ${m.teacher}`

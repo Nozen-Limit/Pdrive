@@ -170,7 +170,7 @@ function profilePage() {
       "Kindergarten",
       ...Array.from({ length: 12 }, (_, i) => "Grade " + (i + 1)),
     ];
-  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div>${u.avatarError ? `<p class="photo-error" role="alert">${esc(u.avatarError)} <button type="button" class="link-btn" onclick="load()">Retry</button></p>` : ""}</section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}${field("phone", "Phone number", `<input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40" value="${esc(u.phone || "")}">`)}${field("location", "Location", `<input id="location" name="location" autocomplete="address-level2" maxlength="200" value="${esc(u.location || "")}" placeholder="City or municipality">`)}</div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><div class="profile-teaching-selects">${profileMultiSelect("subjects", "Subjects handled", subjects, u.subjects || [])}${profileMultiSelect("grade_levels", "Grade levels", grades, u.grade_levels || [])}</div><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
+  return `<div class="profile-layout"><section class="profile-banner"><div class="profile-photo-controls"><div class="profile-avatar">${avatarContent(u)}</div><label class="photo-upload">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadProfilePhoto(event)" aria-label="Choose profile picture"></label>${u.avatar_key ? '<button class="link-btn" onclick="removeProfilePhoto()">Remove photo</button>' : ""}</div><div class="profile-identity"><h2>${esc(u.name)}</h2><p>${esc(u.email)}</p><span class="profile-role">${ico(u.role === "head" ? "verified_user" : "school")}${u.role === "head" ? "Head Teacher" : "Teacher"}</span></div>${u.avatarError ? `<p class="photo-error" role="alert">${esc(u.avatarError)} <button type="button" class="link-btn" onclick="load()">Retry</button></p>` : ""}</section><form class="panel profile-form" onsubmit="saveProfile(event)"><div class="profile-section-title">${ico("person")}<div><h2>Personal details</h2><p>Your name appears on submissions and reviews.</p></div></div><div class="form-grid">${field("name", "Full name", `<input id="name" name="name" value="${esc(u.name)}" required maxlength="120" autocomplete="name">`)}${field("email", "Email", `<input id="email" value="${esc(u.email)}" readonly>`)}${field("phone", "Phone number", `<input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="0912 345 6789" aria-describedby="phone-format" oninput="profilePhoneInput(this)" onblur="profilePhoneInput(this,true)" value="${esc(window.sikapBackend?.phone?.format(u.phone) ?? u.phone ?? "")}"><small id="phone-format">Philippine mobile or landline. Example: 0912 345 6789 or (02) 8123 4567.</small>`)}${field("location", "Location", `<input id="location" name="location" autocomplete="address-level2" maxlength="200" value="${esc(u.location || "")}" placeholder="City or municipality">`)}</div><div class="field"><label for="assignment">Department</label><input id="assignment" name="assignment" value="${esc(u.assignment)}" maxlength="120" placeholder="e.g. Mathematics Department"></div><div class="profile-teaching-selects">${profileMultiSelect("subjects", "Subjects handled", subjects, u.subjects || [])}${profileMultiSelect("grade_levels", "Grade levels", grades, u.grade_levels || [])}</div><p class="form-error" role="alert"></p><div class="form-actions"><button class="primary" type="submit">Save profile</button></div></form></div>`;
 }
 async function saveProfile(e) {
   await formSave(e, async (form) => {
@@ -180,7 +180,7 @@ async function saveProfile(e) {
       body: JSON.stringify({
         name: f.get("name").trim(),
         assignment: f.get("assignment").trim(),
-        phone: f.get("phone").trim(),
+        phone: window.sikapBackend.phone.normalize(f.get("phone")),
         location: f.get("location").trim(),
         subjects: f.getAll("subjects"),
         grade_levels: f.getAll("grade_levels"),
@@ -188,4 +188,14 @@ async function saveProfile(e) {
     });
     toast("Profile saved.");
   });
+}
+
+function profilePhoneInput(input, format = false) {
+  try {
+    window.sikapBackend.phone.normalize(input.value);
+    input.setCustomValidity("");
+    if (format) input.value = window.sikapBackend.phone.format(input.value);
+  } catch (error) {
+    input.setCustomValidity(error.message);
+  }
 }
