@@ -258,6 +258,33 @@ test("Digital Bank: complete return/revision/approval workflow, shared final ver
     );
     await as(db, teacher);
     assert.equal((await detail(db)).versions.length, 2);
+    const archived = (await detail(db)).resource;
+    assert.equal(archived.archived, true);
+    assert.ok(archived.bank_archived_at);
+    await assert.rejects(
+      db.query("select bank_archive($1,$2,false)", [mid, archived.revision]),
+      /Only a Head/,
+    );
+    await as(db, head);
+    await assert.rejects(
+      db.query("select bank_archive($1,$2,false)", [mid, resource.revision]),
+      /archive or restore/,
+    );
+    await db.query("select bank_archive($1,$2,false)", [
+      mid,
+      archived.revision,
+    ]);
+    const restored = await detail(db);
+    assert.equal(restored.resource.archived, false);
+    assert.equal(restored.resource.bank_archived_at, null);
+    assert.equal(restored.resource.status, "approved");
+    assert.equal(restored.resource.final_version, 2);
+    assert.equal(restored.resource.creator, "Original Creator");
+    assert.equal(restored.versions.length, 2);
+    await as(db, other);
+    assert.equal((await list(db)).total, 1);
+    assert.equal((await list(db, { scope: "saved" })).total, 1);
+    assert.equal((await detail(db)).versions[0].version, 2);
   } finally {
     await db.close();
   }

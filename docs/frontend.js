@@ -1146,7 +1146,7 @@ async function overviewOpen(id) {
 }
 function overviewList() {
   const resources = filtered();
-  return `<div class="panel-head"><span class="muted">${resources.length} resources</span></div><div class="module-list">${resources.map((r) => `<div class="module-row"><div><button class="module-title text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><div class="module-meta">${esc(r.category)} · ${esc(r.subject)} · ${esc(r.grade)} · ${esc(r.term)} · v${r.version}</div><div class="module-meta">${esc(r.creator)} · Updated ${date(r.updated)}</div></div><div class="row-actions">${badge(r.status)}<button class="action-btn" onclick="overviewOpen('${r.id}')">Open</button></div></div>`).join("") || '<div class="empty"><h3>No resources here yet</h3><p>Digital Bank submissions will appear here.</p></div>'}</div>`;
+  return `<div class="panel-head"><span class="muted">${resources.length} resources</span></div><div class="module-list">${resources.map((r) => `<div class="module-row"><div><button class="module-title text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><div class="module-meta">${esc(r.category)} · ${esc(r.subject)} · ${esc(r.grade)} · ${esc(r.term)} · v${r.version}</div><div class="module-meta">${esc(r.creator)} · Updated ${date(r.updated)}</div></div><div class="row-actions">${badge(r.status)}${overviewArchiveAction(r)}<button class="action-btn" onclick="overviewOpen('${r.id}')">Open</button></div></div>`).join("") || '<div class="empty"><h3>No resources here yet</h3><p>Digital Bank submissions will appear here.</p></div>'}</div>`;
 }
 function overviewBankCounts() {
   const ready = overview.ready && !overview.loading && !overview.error;
@@ -1177,6 +1177,17 @@ function overviewRecent() {
       )
       .join("") || '<p class="overview-muted">No resource updates.</p>'
   );
+}
+
+function overviewArchiveAction(resource) {
+  if (
+    data.user.role !== "head" ||
+    resource.archived ||
+    resource.bank_draft ||
+    ["draft", "archived"].includes(resource.state)
+  )
+    return "";
+  return `<button class="action-btn" onclick="bankArchive('${resource.id}',${resource.revision},true)" aria-label="Archive ${esc(resource.title)}">${ico("archive")}Archive</button>`;
 }
 
 let overviewLayout = "board";
@@ -1230,7 +1241,7 @@ function overviewCard(module) {
     .map((part) => part[0])
     .slice(0, 2)
     .join("");
-  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>${esc(module.category)} · v${module.version}</span><span class="bank-creator-mini" aria-label="Created by ${esc(teacher)}" title="${esc(teacher)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(module.status === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="overviewOpen('${module.id}')">${esc(module.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini">${ico("description")}</span><span class="bank-board-label">${esc(module.subject)}</span><span class="bank-board-label">${esc(module.grade)}</span><span class="bank-board-label">${esc(module.term)}</span><details class="bank-row-menu"><summary aria-label="Actions for ${esc(module.title)}">${ico("more_vert")}</summary><div><button onclick="overviewOpen('${module.id}')">${ico("open_in_new")}Open resource</button><button onclick="bankDownload('${module.id}')">${ico("download")}Download</button></div></details></div><p class="module-meta">Updated ${date(module.updated)}</p></article>`;
+  return `<article class="bank-board-card"><div class="bank-board-card-top"><span>${esc(module.category)} · v${module.version}</span><span class="bank-creator-mini" aria-label="Created by ${esc(teacher)}" title="${esc(teacher)}">${esc(initials)}</span></div><div class="bank-board-card-title">${ico(module.status === "approved" ? "check_circle" : "radio_button_unchecked")}<button onclick="overviewOpen('${module.id}')">${esc(module.title)}</button></div><div class="bank-board-card-bottom"><span class="bank-type-mini">${ico("description")}</span><span class="bank-board-label">${esc(module.subject)}</span><span class="bank-board-label">${esc(module.grade)}</span><span class="bank-board-label">${esc(module.term)}</span><details class="bank-row-menu"><summary aria-label="Actions for ${esc(module.title)}">${ico("more_vert")}</summary><div><button onclick="overviewOpen('${module.id}')">${ico("open_in_new")}Open resource</button><button onclick="bankDownload('${module.id}')">${ico("download")}Download</button>${overviewArchiveAction(module)}</div></details></div><p class="module-meta">Updated ${date(module.updated)}</p></article>`;
 }
 function overviewStatus(status) {
   overview.screen = "resources";
@@ -2273,7 +2284,7 @@ async function bankArchive(id, revision, archive) {
     archive ? "Archive resource?" : "Restore resource?",
     archive
       ? "This resource will leave the shared Digital Bank. Its files, creator attribution and review history will be preserved."
-      : "Approved resources will become available in the shared Digital Bank again.",
+      : "This resource will return to its previous review status. Approved resources will become available in the shared Digital Bank again.",
     async () => {
       try {
         await bankApi().archive({
@@ -2281,7 +2292,8 @@ async function bankArchive(id, revision, archive) {
           expected_revision: revision,
           archive,
         });
-        if (bank.screen === "detail") await bankOpen(id);
+        if (view === "dashboard") await overviewRead();
+        else if (bank.screen === "detail") await bankOpen(id);
         else await bankRead();
         toast(archive ? "Resource archived." : "Resource restored.");
       } catch (error) {
@@ -2454,7 +2466,7 @@ function render() {
     unread = data.notifications.filter((n) => !n.read).length;
   workspaceRender({
     classes: view === "dashboard" ? "overview-app" : "",
-    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${head ? `<button onclick="bankNavigate('review')"><span class="nav-ico">${ico("fact_check")}</span><span class="nav-label">Review Queue</span></button>` : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
+    navigation: `${overviewNew()}<nav class="nav">${navItem("dashboard", "dashboard", "Overview")}${navItem("bank", "database", "Digital Bank")}${head ? `<button onclick="bankNavigate('review')"><span class="nav-ico">${ico("fact_check")}</span><span class="nav-label">Review Queue</span></button>` : ""}${head ? `<button onclick="bankNavigate('archived')"><span class="nav-ico">${ico("archive")}</span><span class="nav-label">Archived resources</span></button>` : ""}${navItem("notes", "description", "Personal Notes", data.notes.length)}${head ? navItem("teachers", "groups", "Teachers", data.teachers.filter((u) => u.approval_status === "pending").length) : ""}${navItem("notifications", "notifications", "Notifications", unread)}</nav>`,
     heading: `<div class="page-heading"><button class="icon-btn mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><h1>${view === "modules" && head ? "All Modules" : titles[view]}</h1></div>`,
     actions: `${bankAppearanceMenu()}<button class="icon-btn" onclick="go('notifications')" aria-label="Notifications">${ico("notifications")}${unread ? '<span class="unread"></span>' : ""}</button>${!head && view !== "submit" ? '<button class="primary submit-plus" aria-label="Upload resource" title="Upload resource" onclick="bankUploadPage()">+</button>' : ""}`,
     content: page(),

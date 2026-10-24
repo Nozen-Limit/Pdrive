@@ -135,6 +135,8 @@ test("Overview fetches all bank pages, excludes drafts/archives, folds resubmiss
   assert.match(app.innerHTML, /module-row/);
   assert.match(app.innerHTML, /overviewOpen\('bank-/);
   assert.doesNotMatch(app.innerHTML, /openModule\('bank-/);
+  assert.match(app.innerHTML, /Archived resources/);
+  assert.match(app.innerHTML, /bankArchive\('bank-/);
 });
 test("Teachers request their own bank resources and cannot see the school summary; a failed later page never produces partial totals", async () => {
   let scope = "";
@@ -144,6 +146,7 @@ test("Teachers request their own bank resources and cannot see the school summar
   }, "teacher");
   await vm.runInContext("overviewRead()", c);
   assert.equal(scope, "mine");
+  assert.doesNotMatch(app.innerHTML, /bankArchive\(|Archived resources/);
   assert.doesNotMatch(app.innerHTML, /View teacher summary|>Summary</);
   vm.runInContext("overviewSummaryPage()", c);
   assert.equal(vm.runInContext("overview.screen", c), "resources");

@@ -135,7 +135,7 @@ async function overviewOpen(id) {
 }
 function overviewList() {
   const resources = filtered();
-  return `<div class="panel-head"><span class="muted">${resources.length} resources</span></div><div class="module-list">${resources.map((r) => `<div class="module-row"><div><button class="module-title text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><div class="module-meta">${esc(r.category)} · ${esc(r.subject)} · ${esc(r.grade)} · ${esc(r.term)} · v${r.version}</div><div class="module-meta">${esc(r.creator)} · Updated ${date(r.updated)}</div></div><div class="row-actions">${badge(r.status)}<button class="action-btn" onclick="overviewOpen('${r.id}')">Open</button></div></div>`).join("") || '<div class="empty"><h3>No resources here yet</h3><p>Digital Bank submissions will appear here.</p></div>'}</div>`;
+  return `<div class="panel-head"><span class="muted">${resources.length} resources</span></div><div class="module-list">${resources.map((r) => `<div class="module-row"><div><button class="module-title text-button" onclick="overviewOpen('${r.id}')">${esc(r.title)}</button><div class="module-meta">${esc(r.category)} · ${esc(r.subject)} · ${esc(r.grade)} · ${esc(r.term)} · v${r.version}</div><div class="module-meta">${esc(r.creator)} · Updated ${date(r.updated)}</div></div><div class="row-actions">${badge(r.status)}${overviewArchiveAction(r)}<button class="action-btn" onclick="overviewOpen('${r.id}')">Open</button></div></div>`).join("") || '<div class="empty"><h3>No resources here yet</h3><p>Digital Bank submissions will appear here.</p></div>'}</div>`;
 }
 function overviewBankCounts() {
   const ready = overview.ready && !overview.loading && !overview.error;
@@ -166,4 +166,15 @@ function overviewRecent() {
       )
       .join("") || '<p class="overview-muted">No resource updates.</p>'
   );
+}
+
+function overviewArchiveAction(resource) {
+  if (
+    data.user.role !== "head" ||
+    resource.archived ||
+    resource.bank_draft ||
+    ["draft", "archived"].includes(resource.state)
+  )
+    return "";
+  return `<button class="action-btn" onclick="bankArchive('${resource.id}',${resource.revision},true)" aria-label="Archive ${esc(resource.title)}">${ico("archive")}Archive</button>`;
 }

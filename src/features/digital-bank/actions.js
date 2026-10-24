@@ -185,7 +185,7 @@ async function bankArchive(id, revision, archive) {
     archive ? "Archive resource?" : "Restore resource?",
     archive
       ? "This resource will leave the shared Digital Bank. Its files, creator attribution and review history will be preserved."
-      : "Approved resources will become available in the shared Digital Bank again.",
+      : "This resource will return to its previous review status. Approved resources will become available in the shared Digital Bank again.",
     async () => {
       try {
         await bankApi().archive({
@@ -193,7 +193,8 @@ async function bankArchive(id, revision, archive) {
           expected_revision: revision,
           archive,
         });
-        if (bank.screen === "detail") await bankOpen(id);
+        if (view === "dashboard") await overviewRead();
+        else if (bank.screen === "detail") await bankOpen(id);
         else await bankRead();
         toast(archive ? "Resource archived." : "Resource restored.");
       } catch (error) {
