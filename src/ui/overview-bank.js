@@ -118,12 +118,11 @@ async function overviewCoverageRead() {
     if (target)
       target.textContent = coverage.catalog_empty
         ? "Coverage is unavailable until competencies are verified."
-        : `${coverage.without_approved_resource} of ${coverage.verified_competencies} verified competencies have no approved resource. Counts cover the verified catalog only.`;
+        : `${coverage.without_approved_resource} of ${coverage.verified_competencies} verified competencies have no approved resource. Counts cover the verified competency list only.`;
   } catch {
     const target = $("#overview-competency-coverage");
     if (target && data?.user.id === account)
-      target.textContent =
-        "Competency coverage is unavailable. Check the curriculum catalog setup.";
+      target.textContent = "Competency coverage is unavailable.";
   }
 }
 function overviewSummaryContent() {
@@ -145,7 +144,7 @@ function overviewSummaryContent() {
   )}</section><section class="overview-summary-section"><h2>Approved resources per learning area</h2>${table(
     ["Learning area", "Approved"],
     summary.areas.map(([name, count]) => [name, count]),
-  )}</section><section class="overview-summary-section"><h2>Competency coverage</h2><p id="overview-competency-coverage" role="status">Open or refresh this summary to load competency coverage.</p><button class="bank-text-button" onclick="overviewCoverageRead()">Refresh coverage</button><button class="bank-text-button" onclick="curriculumCatalogPage()">Open curriculum catalog</button></section>`;
+  )}</section><section class="overview-summary-section"><h2>Competency coverage</h2><p id="overview-competency-coverage" role="status">Open or refresh this summary to load competency coverage.</p><button class="bank-text-button" onclick="overviewCoverageRead()">Refresh coverage</button></section>`;
 }
 async function overviewOpen(id) {
   bank.scope = data.user.role === "head" ? "all" : "mine";

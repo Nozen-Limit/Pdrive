@@ -67,7 +67,7 @@ function bankState(resource) {
 }
 function bankBadge(resource) {
   const state = bankState(resource);
-  return `<span class="bank-status bank-status-${state}">${bankStates[state] || state}</span>${resource.bank_competency_legacy ? ' <span class="bank-status">Legacy</span>' : ""}`;
+  return `<span class="bank-status bank-status-${state}">${bankStates[state] || state}</span>`;
 }
 function bankUrl(id) {
   if (typeof history === "undefined") return;
@@ -83,7 +83,11 @@ function bankRoute() {
   if (typeof location === "undefined" || !location.hash.startsWith("#bank="))
     return null;
   try {
-    return new URLSearchParams(decodeURIComponent(location.hash.slice(6)));
+    const route = new URLSearchParams(
+      decodeURIComponent(location.hash.slice(6)),
+    );
+    route.delete("legacy");
+    return route;
   } catch {
     return null;
   }

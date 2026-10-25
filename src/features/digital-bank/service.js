@@ -21,9 +21,6 @@ export function createBankService(client, config, checked, signVersions) {
           .eq("id", id)
           .maybeSingle(),
       ),
-    importCompetencies: (entries) =>
-      call("bank_competency_import", { entries }),
-    reviewCompetency: (args) => call("bank_competency_review", args),
     competencyCoverage: () => call("bank_competency_coverage"),
     list: (filters, page) => call("bank_list", { filters, page_no: page }),
     stats: () => call("bank_stats"),

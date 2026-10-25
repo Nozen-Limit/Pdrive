@@ -167,39 +167,17 @@ test("Account changes discard privileged catalog state and legacy resources requ
   const html = vm.runInContext("bankUploadForm()", c);
   assert.match(html, /select name="subject" required/);
   assert.match(html, /name="competency_id" required/);
-  assert.match(html, /Legacy competency: Old text/);
+  assert.doesNotMatch(html, /Legacy|head teacher maps|Curriculum catalog/);
   assert.match(html, /Contextualization \/ Localization/);
   assert.doesNotMatch(html, /textarea name="competency"/);
-});
-test("Import rejects oversized files and invalid grade/area/source data before contacting the server", async () => {
-  const { c } = context();
-  await assert.rejects(
-    vm.runInContext("curriculumReadImport({size:3000001})", c),
-    /3 MB/,
-  );
-  c.file = {
-    size: 100,
-    text: async () =>
-      JSON.stringify([{ ...sample, learning_area: "Fake subject" }]),
-  };
-  await assert.rejects(
-    vm.runInContext("curriculumReadImport(file)", c),
-    /listed grade/,
-  );
-  c.file = {
-    size: 100,
-    text: async () =>
-      JSON.stringify([{ ...sample, source_url: "javascript:alert(1)" }]),
-  };
-  await assert.rejects(
-    vm.runInContext("curriculumReadImport(file)", c),
-    /HTTPS/,
-  );
 });
 test("The empty-catalog rollout keeps uploads working as Legacy, while enforcement or verified entries disable that fallback", () => {
   const { c } = context();
   vm.runInContext("curriculum.config={verified_count:0,enforced:false}", c);
-  assert.match(vm.runInContext("curriculumFields({})", c), /marked Legacy/);
+  assert.doesNotMatch(
+    vm.runInContext("curriculumFields({})", c),
+    /Legacy|catalog is not ready|head teacher maps/,
+  );
   assert.throws(
     () =>
       vm.runInContext("curriculumValidateFields({...fields,competency:''})", c),

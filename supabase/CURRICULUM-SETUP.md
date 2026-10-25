@@ -14,7 +14,7 @@ select count(*) as competency_entries from public.curriculum_competencies;
 
 On a first installation, expect enforcement `false`, nine learning areas, and zero competencies. Re-running the upgrade preserves existing catalog entries and the enforcement setting. It does not delete resources, upload files, reviews, or approvals.
 
-The updated website includes the fixed learning-area and grade selectors, searchable competency selector, a head-only catalog with source review, and coverage monitoring. The SQL does not import a curriculum guide. Keep enforcement off until reviewed catalog entries are available. The upload form uses a verified selection once entries are available. While the catalog is empty and enforcement is off, it retains the required free-text competency field and labels new entries Legacy so uploads remain usable. Enabling enforcement disables that temporary fallback, even if the catalog is empty. No invented competencies are inserted.
+The updated website includes the fixed learning-area and grade selectors, searchable competency selector, coverage monitoring, and a searchable competency selector when verified entries are available. Catalog maintenance is not a separate head-teacher screen. The SQL does not import a curriculum guide. Keep enforcement off until reviewed catalog entries are available. The upload form uses a verified selection once entries are available. While the catalog is empty and enforcement is off, it retains the required free-text competency field and retains an internal compatibility flag so uploads remain usable. The client requested removal of visible Legacy labels, notices and filters. Enabling enforcement disables that temporary fallback, even if the catalog is empty. No invented competencies are inserted.
 
 ## Catalog fields
 
@@ -83,8 +83,8 @@ These names follow the relevant full MATATAG guides linked by the official [DepE
 
 TLE components are ICT, Agriculture and Fishery Arts, Family and Consumer Science, and Industrial Arts; specializations remain under TLE. Music and Arts and Physical Education and Health are separate areas in these guides. GMRC applies to the elementary section of the combined guide; Values Education applies to JHS. Quarter tags are not evidence that the source assigns that quarter: leave an unspecified source quarter null.
 
-### Adding only the competencies the school needs
+### Data administration
 
-As an approved head teacher, open Digital Bank → Curriculum catalog. Expand the official guide list, then “Add a competency from a DepEd guide.” Enter the exact wording, grade/area, source edition, URL and PDF page. Enter a code or quarter only when supported by the source. Save as a draft. Open “Review entry,” check it against the guide and the school’s applicable edition, record the source-check note and choose “Verify for uploads.” Teachers can then find it in the upload dropdown. Retire outdated entries rather than changing history.
+The client requested removal of the separate head-teacher catalog page and visible Legacy labels. Competency data can still be maintained through the protected database setup APIs by an authorized administrator. The teacher upload form retains its existing fields and layout. No resources or historical competency text were deleted. An empty, unenforced list retains the required competency text field; a populated verified list uses the searchable selector.
 
-Prepared JSON imports remain available for the administrator; no complete curriculum import is required for this release. Imports always create drafts, even if a file supplies a verified status. The catalog page and the head-teacher Summary both distinguish an empty catalog from complete coverage.
+Official competency population has not been completed by this UI cleanup. Do not enable enforcement until the applicable source-checked data is installed. The nine learning-area names and Grades 7–10 are already available.
