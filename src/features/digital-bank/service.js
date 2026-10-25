@@ -3,11 +3,28 @@ export function createBankService(client, config, checked, signVersions) {
     const result = await client.rpc(name, args);
     if (result.error?.code === "PGRST202")
       throw Error(
-        "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
+        /curriculum|competency/.test(name)
+          ? "Curriculum catalog setup is required. Ask the administrator to apply curriculum-catalog.sql."
+          : "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
       );
     return checked(result);
   }
   return {
+    curriculum: () => call("bank_curriculum"),
+    competencies: (filters, page = 1) =>
+      call("bank_competency_list", { filters, page_no: page }),
+    competency: async (id) =>
+      checked(
+        await client
+          .from("curriculum_competencies")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle(),
+      ),
+    importCompetencies: (entries) =>
+      call("bank_competency_import", { entries }),
+    reviewCompetency: (args) => call("bank_competency_review", args),
+    competencyCoverage: () => call("bank_competency_coverage"),
     list: (filters, page) => call("bank_list", { filters, page_no: page }),
     stats: () => call("bank_stats"),
     facets: () => call("bank_facets"),

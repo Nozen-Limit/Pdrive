@@ -67,7 +67,7 @@ function bankState(resource) {
 }
 function bankBadge(resource) {
   const state = bankState(resource);
-  return `<span class="bank-status bank-status-${state}">${bankStates[state] || state}</span>`;
+  return `<span class="bank-status bank-status-${state}">${bankStates[state] || state}</span>${resource.bank_competency_legacy ? ' <span class="bank-status">Legacy</span>' : ""}`;
 }
 function bankUrl(id) {
   if (typeof history === "undefined") return;
@@ -91,7 +91,7 @@ function bankRoute() {
 function bankMessage(error) {
   const message = error?.message || "The request could not be completed.";
   if (
-    /setup|required|Choose|Enter|Complete|Refresh|Only|resource|revision|School account|Sign in|Upload|upload|File |file |before|checklist|feedback/i.test(
+    /competency|catalog|learning area|setup|required|Choose|Enter|Complete|Refresh|Only|resource|revision|School account|Sign in|Upload|upload|File |file |before|checklist|feedback/i.test(
       message,
     ) &&
     !/column|relation|syntax|constraint|jwt|schema cache/i.test(message)

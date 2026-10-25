@@ -68,7 +68,7 @@ function overviewState() {
 }
 function overviewSummaryData() {
   const teachers = new Map(),
-    areas = new Map();
+    areas = new Map(curriculumGuides.map(([name]) => [name, 0]));
   for (const t of data.teachers || [])
     if (t.role !== "head" && t.approval_status === "approved")
       teachers.set(t.id, {
@@ -106,6 +106,25 @@ function overviewSummaryPage() {
   if (data.user.role !== "head") return;
   overview.screen = "summary";
   render();
+  overviewCoverageRead();
+}
+async function overviewCoverageRead() {
+  if (data.user.role !== "head") return;
+  const account = data.user.id;
+  try {
+    const coverage = await bankApi().competencyCoverage();
+    if (data?.user.id !== account) return;
+    const target = $("#overview-competency-coverage");
+    if (target)
+      target.textContent = coverage.catalog_empty
+        ? "Coverage is unavailable until competencies are verified."
+        : `${coverage.without_approved_resource} of ${coverage.verified_competencies} verified competencies have no approved resource. Counts cover the verified catalog only.`;
+  } catch {
+    const target = $("#overview-competency-coverage");
+    if (target && data?.user.id === account)
+      target.textContent =
+        "Competency coverage is unavailable. Check the curriculum catalog setup.";
+  }
 }
 function overviewSummaryContent() {
   if (data.user.role !== "head") return "";
@@ -126,7 +145,7 @@ function overviewSummaryContent() {
   )}</section><section class="overview-summary-section"><h2>Approved resources per learning area</h2>${table(
     ["Learning area", "Approved"],
     summary.areas.map(([name, count]) => [name, count]),
-  )}</section>`;
+  )}</section><section class="overview-summary-section"><h2>Competency coverage</h2><p id="overview-competency-coverage" role="status">Open or refresh this summary to load competency coverage.</p><button class="bank-text-button" onclick="overviewCoverageRead()">Refresh coverage</button><button class="bank-text-button" onclick="curriculumCatalogPage()">Open curriculum catalog</button></section>`;
 }
 async function overviewOpen(id) {
   bank.scope = data.user.role === "head" ? "all" : "mine";

@@ -4,18 +4,18 @@ function bankUploadForm() {
   const input = (name, title, value, max, multiline = false, required = true) =>
     `<label class="bank-form-field ${multiline ? "bank-form-wide" : ""}">${title}${multiline ? `<textarea name="${name}" maxlength="${max}" ${required ? "required" : ""}>${esc(value || "")}</textarea>` : `<input name="${name}" maxlength="${max}" value="${esc(value || "")}" ${required ? "required" : ""}>`}</label>`;
   const select = (name, title, value, options) =>
-    `<label class="bank-form-field">${title}<select name="${name}" required><option value="">Choose ${title.toLowerCase()}</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></label>`;
-  return `<button class="bank-text-button" onclick="bankBack()">${ico("arrow_back")}Back to resources</button><div class="bank-page-heading"><h1>${edit ? "Edit resource metadata" : resource.id ? "Edit draft" : "Upload resource"}</h1></div><form class="bank-resource-form" onsubmit="bankSubmitForm(event)"><div class="bank-form-grid">${input("title", "Resource title", resource.title, 200)}${select("category", "Category", resource.bank_category, Object.keys(bankCategories))}${input("subject", "Subject / Learning area", resource.subject, 200)}${select(
+    `<label class="bank-form-field">${title}<select name="${name}" required ${["subject", "grade", "term"].includes(name) ? 'onchange="curriculumFormChanged()"' : ""}><option value="">Choose ${title.toLowerCase()}</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></label>`;
+  return `<button class="bank-text-button" onclick="bankBack()">${ico("arrow_back")}Back to resources</button><div class="bank-page-heading"><h1>${edit ? "Edit resource metadata" : resource.id ? "Edit draft" : "Upload resource"}</h1></div><form class="bank-resource-form" onsubmit="bankSubmitForm(event)"><div class="bank-form-grid">${input("title", "Resource title", resource.title, 200)}${select("category", "Category", resource.bank_category, Object.keys(bankCategories))}${select("subject", "Learning area", resource.subject, curriculumAreaNames())}${select(
     "grade",
     "Grade level",
     resource.grade,
-    [7, 8, 9, 10].map((n) => "Grade " + n),
+    curriculumGrades,
   )}${select(
     "term",
     "Quarter",
     resource.term,
-    [1, 2, 3, 4].map((n) => "Quarter " + n),
-  )}<label class="bank-form-field">Creator<input value="${esc(resource.creator || data.user.name)}" readonly></label>${input("description", "Description", resource.bank_description, 5000, true)}${input("competency", "Learning competency", resource.bank_competency, 3000, true)}${input("localization", "Contextualization / Localization", resource.bank_localization, 5000, true)}${input("tags", "Keywords / Tags (comma separated)", resource.bank_tags?.join(", "), 1000)}${input("source", "Reference / Source (optional)", resource.bank_source, 2000, false, false)}${input("notes", "Additional notes (optional)", resource.bank_notes, 3000, true, false)}</div>${edit ? "" : bankFileInput()}<p class="form-error" role="alert"></p><div class="form-actions"><button type="button" class="secondary" onclick="bankBack()">Cancel</button>${edit ? '<button type="submit" class="primary" name="action" value="metadata">Save metadata</button>' : '<button type="submit" class="secondary" name="action" value="draft">Save draft</button><button type="submit" class="primary" name="action" value="submit">Submit for review</button>'}</div></form>`;
+    curriculumQuarters,
+  )}<label class="bank-form-field">Creator<input value="${esc(resource.creator || data.user.name)}" readonly></label>${input("description", "Description", resource.bank_description, 5000, true)}${curriculumFields(resource)}${input("localization", "Contextualization / Localization", resource.bank_localization, 5000, true)}${input("tags", "Keywords / Tags (comma separated)", resource.bank_tags?.join(", "), 1000)}${input("source", "Reference / Source (optional)", resource.bank_source, 2000, false, false)}${input("notes", "Additional notes (optional)", resource.bank_notes, 3000, true, false)}</div>${edit ? "" : bankFileInput()}<p class="form-error" role="alert"></p><div class="form-actions"><button type="button" class="secondary" onclick="bankBack()">Cancel</button>${edit ? '<button type="submit" class="primary" name="action" value="metadata">Save metadata</button>' : '<button type="submit" class="secondary" name="action" value="draft">Save draft</button><button type="submit" class="primary" name="action" value="submit">Submit for review</button>'}</div></form>`;
 }
 function bankFileInput() {
   return `<div class="bank-drop-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="bankDrop(event)">${ico("upload_file")}<strong>Drag and drop your file here</strong><label class="bank-browse">or browse files<input id="bank-file" type="file" accept=".pdf,.docx" onchange="bankSelectFile(this.files[0])"></label><small>PDF or DOCX · up to 20 MB</small><div id="bank-file-summary">${bankFileSummary()}</div><div class="bank-upload-progress" hidden><label for="bank-progress">Uploading and verifying file…</label><progress id="bank-progress" max="100" value="0"></progress><span id="bank-progress-text" role="status">0%</span></div></div>`;
@@ -69,6 +69,12 @@ function bankDrop(event) {
 }
 async function bankUploadPage() {
   if (busy || !(await bankDiscard())) return;
+  try {
+    await curriculumPrepare();
+  } catch (error) {
+    toast(bankMessage(error));
+    return;
+  }
   bank.sequence++;
   clearTimeout(bankSearchTimer);
   view = "bank";
@@ -84,6 +90,7 @@ async function bankEditDraft(id) {
   if (busy || !(await bankDiscard())) return;
   try {
     bank.detail = await bankApi().details(id);
+    await curriculumPrepare(bank.detail.resource);
     bank.editing = bank.detail.resource;
     bank.uploadId = id;
     bank.file = null;
@@ -94,7 +101,13 @@ async function bankEditDraft(id) {
     toast(bankMessage(error));
   }
 }
-function bankMetadataPage() {
+async function bankMetadataPage() {
+  try {
+    await curriculumPrepare(bank.detail.resource);
+  } catch (error) {
+    toast(bankMessage(error));
+    return;
+  }
   bank.editing = bank.detail.resource;
   bank.screen = "upload";
   render();

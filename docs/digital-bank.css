@@ -1841,3 +1841,9 @@ html body .app.bank-app .brand-symbol .material-symbols-rounded {
   white-space: nowrap;
   word-break: normal;
 }
+
+/* Author button styles must not expose unavailable competency pagination. */
+#competency-prev[hidden],
+#competency-next[hidden] {
+  display: none;
+}

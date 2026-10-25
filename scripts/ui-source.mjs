@@ -13,6 +13,7 @@ export const uiSources = [
   "features/digital-bank/state.js",
   "features/digital-bank/views.js",
   "features/digital-bank/board.js",
+  "features/digital-bank/curriculum.js",
   "features/digital-bank/forms.js",
   "features/digital-bank/actions.js",
   "frontend.js",

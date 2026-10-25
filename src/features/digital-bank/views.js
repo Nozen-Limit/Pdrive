@@ -2,7 +2,7 @@ function bankNavigation() {
   const head = data.user.role === "head";
   const item = (scope, icon, title, category = "") =>
     `<button class="${bank.screen !== "collaboration" && bank.scope === scope && (bank.filters.category || "") === category ? "active" : ""}" onclick="bankNavigate('${scope}','${category}')">${ico(icon)}<span>${title}</span></button>`;
-  return `<details class="bank-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload Resource</button></div></details><nav aria-label="Digital Bank"><button onclick="go('dashboard')">${ico("home")}<span>Home</span></button>${item("shared", "database", "Digital Bank")}${bankCollaborationPreviewAvailable() ? '<button class="' + (bank.screen === "collaboration" ? "active" : "") + '" onclick="bankCollaborationPage()">' + ico("group_work") + "<span>Collaboration</span></button>" : ""}${item("mine", "folder_open", "My Resources")}${item("recent", "history", "Recent")}${item("saved", "bookmark", "Saved Resources")}${head ? item("review", "fact_check", "Resource Reviews") + item("all", "inventory_2", "All Resources") + item("archived", "archive", "Archived") : ""}<span class="bank-nav-label">Resource Bank</span>${Object.keys(
+  return `<details class="bank-new"><summary>${ico("add")}New</summary><div><button onclick="bankUploadPage()">${ico("upload_file")}Upload Resource</button></div></details><nav aria-label="Digital Bank"><button onclick="go('dashboard')">${ico("home")}<span>Home</span></button>${item("shared", "database", "Digital Bank")}${bankCollaborationPreviewAvailable() ? '<button class="' + (bank.screen === "collaboration" ? "active" : "") + '" onclick="bankCollaborationPage()">' + ico("group_work") + "<span>Collaboration</span></button>" : ""}${item("mine", "folder_open", "My Resources")}${item("recent", "history", "Recent")}${item("saved", "bookmark", "Saved Resources")}${head ? item("review", "fact_check", "Resource Reviews") + item("all", "inventory_2", "All Resources") + item("archived", "archive", "Archived") + '<button onclick="curriculumCatalogPage()">' + ico("menu_book") + "<span>Curriculum catalog</span></button>" : ""}<span class="bank-nav-label">Resource Bank</span>${Object.keys(
     bankCategories,
   )
     .map((key) =>
@@ -19,15 +19,20 @@ function bankRender() {
     heading: `<button class="icon-btn bank-mobile-menu" onclick="menu()" aria-label="Open menu">${ico("menu")}</button><div class="bank-search">${ico("search")}<input type="search" aria-label="Search in Digital Bank" placeholder="Search in Digital Bank" maxlength="300" value="${esc(bank.filters.q || "")}" oninput="bankSearch(this)" ${bank.screen !== "list" ? 'onfocus="bankBack()"' : ""}><button class="icon-btn" aria-label="Open resource filters" onclick="bankOpenFilters()">${ico("tune")}</button></div>`,
     actions: `${bankAppearanceMenu()}<button class="icon-btn" aria-label="Notifications" onclick="go('notifications')">${ico("notifications")}</button>`,
     content:
-      bank.screen === "collaboration"
-        ? '<div id="bank-collaboration-preview" role="region" aria-label="Collaboration preview"></div>'
-        : bank.screen === "list"
-          ? bankListPage()
-          : bank.screen === "upload"
-            ? bankUploadForm()
-            : bankDetailPage(),
+      bank.screen === "curriculum"
+        ? curriculumCatalogContent()
+        : bank.screen === "competency-review"
+          ? curriculumReviewContent()
+          : bank.screen === "collaboration"
+            ? '<div id="bank-collaboration-preview" role="region" aria-label="Collaboration preview"></div>'
+            : bank.screen === "list"
+              ? bankListPage()
+              : bank.screen === "upload"
+                ? bankUploadForm()
+                : bankDetailPage(),
     bankPage: true,
   });
+  if (bank.screen === "upload") curriculumLoadOptions();
   if (bank.screen === "collaboration")
     window.sikapCollaboration?.mount(data.user.role);
   else if (bank.screen === "list") bankPaintCollaboration();
@@ -121,16 +126,19 @@ function bankFilters() {
     "Quarter",
     [1, 2, 3, 4].map((n) => "Quarter " + n),
   )}${select("creator", "Creator", bank.facets.creators)}${select(
-    "type",
-    "File type",
+    "legacy",
+    "Competency mapping",
     [
-      ["application/pdf", "PDF"],
-      [
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "DOCX",
-      ],
+      ["true", "Legacy free text"],
+      ["false", "Catalog mapped"],
     ],
-  )}${["mine", "all"].includes(bank.scope) ? select("status", "Status", Object.entries(bankStates)) : ""}<label>Modified since<input type="date" name="date" value="${esc(bank.filters.date || "")}"></label></div><div class="form-actions"><button class="primary" type="submit">Apply filters</button></div></form>`;
+  )}${select("type", "File type", [
+    ["application/pdf", "PDF"],
+    [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "DOCX",
+    ],
+  ])}${["mine", "all"].includes(bank.scope) ? select("status", "Status", Object.entries(bankStates)) : ""}<label>Modified since<input type="date" name="date" value="${esc(bank.filters.date || "")}"></label></div><div class="form-actions"><button class="primary" type="submit">Apply filters</button></div></form>`;
 }
 function bankOpenFilters() {
   if (bank.screen !== "list") {
@@ -239,7 +247,7 @@ function bankDetailPage() {
     .map(([name, value]) => `<div><dt>${name}</dt><dd>${esc(value)}</dd></div>`)
     .join(
       "",
-    )}</dl><h3>Learning competency</h3><p class="bank-prose">${esc(resource.bank_competency)}</p><h3>Tags</h3><div class="bank-tags">${resource.bank_tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>${resource.bank_source ? `<h3>Reference / Source</h3><p class="bank-prose">${esc(resource.bank_source)}</p>` : ""}${resource.bank_notes ? `<h3>Additional notes</h3><p class="bank-prose">${esc(resource.bank_notes)}</p>` : ""}${head && !own && ["pending", "resubmitted"].includes(state) ? bankReviewForm() : ""}${own && state === "returned" ? bankRevisionForm() : ""}</aside></div>`;
+    )}</dl><h3>Learning competency</h3>${resource.bank_competency_legacy ? '<p class="muted">Legacy · free-text competency</p>' : ""}<p class="bank-prose">${esc(resource.bank_competency)}</p>${resource.bank_competency_code ? `<p>Official code: ${esc(resource.bank_competency_code)}</p>` : ""}${resource.bank_competency_source ? `<p>${curriculumSource({ source_title: resource.bank_competency_source.title, source_url: resource.bank_competency_source.url, source_page: resource.bank_competency_source.page, curriculum_version: resource.bank_curriculum_version })}</p>` : ""}<h3>Tags</h3><div class="bank-tags">${resource.bank_tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>${resource.bank_source ? `<h3>Reference / Source</h3><p class="bank-prose">${esc(resource.bank_source)}</p>` : ""}${resource.bank_notes ? `<h3>Additional notes</h3><p class="bank-prose">${esc(resource.bank_notes)}</p>` : ""}${head && !own && ["pending", "resubmitted"].includes(state) ? bankReviewForm() : ""}${own && state === "returned" ? bankRevisionForm() : ""}</aside></div>`;
 }
 
 function bankCollaborationPreviewAvailable() {

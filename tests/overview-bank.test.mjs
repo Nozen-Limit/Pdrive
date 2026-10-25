@@ -125,8 +125,15 @@ test("Overview fetches all bank pages, excludes drafts/archives, folds resubmiss
     0,
   );
   assert.deepEqual(report.areas, [
+    ["Araling Panlipunan", 0],
+    ["English", 0],
+    ["Filipino", 0],
     ["Mathematics", 7],
+    ["Music and Arts", 0],
+    ["Physical Education and Health", 0],
     ["Science", 0],
+    ["Technology and Livelihood Education", 0],
+    ["Values Education", 0],
   ]);
   vm.runInContext(
     "overviewStatus('pending');filters.search='';overviewLayout='list';render()",

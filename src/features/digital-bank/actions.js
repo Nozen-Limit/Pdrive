@@ -40,6 +40,7 @@ async function bankSubmitForm(event) {
   const action = event.submitter?.value || "submit";
   await bankRunForm(event, async (form) => {
     const fields = Object.fromEntries(new FormData(form));
+    curriculumValidateFields(fields);
     fields.tags = [
       ...new Set(
         fields.tags
