@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFile } from "node:fs/promises";
 
-test("Local collaboration preview mounts inside the existing workspace and is absent from hosted navigation", async () => {
+test("Collaboration preview mounts inside the workspace on localhost and the approved public host", async () => {
   const source = await readFile("src/features/digital-bank/views.js", "utf8");
   let workspace, mounted;
   const context = vm.createContext({
@@ -42,7 +42,7 @@ test("Local collaboration preview mounts inside the existing workspace and is ab
   assert.match(workspace.actions, /appearance-controls/);
   assert.equal(mounted, "teacher");
   context.location.hostname = "nozen-limit.github.io";
-  assert.doesNotMatch(
+  assert.match(
     vm.runInContext("bankNavigation()", context),
     /Collaboration<\/span>/,
   );
@@ -89,4 +89,20 @@ test("Approved collaboration rows use the normal Digital Bank table with credits
   assert.doesNotMatch(html, /bankDownload\('collaboration:deck'/);
   assert.doesNotMatch(html, /Collaboration resources/);
   assert.match(html, /1\u20131 of 1/);
+});
+test("Public Digital Bank does not load sample resources until Collaboration is opened", async () => {
+  const source = await readFile("src/features/digital-bank/views.js", "utf8");
+  let touched = false;
+  const context = vm.createContext({
+    location: { hostname: "nozen-limit.github.io" },
+    window: {},
+    document: {
+      querySelector() {
+        touched = true;
+        throw new Error("Unexpected preview load");
+      },
+    },
+  });
+  await vm.runInContext(source + "\nbankPaintCollaboration()", context);
+  assert.equal(touched, false);
 });

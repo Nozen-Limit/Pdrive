@@ -260,7 +260,7 @@ function bankSort(value) {
   bankRead();
 }
 async function bankOpen(id, internal = false) {
-  if (bankLocalPreviewAvailable() && id.startsWith("collaboration:"))
+  if (bankCollaborationPreviewAvailable() && id.startsWith("collaboration:"))
     return bankCollaborationPage(id.slice(14), true);
   if ((busy && !internal) || !(await bankDiscard())) return;
   bank.sequence++;

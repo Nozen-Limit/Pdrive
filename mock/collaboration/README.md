@@ -21,3 +21,5 @@ Assumptions for this preview:
 Before production: implement persisted collaboration tables, accepted-invitation access policies, immutable submission file sets, authorized storage, server-side file validation and media limits, and test real multi-account access. The mock's client-side permissions are demonstrations, not production security.
 
 The generated slide and matching PDF are local sample fixtures. Video and audio playback examples link to MDN sample media and require a network connection. PDF.js is copied from the installed npm development dependency for local PDF rendering; retain its upstream license when distributing.
+
+Published preview: Collaboration is also available on https://nozen-limit.github.io/Pdrive/. It uses sample accounts and in-memory data. On the hosted site, sample resources are included in the Digital Bank list only after opening Collaboration in that tab. Real school records are never changed by preview actions.
