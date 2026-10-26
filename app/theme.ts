@@ -72,6 +72,16 @@ export function makeTheme(name: PaletteName) {
       button: { textTransform: "none", fontWeight: 500, fontSize: 12 },
     },
     components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          "@media (min-width:900px)": {
+            body: { fontSize: 13 },
+            ".MuiTableCell-root": { fontSize: 13 },
+            ".MuiButton-root": { fontSize: 13 },
+            ".MuiTab-root": { fontSize: 13 },
+          },
+        },
+      },
       MuiButton: {
         defaultProps: { disableElevation: true, size: "small" },
         styleOverrides: { root: { minHeight: 34, padding: "6px 12px" } },

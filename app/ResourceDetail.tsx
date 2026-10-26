@@ -259,8 +259,13 @@ export function ResourceDetail({
               !!r.bank_category &&
               head &&
               !own &&
+              !r.contributors?.some((p) => p.id === person.id) &&
               ["pending", "resubmitted"].includes(state),
             canEdit =
+              !(
+                r.contributors?.length &&
+                ["pending", "approved"].includes(state)
+              ) &&
               !!r.bank_category &&
               !r.archived &&
               (head || (own && ["draft", "returned"].includes(state)));
@@ -274,6 +279,11 @@ export function ResourceDetail({
                 >
                   {r.title}
                 </Typography>
+                {!!r.contributors?.length && (
+                  <Typography color="text.secondary" sx={{ mb: 1 }}>
+                    Contributors: {r.contributors.map((p) => p.name).join(", ")}
+                  </Typography>
+                )}
                 <Box sx={{ ...row, mb: 1 }}>
                   <Status resource={r} />
                   <Typography variant="caption" color="text.secondary">

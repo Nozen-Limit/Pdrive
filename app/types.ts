@@ -12,6 +12,7 @@ export type Page =
   | "notifications"
   | "teachers"
   | "profile"
+  | "collaboration"
   | "summary";
 export interface Person {
   id: string;
@@ -52,6 +53,7 @@ export interface SchoolState {
   workflowReady: boolean;
 }
 export interface Resource {
+  contributors?: { id: string; name: string }[];
   id: string;
   owner: string;
   title: string;
@@ -158,6 +160,13 @@ export interface Backend {
   validateBankFile(file: File): Promise<unknown>;
   phone: { normalize(value: string): string; format(value: string): string };
   bank: {
+    collaboration(mid?: string | null): Promise<CollaborationState>;
+    collaborationAction(args: {
+      mid: string;
+      action: string;
+      payload?: Record<string, unknown>;
+      expected_revision?: number;
+    }): Promise<void>;
     list(
       filters: Record<string, string>,
       page?: number,
@@ -212,6 +221,25 @@ export interface Backend {
     }): Promise<void>;
     saved(id: string, value: boolean): Promise<void>;
   };
+}
+export interface CollaborationState {
+  resources?: (Resource & { membership?: string })[];
+  teachers?: { id: string; name: string }[];
+  resource?: Resource;
+  members?: { id: string; name: string; status: string }[];
+  comments?: {
+    id: string;
+    author: string;
+    name: string;
+    body: string;
+    created: string;
+  }[];
+  proposals?: (Version & {
+    id: string;
+    author: string;
+    selected: boolean;
+    submitted: boolean;
+  })[];
 }
 declare global {
   interface Window {

@@ -273,10 +273,12 @@ export function Notifications({
   state,
   onChanged,
   onOpen,
+  onCollaboration,
 }: {
   state: SchoolState;
   onChanged: () => Promise<void>;
   onOpen: (id: string) => void;
+  onCollaboration: () => void;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useBusy();
@@ -340,7 +342,11 @@ export function Notifications({
             </Typography>
             {notice.module && (
               <Button
-                onClick={() => onOpen(notice.module!)}
+                onClick={() =>
+                  /collaborat/i.test(notice.body)
+                    ? onCollaboration()
+                    : onOpen(notice.module!)
+                }
                 sx={{ display: "block", p: 0, mt: 0.5, minHeight: 0 }}
               >
                 Open resource

@@ -158,6 +158,16 @@ export function ResourceCard({
           {resource.creator} · {date(resource.updated)}
         </Typography>
         {showStatus && <Status resource={resource} />}
+        {!!resource.contributors?.length && (
+          <Typography
+            variant="caption"
+            component="p"
+            color="text.secondary"
+            sx={{ mt: 1 }}
+          >
+            Contributors: {resource.contributors.map((p) => p.name).join(", ")}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );

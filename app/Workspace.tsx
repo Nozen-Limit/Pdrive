@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   AppBar,
   Avatar,
@@ -35,6 +35,8 @@ import {
   StickyNote2Outlined,
   StorageOutlined,
   BookmarkBorderOutlined,
+  GroupsOutlined,
+  HistoryOutlined,
 } from "@mui/icons-material";
 import type { ReactNode } from "react";
 import type { Page, SchoolState, Scope } from "./types";
@@ -50,6 +52,7 @@ export function Workspace({
   logout,
   palette,
   onPalette,
+  onCategory,
 }: {
   state: SchoolState;
   page: Page;
@@ -61,6 +64,7 @@ export function Workspace({
   logout: () => void;
   palette: PaletteName;
   onPalette: (value: PaletteName) => void;
+  onCategory: (value: string) => void;
 }) {
   const theme = useTheme(),
     mobile = useMediaQuery(theme.breakpoints.down("md")),
@@ -71,7 +75,7 @@ export function Workspace({
   const items = [
     {
       page: "overview" as Page,
-      label: "Overview",
+      label: mobile ? "Overview" : "Home",
       icon: <DashboardOutlined />,
     },
     {
@@ -81,10 +85,21 @@ export function Workspace({
       icon: <StorageOutlined />,
     },
     {
+      page: "collaboration" as Page,
+      label: "Collaboration",
+      icon: <GroupsOutlined />,
+    },
+    {
       page: "bank" as Page,
       scope: "mine" as Scope,
       label: "My Resources",
       icon: <FolderOpenOutlined />,
+    },
+    {
+      page: "bank" as Page,
+      scope: "recent" as Scope,
+      label: "Recent",
+      icon: <HistoryOutlined />,
     },
     {
       page: "bank" as Page,
@@ -158,31 +173,89 @@ export function Workspace({
       </Button>
       <List dense sx={{ p: 0 }} aria-label="Workspace">
         {items.map((item) => (
-          <ListItemButton
-            key={item.label}
-            selected={
-              page === item.page && (page !== "bank" || scope === item.scope)
-            }
-            onClick={() => {
-              navigate(item.page, item.scope);
-              setOpen(false);
-            }}
-            sx={{
-              borderRadius: 1,
-              mb: 0.25,
-              px: 1.25,
-              py: 0.6,
-              "&.Mui-selected": { bgcolor: "action.selected" },
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 30, "& svg": { fontSize: 18 } }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText
-              primary={item.label}
-              slotProps={{ primary: { sx: { fontSize: 12 } } }}
-            />
-          </ListItemButton>
+          <Fragment key={item.label}>
+            {item.page === "notes" && (
+              <>
+                {" "}
+                {!mobile && (
+                  <>
+                    <Typography
+                      color="text.secondary"
+                      sx={{
+                        px: 1.25,
+                        pt: 2,
+                        pb: 1,
+                        fontSize: 10,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      RESOURCE BANK
+                    </Typography>
+                    <List dense sx={{ p: 0 }} aria-label="Resource categories">
+                      {["METHODS", "MODELS", "UNITS"].map((category) => (
+                        <ListItemButton
+                          key={category}
+                          onClick={() => onCategory(category)}
+                          sx={{ borderRadius: 1, px: 1.25, py: 0.5 }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 30 }}>
+                            <FolderOpenOutlined sx={{ fontSize: 18 }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              category[0] + category.slice(1).toLowerCase()
+                            }
+                            slotProps={{ primary: { sx: { fontSize: 13 } } }}
+                          />
+                        </ListItemButton>
+                      ))}
+                    </List>
+                  </>
+                )}
+                {!mobile && (
+                  <Typography
+                    color="text.secondary"
+                    sx={{
+                      px: 1.25,
+                      pt: 2,
+                      pb: 1,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    WORKSPACE
+                  </Typography>
+                )}
+              </>
+            )}
+            <ListItemButton
+              key={item.label}
+              selected={
+                page === item.page && (page !== "bank" || scope === item.scope)
+              }
+              onClick={() => {
+                navigate(item.page, item.scope);
+                setOpen(false);
+              }}
+              sx={{
+                borderRadius: 1,
+                mb: 0.25,
+                px: 1.25,
+                py: 0.6,
+                "&.Mui-selected": { bgcolor: "action.selected" },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 30, "& svg": { fontSize: 18 } }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                slotProps={{
+                  primary: { sx: { fontSize: { xs: 12, md: 13 } } },
+                }}
+              />
+            </ListItemButton>
+          </Fragment>
         ))}
       </List>
       <Box sx={{ flexGrow: 1, minHeight: 24 }} />
@@ -232,10 +305,10 @@ export function Workspace({
         open={!mobile || open}
         onClose={() => setOpen(false)}
         sx={{
-          width: mobile ? 0 : 212,
+          width: mobile ? 0 : 232,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: 212,
+            width: mobile ? 212 : 232,
             boxSizing: "border-box",
             borderRight: "1px solid",
             borderColor: "divider",
@@ -264,9 +337,17 @@ export function Workspace({
                 <MenuOutlined />
               </IconButton>
             )}
-            <Typography component="h1" variant="h3" sx={{ flexGrow: 1 }}>
-              {title}
-            </Typography>
+            {!mobile && page === "bank" ? (
+              <Box
+                id="desktop-bank-search"
+                sx={{ flexGrow: 1, minWidth: 0, maxWidth: 520 }}
+              />
+            ) : (
+              <Typography component="h1" variant="h3" sx={{ flexGrow: 1 }}>
+                {title}
+              </Typography>
+            )}
+            {!mobile && page === "bank" && <Box sx={{ flexGrow: 1 }} />}
             <IconButton
               aria-label="Choose color"
               onClick={(e) => setAnchor(e.currentTarget)}
@@ -284,6 +365,14 @@ export function Workspace({
           </Toolbar>
         </AppBar>
         <Box component="section" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+          {!mobile && page === "bank" && (
+            <Typography
+              component="h1"
+              sx={{ fontSize: 20, fontWeight: 600, mb: 2.5 }}
+            >
+              {title}
+            </Typography>
+          )}
           {children}
         </Box>
       </Box>

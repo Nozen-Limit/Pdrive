@@ -3,13 +3,22 @@ export function createBankService(client, config, checked, signVersions) {
     const result = await client.rpc(name, args);
     if (result.error?.code === "PGRST202")
       throw Error(
-        /curriculum|competency/.test(name)
-          ? "Curriculum catalog setup is required. Ask the administrator to apply curriculum-catalog.sql."
-          : "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
+        /^collab_/.test(name)
+          ? "Collaboration database setup is required. Apply supabase/collaboration.sql in the Supabase SQL Editor, then refresh."
+          : /curriculum|competency/.test(name)
+            ? "Curriculum catalog setup is required. Ask the administrator to apply curriculum-catalog.sql."
+            : "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
       );
     return checked(result);
   }
   return {
+    async collaboration(mid = null) {
+      const value = await call("collab_state", { mid });
+      if (value.proposals)
+        value.proposals = await signVersions(value.proposals);
+      return value;
+    },
+    collaborationAction: (args) => call("collab_action", args),
     curriculum: () => call("bank_curriculum"),
     competencies: (filters, page = 1) =>
       call("bank_competency_list", { filters, page_no: page }),

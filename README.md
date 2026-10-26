@@ -10,10 +10,11 @@ Use Node.js 22. Install dependencies with `npm ci`, then run `npm run dev`. Open
 
 ## Data and publishing
 
-The existing public Supabase configuration is preserved during builds. No database migration is needed for this UI update. Database authorization, review checklist, resource version rules, PDF/DOCX uploads with the 20 MB limit, and download behavior continue through the existing services.
+The existing public Supabase configuration is preserved during builds. The restored desktop layout uses the existing database. Persistent Collaboration additionally requires `supabase/collaboration.sql`, applied after the existing curriculum setup. Database authorization, review checklist, resource version rules, PDF/DOCX uploads with the 20 MB limit, and download behavior continue through the existing services.
 
-Cards have natural heights and bounded widths. Forms, filters, tables and dialogs adapt to available space. The Overview and head-teacher summary read Digital Bank records; drafts and archived items are excluded from submission totals.
+Desktop navigation restores Home, Digital Bank, Collaboration, Recent, category shortcuts and Workspace groups. Desktop Digital Bank search is in the top bar, with sorting beside the list controls; mobile retains its compact layout. Category card counts come from saved approved resources. Cards have natural heights and bounded widths. Forms, filters, tables and dialogs adapt to available space. The Overview and head-teacher summary read Digital Bank records; drafts and archived items are excluded from submission totals.
 
-The in-memory Collaboration prototype, sample-account switcher and demo assets are excluded from the published site. This update does not implement persistent collaboration or media uploads, and does not delete school accounts or stored resources. The competency catalog remains dependent on verified entries supplied to the database; this UI migration does not populate it.
+The in-memory Collaboration prototype, sample-account switcher and demo assets are excluded from the published site. Collaboration now uses database-backed invitations, discussion, verified file proposals, owner selection and immutable contributor credits. Only owners submit selected revisions; the existing head-teacher checklist and approval flow apply. Accepted contributors appear in Digital Bank cards, rows and details. Without the collaboration migration, the page reports setup required and never falls back to fake or local-only data. Media upload formats are not expanded, and no school accounts or stored resources are deleted. The competency catalog remains dependent on verified entries supplied to the database; this UI migration does not populate it.
 
 `app/` contains the current React UI. The retained `src/` services and historical helpers support backend integration and regression tests; the old UI entry points are not loaded by the published site.
+

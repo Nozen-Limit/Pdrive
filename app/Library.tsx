@@ -1,5 +1,6 @@
 import { useBusy } from "./operations";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Box,
   Button,
@@ -22,6 +23,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   FilterList,
@@ -77,6 +80,7 @@ export function Library({
   onChanged,
   confirm,
   notify,
+  categoryRequest,
 }: {
   scope: Scope;
   head: boolean;
@@ -89,7 +93,30 @@ export function Library({
   onChanged: () => Promise<void>;
   confirm: Confirm;
   notify: (value: string) => void;
+  categoryRequest: { value: string; key: number };
 }) {
+  const desktop = useMediaQuery(useTheme().breakpoints.up("md"));
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setCounts(null);
+    Promise.all(
+      Object.keys(categories).map(
+        async (category) =>
+          [
+            category,
+            (await backend.bank.list({ scope: "shared", category }, 1)).total,
+          ] as const,
+      ),
+    )
+      .then((values) => {
+        if (!cancelled) setCounts(Object.fromEntries(values));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [epoch, userId]);
   const [filters, setFilters] = useState<Record<string, string>>({
       sort: "approved",
     }),
@@ -156,6 +183,9 @@ export function Library({
     setPage(1);
     setFilters((old) => ({ ...old, [name]: value }));
   };
+  useEffect(() => {
+    if (categoryRequest.key) filter("category", categoryRequest.value);
+  }, [categoryRequest.key]);
   async function action(kind: "download" | "save" | "archive" | "delete") {
     if (!menu || actionBusy) return;
     const r = menu.resource;
@@ -232,6 +262,22 @@ export function Library({
   );
   const rows = result?.items || [];
   const showStatus = !["shared", "recent"].includes(scope);
+  const search = (
+    <TextField
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search resources"
+      label="Search resources"
+      slotProps={{
+        input: {
+          startAdornment: (
+            <Search fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+          ),
+        },
+      }}
+      sx={{ width: "100%", maxWidth: desktop ? 520 : 360 }}
+    />
+  );
   return (
     <>
       <Tabs
@@ -285,6 +331,13 @@ export function Library({
             >
               <Typography sx={{ fontSize: 12, fontWeight: 500 }}>
                 {key[0] + key.slice(1).toLowerCase()}
+                <Box
+                  component="span"
+                  sx={{ float: "right", fontSize: 18, lineHeight: 1, pl: 2 }}
+                  aria-label={`${key} approved resources`}
+                >
+                  {counts?.[key] ?? "—"}
+                </Box>
               </Typography>
               <Typography color="text.secondary" sx={{ fontSize: 11, mt: 0.5 }}>
                 {label}
@@ -294,24 +347,28 @@ export function Library({
         </Box>
       )}
       <Box sx={{ ...row, justifyContent: "space-between", mb: 2, gap: 1.5 }}>
-        <TextField
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search resources"
-          label="Search resources"
-          slotProps={{
-            input: {
-              startAdornment: (
-                <Search
-                  fontSize="small"
-                  sx={{ mr: 1, color: "text.secondary" }}
-                />
-              ),
-            },
-          }}
-          sx={{ width: "100%", maxWidth: 360 }}
-        />
-        <Box sx={row}>
+        {desktop && document.getElementById("desktop-bank-search") ? (
+          createPortal(search, document.getElementById("desktop-bank-search")!)
+        ) : (
+          <TextField
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search resources"
+            label="Search resources"
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <Search
+                    fontSize="small"
+                    sx={{ mr: 1, color: "text.secondary" }}
+                  />
+                ),
+              },
+            }}
+            sx={{ width: "100%", maxWidth: 360 }}
+          />
+        )}
+        <Box sx={{ ...row, width: desktop ? "100%" : undefined }}>
           <Button
             color="inherit"
             startIcon={<FilterList fontSize="small" />}
@@ -319,6 +376,31 @@ export function Library({
           >
             Filters
           </Button>
+          {desktop && (
+            <>
+              <Box sx={{ flexGrow: 1 }} />
+              <TextField
+                select
+                label="Sort"
+                value={filters.sort || "approved"}
+                onChange={(e) => filter("sort", e.target.value)}
+                sx={{ width: 180 }}
+              >
+                {[
+                  ["approved", "Recently approved"],
+                  ["updated", "Recently modified"],
+                  ["name", "Name"],
+                  ["newest", "Newest"],
+                  ["oldest", "Oldest"],
+                  ["creator", "Creator"],
+                ].map(([value, label]) => (
+                  <MenuItem key={value} value={value}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </>
+          )}
           <IconButton
             aria-label="Refresh resources"
             onClick={() => setRefresh((n) => n + 1)}
@@ -615,6 +697,16 @@ export function Library({
                           >
                             {r.term} · {r.filename || "Draft"}
                           </Typography>
+                          {!!r.contributors?.length && (
+                            <Typography
+                              variant="caption"
+                              component="p"
+                              color="text.secondary"
+                            >
+                              Contributors:{" "}
+                              {r.contributors.map((p) => p.name).join(", ")}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>{r.category}</TableCell>
                         <TableCell>{r.subject}</TableCell>

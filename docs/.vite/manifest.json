@@ -3,43 +3,57 @@
     "file": "react-assets/pdf.worker.min-CjEcRF4W.mjs",
     "src": "../node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
+  "Collaboration.tsx": {
+    "file": "react-assets/Collaboration-CtBEgsL-.js",
+    "name": "Collaboration",
+    "src": "Collaboration.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-WkwZ5CU-.js",
+      "_ui-MMRlHqJG.js",
+      "_operations-FH1Kiz0W.js",
+      "_UploadFileOutlined-DpW5Ghpf.js",
+      "index.html"
+    ]
+  },
   "FilePreview.tsx": {
-    "file": "react-assets/FilePreview-I103zBti.js",
+    "file": "react-assets/FilePreview-iYIpB17S.js",
     "name": "FilePreview",
     "src": "FilePreview.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js"
+      "_ui-MMRlHqJG.js"
     ],
     "assets": [
       "react-assets/pdf.worker.min-CjEcRF4W.mjs"
     ]
   },
   "Library.tsx": {
-    "file": "react-assets/Library-DjuPWKCS.js",
+    "file": "react-assets/Library-DYpHGJgI.js",
     "name": "Library",
     "src": "Library.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js",
-      "_operations-B9mMHDJi.js",
-      "_Collapse-CNEHCerJ.js",
+      "_ui-MMRlHqJG.js",
+      "_operations-FH1Kiz0W.js",
+      "_Collapse-D9uDZZyY.js",
       "index.html"
     ]
   },
   "ResourceDetail.tsx": {
-    "file": "react-assets/ResourceDetail-2SikPxxU.js",
+    "file": "react-assets/ResourceDetail-D9AMT1_7.js",
     "name": "ResourceDetail",
     "src": "ResourceDetail.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js",
-      "_operations-B9mMHDJi.js",
-      "_Collapse-CNEHCerJ.js",
-      "_UploadFileOutlined-Cd3oIl1P.js",
+      "_ui-MMRlHqJG.js",
+      "_operations-FH1Kiz0W.js",
+      "_Collapse-D9uDZZyY.js",
+      "_Link-CiMGvS9K.js",
+      "_UploadFileOutlined-DpW5Ghpf.js",
       "index.html"
     ],
     "dynamicImports": [
@@ -47,64 +61,73 @@
     ]
   },
   "ResourceForm.tsx": {
-    "file": "react-assets/ResourceForm-lIHO2Cyv.js",
+    "file": "react-assets/ResourceForm-QDki-i0C.js",
     "name": "ResourceForm",
     "src": "ResourceForm.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js",
-      "_operations-B9mMHDJi.js",
-      "_UploadFileOutlined-Cd3oIl1P.js",
+      "_ui-MMRlHqJG.js",
+      "_operations-FH1Kiz0W.js",
+      "_Link-CiMGvS9K.js",
+      "_UploadFileOutlined-DpW5Ghpf.js",
       "index.html"
     ]
   },
-  "_Collapse-CNEHCerJ.js": {
-    "file": "react-assets/Collapse-CNEHCerJ.js",
+  "_Collapse-D9uDZZyY.js": {
+    "file": "react-assets/Collapse-D9uDZZyY.js",
     "name": "Collapse",
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js"
+      "_ui-MMRlHqJG.js"
     ]
   },
-  "_UploadFileOutlined-Cd3oIl1P.js": {
-    "file": "react-assets/UploadFileOutlined-Cd3oIl1P.js",
-    "name": "UploadFileOutlined",
+  "_Link-CiMGvS9K.js": {
+    "file": "react-assets/Link-CiMGvS9K.js",
+    "name": "Link",
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js"
+      "_ui-MMRlHqJG.js"
     ]
   },
-  "_operations-B9mMHDJi.js": {
-    "file": "react-assets/operations-B9mMHDJi.js",
+  "_UploadFileOutlined-DpW5Ghpf.js": {
+    "file": "react-assets/UploadFileOutlined-DpW5Ghpf.js",
+    "name": "UploadFileOutlined",
+    "imports": [
+      "_ui-MMRlHqJG.js"
+    ]
+  },
+  "_operations-FH1Kiz0W.js": {
+    "file": "react-assets/operations-FH1Kiz0W.js",
     "name": "operations",
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js"
+      "_ui-MMRlHqJG.js"
     ]
   },
   "_rolldown-runtime-WkwZ5CU-.js": {
     "file": "react-assets/rolldown-runtime-WkwZ5CU-.js",
     "name": "rolldown-runtime"
   },
-  "_ui-hEeJmGqJ.js": {
-    "file": "react-assets/ui-hEeJmGqJ.js",
+  "_ui-MMRlHqJG.js": {
+    "file": "react-assets/ui-MMRlHqJG.js",
     "name": "ui",
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js"
     ]
   },
   "index.html": {
-    "file": "react-assets/index-jnM0Zgas.js",
+    "file": "react-assets/index-B8eUhVam.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
       "_rolldown-runtime-WkwZ5CU-.js",
-      "_ui-hEeJmGqJ.js",
-      "_operations-B9mMHDJi.js"
+      "_ui-MMRlHqJG.js",
+      "_operations-FH1Kiz0W.js"
     ],
     "dynamicImports": [
+      "Collaboration.tsx",
       "Library.tsx",
       "ResourceForm.tsx",
       "ResourceDetail.tsx"

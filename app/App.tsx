@@ -26,6 +26,7 @@ import { makeTheme, palettes, type PaletteName } from "./theme";
 import { Operations } from "./operations";
 import { Auth } from "./Auth";
 import { Workspace } from "./Workspace";
+const Collaboration = lazy(() => import("./Collaboration"));
 const Library = lazy(() =>
   import("./Library").then((module) => ({ default: module.Library })),
 );
@@ -70,6 +71,7 @@ function initialRoute(): { page: Page; scope: Scope; resource: string } {
       "teachers",
       "profile",
       "summary",
+      "collaboration",
     ];
     return {
       page: resource
@@ -115,6 +117,7 @@ export function App() {
       backend.recovery || !!backend.recoveryError,
     ),
     [route, setRoute] = useState(initialRoute),
+    [categoryRequest, setCategoryRequest] = useState({ value: "", key: 0 }),
     [editing, setEditing] = useState<Resource | null>(null),
     [dirty, setDirty] = useState(false),
     [epoch, setEpoch] = useState(0),
@@ -259,7 +262,7 @@ export function App() {
   ) {
     if (!force && work.current.size) {
       notify("Please wait for the current action to finish.");
-      return;
+      return false;
     }
     if (
       !force &&
@@ -270,7 +273,7 @@ export function App() {
         "Discard changes",
       ))
     )
-      return;
+      return false;
     if (
       state?.user.role !== "head" &&
       (["teachers", "summary"].includes(page) ||
@@ -286,6 +289,7 @@ export function App() {
     if (resource) query.set("resource", resource);
     history.replaceState(null, "", "#" + query.toString());
     window.scrollTo(0, 0);
+    return true;
   }
   const open = (id: string) => {
     void navigate("detail", route.scope, id);
@@ -402,6 +406,7 @@ export function App() {
     if (page === "bank")
       body = (
         <Library
+          categoryRequest={categoryRequest}
           scope={route.scope}
           head={head}
           userId={state.user.id}
@@ -413,6 +418,18 @@ export function App() {
           onChanged={refresh}
           confirm={confirm}
           notify={notify}
+        />
+      );
+    else if (page === "collaboration")
+      body = (
+        <Collaboration
+          person={state.user}
+          onOpen={open}
+          onUpload={() => void navigate("upload")}
+          notify={notify}
+          confirm={confirm}
+          setDirty={setDirty}
+          onChanged={refresh}
         />
       );
     else if (page === "upload")
@@ -444,7 +461,14 @@ export function App() {
       );
     else if (page === "notes") body = <Notes {...common} />;
     else if (page === "notifications")
-      body = <Notifications state={state} onChanged={refresh} onOpen={open} />;
+      body = (
+        <Notifications
+          state={state}
+          onChanged={refresh}
+          onOpen={open}
+          onCollaboration={() => void navigate("collaboration")}
+        />
+      );
     else if (page === "teachers" && head) body = <Teachers {...common} />;
     else if (page === "profile")
       body = (
@@ -512,6 +536,7 @@ export function App() {
       teachers: "Teachers",
       profile: "Profile",
       summary: "Teacher summary",
+      collaboration: "Collaboration",
     };
     content = (
       <Workspace
@@ -520,6 +545,12 @@ export function App() {
         scope={route.scope}
         title={titles[page]}
         navigate={(page, scope) => void navigate(page, scope)}
+        onCategory={(value) => {
+          void navigate("bank", "shared").then((changed) => {
+            if (changed)
+              setCategoryRequest((old) => ({ value, key: old.key + 1 }));
+          });
+        }}
         upload={() => void navigate("upload")}
         logout={() => void logout()}
         palette={palette}
