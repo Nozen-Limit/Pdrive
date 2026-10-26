@@ -359,11 +359,7 @@ export function ResourceDetail({
                       {r.bank_description}
                     </Typography>
                   )}
-                  {state === "draft" ? (
-                    <Typography color="text.secondary" sx={{ mb: 2 }}>
-                      This draft has not been submitted for review.
-                    </Typography>
-                  ) : (
+                  {state !== "draft" && (
                     <Suspense fallback={<Loading label="Loading preview…" />}>
                       <FilePreview file={file} />
                     </Suspense>

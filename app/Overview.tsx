@@ -128,10 +128,6 @@ export function Summary({
   );
   return (
     <>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Digital Bank submissions. Drafts and archived resources are excluded.
-        Pending includes resubmissions.
-      </Typography>
       {table(
         "Resources per teacher",
         ["Teacher", "Submitted", "Approved", "Pending", "Returned"],
@@ -156,7 +152,7 @@ export function Summary({
         <Typography color="text.secondary" role="status">
           {coverage
             ? coverage.catalog_empty
-              ? "Coverage is unavailable until the competency list is prepared."
+              ? "No competency data"
               : `${coverage.without_approved_resource} of ${coverage.verified_competencies} listed competencies have no approved resource.`
             : !error
               ? "Loading coverage…"

@@ -97,9 +97,6 @@ class Boundary extends Component<{ children: ReactNode }, { error: boolean }> {
         <Typography variant="h2" gutterBottom>
           The page could not be displayed.
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          Reload to reopen your workspace. Saved resources are preserved.
-        </Typography>
         <Button onClick={() => location.reload()} variant="contained">
           Reload website
         </Button>
@@ -381,11 +378,6 @@ export function App() {
                 : "Account setup required"}
           </Typography>
           <Typography sx={{ my: 2 }}>{state.user.email}</Typography>
-          <Typography color="text.secondary">
-            {state.user.approval_status === "rejected"
-              ? "Contact your school for assistance."
-              : "A head teacher must approve your account before you can access school resources."}
-          </Typography>
           {state.user.approval_note && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {state.user.approval_note}

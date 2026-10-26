@@ -310,7 +310,7 @@ export function Library({
             mb: 2.5,
           }}
         >
-          {Object.entries(categories).map(([key, label]) => (
+          {Object.keys(categories).map((key) => (
             <Button
               key={key}
               variant="outlined"
@@ -338,9 +338,6 @@ export function Library({
                 >
                   {counts?.[key] ?? "—"}
                 </Box>
-              </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 11, mt: 0.5 }}>
-                {label}
               </Typography>
             </Button>
           ))}
@@ -532,7 +529,6 @@ export function Library({
               : "No resources found"
           }
         >
-          Resources matching this collection and its filters will appear here.
           {scope === "mine" && (
             <Box sx={{ mt: 2 }}>
               <Button onClick={onUpload} variant="outlined">

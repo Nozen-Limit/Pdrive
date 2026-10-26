@@ -356,12 +356,7 @@ export function ResourceForm({
                       {...params}
                       required
                       label="Learning competency"
-                      helperText={
-                        !subject || !grade || !term
-                          ? "Choose grade, learning area and quarter first."
-                          : lookupError ||
-                            `${matches} matches. Search by wording or official code.`
-                      }
+                      helperText={lookupError || undefined}
                       error={!!lookupError}
                     />
                   )}
@@ -447,7 +442,6 @@ export function ResourceForm({
               }}
             >
               <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-                <Typography>Drag a file here, or choose a file.</Typography>
                 <Button
                   component="label"
                   startIcon={<UploadFileOutlined />}

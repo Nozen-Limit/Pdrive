@@ -56,7 +56,7 @@ export function Auth({
       if (mode === "reset") {
         await backend.reset(String(fields.email).trim());
         setNotice(
-          "If this email has an account, a reset link will arrive by email. Check Spam too.",
+          "If this email has an account, a password reset email has been sent.",
         );
         return;
       }
@@ -70,9 +70,7 @@ export function Auth({
         },
       );
       if (result.needsConfirmation) {
-        setNotice(
-          "Check your email to confirm your account, then sign in. A head teacher must approve new teacher accounts.",
-        );
+        setNotice("Email confirmation required.");
         setMode("login");
       } else await onSignedIn();
     } catch (e) {

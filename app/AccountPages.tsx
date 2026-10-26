@@ -199,11 +199,7 @@ export function Notes({ state, onChanged, notify, confirm, setDirty }: Common) {
           </Card>
         ))}
       </Box>
-      {!state.notes.length && (
-        <Empty title="No notes yet">
-          Create a personal note. Pinned notes appear on your Overview.
-        </Empty>
-      )}
+      {!state.notes.length && <Empty title="No notes yet" />}
       <Dialog
         open={editing !== undefined}
         onClose={() => {
@@ -517,10 +513,6 @@ export function Teachers({
               </Typography>
               {review ? (
                 <>
-                  <Typography sx={{ mb: 2 }}>
-                    Approval grants Teacher access. Head Teacher accounts are
-                    provisioned separately.
-                  </Typography>
                   <TextField
                     name="note"
                     label="Decision note (optional)"
@@ -783,10 +775,7 @@ export function Profile({
               type="tel"
               defaultValue={backend.phone.format(user.phone || "")}
               error={!!phoneError}
-              helperText={
-                phoneError ||
-                "Philippine mobile or landline: 0912 345 6789 or (02) 8123 4567."
-              }
+              helperText={phoneError || undefined}
               onBlur={(e) => {
                 try {
                   backend.phone.normalize(e.target.value);

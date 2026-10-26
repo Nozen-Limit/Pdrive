@@ -233,12 +233,7 @@ export default function Collaboration({
       <ErrorNotice error={error} retry={() => setEpoch((n) => n + 1)} />
       {loading ? (
         <Loading label="Loading collaboration…" />
-      ) : error && !listing ? (
-        <Typography color="text.secondary">
-          Your school administrator needs to activate Collaboration. Existing
-          Digital Bank resources are preserved.
-        </Typography>
-      ) : !id ? (
+      ) : error && !listing ? null : !id ? (
         <>
           <Tabs
             value={scope}
