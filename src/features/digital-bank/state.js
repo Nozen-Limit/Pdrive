@@ -200,7 +200,6 @@ function bankPaintResults() {
   const target = $("#bank-results");
   if (view === "bank" && bank.screen === "list" && target)
     target.innerHTML = bankResults();
-  if (view === "bank" && bank.screen === "list") bankPaintCollaboration();
 }
 let bankSearchTimer;
 function bankSearch(input) {
@@ -264,8 +263,7 @@ function bankSort(value) {
   bankRead();
 }
 async function bankOpen(id, internal = false) {
-  if (bankCollaborationPreviewAvailable() && id.startsWith("collaboration:"))
-    return bankCollaborationPage(id.slice(14), true);
+  if (id.startsWith("collaboration:")) return bankNavigate("shared");
   if ((busy && !internal) || !(await bankDiscard())) return;
   bank.sequence++;
   clearTimeout(bankSearchTimer);

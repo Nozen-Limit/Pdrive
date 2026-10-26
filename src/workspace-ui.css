@@ -785,3 +785,98 @@ html body .book-form .login-submit:hover > span {
     flex-wrap: wrap;
   }
 }
+
+/* Size independent cards to their contents instead of the tallest neighbour. */
+html
+  body
+  .app.workspace-app
+  :is(
+    .cards,
+    .grid-2,
+    .profile-layout,
+    .bank-form-grid,
+    .bank-review-workspace,
+    .overview-support
+  ) {
+  align-items: start;
+}
+html body .app.workspace-app :is(.bank-grid, .notes-grid) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 320px));
+  align-items: start;
+  justify-content: start;
+}
+html
+  body
+  .app.workspace-app
+  :is(.bank-grid-file, .note-panel, .overview-support > section) {
+  min-height: 0;
+  height: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html body .app.workspace-app .note-body {
+  min-height: 0;
+}
+html body .app.workspace-app .bank-categories {
+  grid-template-columns: repeat(3, minmax(0, 240px));
+  align-items: start;
+}
+html body .app.workspace-app .bank-categories button {
+  min-height: 0;
+  height: auto;
+}
+html body .app.workspace-app :is(.bank-board, .overview-board) {
+  min-height: 0;
+}
+html body .app.workspace-app .bank-board-column {
+  flex: 0 1 360px;
+  width: 100%;
+  max-width: 360px;
+}
+html body .app.workspace-app .overview-support {
+  max-width: 1120px;
+}
+html body .app.workspace-app .overview-summary-section {
+  max-width: 1120px;
+}
+html
+  body
+  .app.workspace-app
+  .bank-resource-form
+  :is(select[name="category"], select[name="grade"], select[name="term"]) {
+  width: 100%;
+  max-width: 240px;
+}
+html body .app.workspace-app .bank-search {
+  max-width: 640px;
+}
+html body .app.workspace-app .bank-empty {
+  max-width: 520px;
+  padding: 32px 16px;
+}
+html body .app.workspace-app .notes-grid > .empty {
+  min-height: 0;
+  padding: 24px 16px;
+}
+@media (max-width: 1100px) {
+  html body .app.workspace-app .overview-support > section:last-child {
+    grid-column: auto;
+  }
+}
+@media (max-width: 760px) {
+  html body .app.workspace-app :is(.bank-grid, .notes-grid) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 420px;
+  }
+  html body .app.workspace-app .bank-categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 520px;
+  }
+  html body .app.workspace-app .bank-board-column {
+    max-width: 420px;
+  }
+  html body .app.workspace-app .overview-support {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 520px;
+  }
+}

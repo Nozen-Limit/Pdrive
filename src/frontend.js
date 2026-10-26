@@ -394,8 +394,7 @@ document.addEventListener("input", (e) => {
   if (
     e.target.closest?.(".content form, #modalRoot form") &&
     !e.target.closest?.(".bank-filter-popover") &&
-    !e.target.closest?.("[data-no-dirty]") &&
-    !e.target.closest?.("#bank-collaboration-preview")
+    !e.target.closest?.("[data-no-dirty]")
   )
     dirty = true;
 });
@@ -403,8 +402,7 @@ document.addEventListener("change", (e) => {
   if (
     e.target.closest?.(".content form, #modalRoot form") &&
     !e.target.closest?.(".bank-filter-popover") &&
-    !e.target.closest?.("[data-no-dirty]") &&
-    !e.target.closest?.("#bank-collaboration-preview")
+    !e.target.closest?.("[data-no-dirty]")
   )
     dirty = true;
 });

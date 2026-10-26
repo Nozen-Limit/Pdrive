@@ -6,3 +6,6 @@ node_modules/
 *.log
 .env.*
 !.env.example
+
+app/config.js
+app/docx-preview.js

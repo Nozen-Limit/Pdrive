@@ -117,7 +117,7 @@ test("Requirement screens distinguish missing, returned and late submissions wit
   );
 });
 
-test("Published dashboard uses Digital Bank resources while keeping its original workspace styling", async () => {
+test("Retained workspace helpers use Digital Bank resources and preserve historical workflow behavior", async () => {
   const app = { innerHTML: "" };
   const ctx = vm.createContext({
     console,
@@ -135,7 +135,7 @@ test("Published dashboard uses Digital Bank resources while keeping its original
     addEventListener() {},
     window: {},
   });
-  const built = await readFile("docs/frontend.js", "utf8");
+  const built = await readUi();
   vm.runInContext(built.replace(/^load\(\);\s*$/m, ""), ctx);
   vm.runInContext(
     "data={user:{id:'t',role:'teacher',name:'Teacher',approval_status:'approved'},workflowReady:true,modules:[{id:'m',title:'Existing module',teacher:'Teacher',subject:'Science',grade:'Grade 5',term:'Quarter 1',year:'2026',status:'pending',version:1,created:'2026-10-17',updated:'2026-10-17',deadline:'2026-10-20'}],notes:[],teachers:[],notifications:[],events:[],requirements:[],assignments:[]};render()",

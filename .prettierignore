@@ -1,0 +1,4 @@
+app/config.js
+app/docx-preview.js
+docs/
+node_modules/
