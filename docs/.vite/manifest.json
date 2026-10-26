@@ -4,7 +4,7 @@
     "src": "../node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
   "Collaboration.tsx": {
-    "file": "react-assets/Collaboration-CtBEgsL-.js",
+    "file": "react-assets/Collaboration-Bg2-p0vx.js",
     "name": "Collaboration",
     "src": "Collaboration.tsx",
     "isDynamicEntry": true,
@@ -30,7 +30,7 @@
     ]
   },
   "Library.tsx": {
-    "file": "react-assets/Library-DYpHGJgI.js",
+    "file": "react-assets/Library-z4cuYbIU.js",
     "name": "Library",
     "src": "Library.tsx",
     "isDynamicEntry": true,
@@ -43,7 +43,7 @@
     ]
   },
   "ResourceDetail.tsx": {
-    "file": "react-assets/ResourceDetail-D9AMT1_7.js",
+    "file": "react-assets/ResourceDetail-CAFkgrEd.js",
     "name": "ResourceDetail",
     "src": "ResourceDetail.tsx",
     "isDynamicEntry": true,
@@ -61,7 +61,7 @@
     ]
   },
   "ResourceForm.tsx": {
-    "file": "react-assets/ResourceForm-QDki-i0C.js",
+    "file": "react-assets/ResourceForm-DTOO74oC.js",
     "name": "ResourceForm",
     "src": "ResourceForm.tsx",
     "isDynamicEntry": true,
@@ -117,7 +117,7 @@
     ]
   },
   "index.html": {
-    "file": "react-assets/index-B8eUhVam.js",
+    "file": "react-assets/index-BoLHLXkm.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,

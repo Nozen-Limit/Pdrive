@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -263,10 +262,6 @@ export default function Collaboration({
               New resource
             </Button>
           </Box>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Save a resource as a draft, then open it here to invite teachers and
-            prepare a version together.
-          </Typography>
           {!resources.length ? (
             <Empty
               title={
@@ -390,18 +385,6 @@ export default function Collaboration({
                 <Button onClick={() => onOpen(r.id)}>Resource details</Button>
               )}
             </Box>
-            {locked && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                This version is fixed during review. Changes can be proposed
-                after it is returned or approved.
-              </Alert>
-            )}
-            {!r.bank_draft && r.status === "approved" && (
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                Propose a new file below. The owner submits the selected
-                revision for a new approval.
-              </Typography>
-            )}
             <Box
               sx={{
                 display: "grid",
@@ -548,15 +531,6 @@ export default function Collaboration({
                     >
                       Submit selected version
                     </Button>
-                    <Typography
-                      variant="caption"
-                      component="p"
-                      color="text.secondary"
-                      sx={{ mt: 1 }}
-                    >
-                      Only the owner submits. Accepted contributors receive
-                      credit on this version.
-                    </Typography>
                   </Box>
                 )}
                 <Divider sx={{ my: 3 }} />
