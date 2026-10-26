@@ -410,7 +410,22 @@ export function Overview({
             md: "repeat(3,minmax(0,340px))",
           },
           gap: 3,
-          alignItems: "start",
+          alignItems: "stretch",
+          "& > section": { position: "relative", minWidth: 0 },
+          "& > section + section::before": {
+            content: '""',
+            position: "absolute",
+            pointerEvents: "none",
+            left: { xs: 0, md: -12 },
+            top: { xs: -12, md: 0 },
+            bottom: { xs: "auto", md: 0 },
+            width: { xs: "100%", md: "1px" },
+            height: { xs: "1px", md: "auto" },
+            background: {
+              xs: "linear-gradient(to right, color-mix(in srgb, currentColor 22%, transparent), transparent)",
+              md: "linear-gradient(to bottom, color-mix(in srgb, currentColor 22%, transparent), color-mix(in srgb, currentColor 9%, transparent) 55%, transparent)",
+            },
+          },
         }}
       >
         <Box component="section">
