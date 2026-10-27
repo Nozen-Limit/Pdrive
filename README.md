@@ -18,3 +18,5 @@ The in-memory Collaboration prototype, sample-account switcher and demo assets a
 
 `app/` contains the current React UI. The retained `src/` services and historical helpers support backend integration and regression tests; the old UI entry points are not loaded by the published site.
 
+
+Authentication preserves the original login markup, styles, palette chooser, registration page, recovery page and animated particle book in an isolated document. Only the successful sign-in handoff connects it to the React workspace; credentials stay with the existing backend client.

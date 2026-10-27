@@ -1,0 +1,803 @@
+/* Live content is anchored to the two curved pages of the particle book. */
+.book-landing {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 48% 43%,
+    #253044 0%,
+    #141b27 38%,
+    #080c12 78%
+  );
+  position: relative;
+  isolation: isolate;
+  color: #e2e6ed;
+}
+.book-landing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 92%, #8dabc80d, transparent 55%);
+  z-index: -1;
+}
+.book-stage {
+  --u: 1cqw;
+  position: relative;
+  width: min(100vw, 177.6833svh);
+  aspect-ratio: 1672 / 941;
+  container-type: inline-size;
+  font-family: Inter, "Segoe UI", sans-serif;
+  transform: perspective(2200px) rotateX(var(--book-rx, 0deg))
+    rotateY(var(--book-ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease-out;
+}
+.book-stage:focus-within {
+  transform: perspective(2200px) rotateX(0deg) rotateY(0deg);
+}
+.book-art {
+  position: absolute;
+  inset: 0;
+  background: none;
+  pointer-events: none;
+}
+.book-dust {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.book-header {
+  position: absolute;
+  top: 3.5%;
+  left: 3.7%;
+  right: 3.7%;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  color: #e0e5ed;
+  font-size: calc(var(--u) * 0.78);
+  line-height: 1.3;
+}
+.book-header > div {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.6);
+  letter-spacing: 0.17em;
+  white-space: nowrap;
+}
+.book-header > div::after {
+  content: "";
+  display: block;
+  width: calc(var(--u) * 56);
+  height: 1px;
+  margin-left: calc(var(--u) * 0.8);
+  background: #a0aec02b;
+}
+.book-header .material-symbols-rounded {
+  color: #c1cbd9;
+  font-size: calc(var(--u) * 2.6);
+  font-variation-settings: "wght" 200;
+}
+.book-header > span {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: calc(var(--u) * 0.88);
+}
+.book-left {
+  position: absolute;
+  left: 23.85%;
+  top: 17.2%;
+  width: 25%;
+}
+.book-wordmark {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.2);
+  font-size: calc(var(--u) * 0.8);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+.book-wordmark .material-symbols-rounded {
+  font-size: calc(var(--u) * 2.6);
+  color: #9eacc1;
+  font-variation-settings: "wght" 200;
+}
+.book-short-rule {
+  width: calc(var(--u) * 2.5);
+  height: 1px;
+  background: #9eacc1;
+}
+.book-left > .book-short-rule {
+  margin-top: calc(var(--u) * 1.15);
+  margin-bottom: calc(var(--u) * 1.9);
+}
+.book-eyebrow {
+  margin: 0;
+  font:
+    400 calc(var(--u) * 0.74)/1.4 Inter,
+    sans-serif;
+  letter-spacing: 0.28em;
+  color: #a8b5c8;
+}
+.book-left h2 {
+  margin: calc(var(--u) * 1.1) 0 calc(var(--u) * 1.25);
+  font-family: Inter, "Segoe UI", sans-serif;
+  font-size: calc(var(--u) * 2.5);
+  line-height: 1.22;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+.book-left h2 em {
+  font-weight: 400;
+  color: #aebfd7;
+  font-size: 1em;
+  font-style: normal;
+  line-height: 1.1;
+}
+.book-description {
+  font-size: calc(var(--u) * 1.45);
+  line-height: 1.1;
+  margin: calc(var(--u) * 1.2) 0 calc(var(--u) * 1.2);
+  font-weight: 500;
+}
+.book-workflow {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 88%;
+}
+.book-workflow li {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.1);
+  min-height: calc(var(--u) * 3.9);
+  position: relative;
+  font-size: calc(var(--u) * 0.98);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.book-workflow li + li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--u) * 3.95);
+  right: 0;
+  height: 1px;
+  background: #9eacc125;
+}
+.book-workflow li > span {
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 2.85);
+  height: calc(var(--u) * 2.85);
+  border: 1px solid #a4b2c44f;
+  border-radius: 50%;
+  font-size: calc(var(--u) * 0.88);
+  flex-shrink: 0;
+}
+.book-right {
+  position: absolute;
+  top: 24.1%;
+  left: 55.85%;
+  width: 23%;
+  perspective: 1000px;
+}
+.book-form {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+.book-form > .book-short-rule {
+  margin-top: calc(var(--u) * 1.2);
+  margin-bottom: calc(var(--u) * 0.7);
+}
+.book-form h1 {
+  font-family: Inter, "Segoe UI", sans-serif;
+  font-size: calc(var(--u) * 3);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 0 0 calc(var(--u) * 0.7);
+  color: #edf0f5;
+}
+.book-form-intro {
+  margin: 0 0 calc(var(--u) * 1.5);
+  font-size: calc(var(--u) * 0.98);
+  line-height: 1.25;
+  font-weight: 500;
+}
+.book-form .field {
+  margin: 0 0 calc(var(--u) * 1.05);
+}
+.book-form .field > label {
+  display: block;
+  color: #bdc7d6;
+  font-size: calc(var(--u) * 0.88);
+  font-weight: 600;
+  margin-bottom: calc(var(--u) * 0.15);
+  line-height: 1.25;
+}
+.book-form .field input {
+  width: 100%;
+  min-height: 0;
+  height: calc(var(--u) * 3.1);
+  padding: 0 calc(var(--u) * 1.2);
+  border: 1px solid #a3afc447;
+  border-radius: calc(var(--u) * 0.22);
+  background: #0a0f1888;
+  font:
+    400 calc(var(--u) * 0.9)/1.3 Inter,
+    "Segoe UI",
+    sans-serif;
+  color: #e0e6ef;
+  outline: 0;
+  box-shadow: none;
+}
+.book-form .field input::placeholder {
+  color: #a2adbd;
+  opacity: 1;
+}
+.book-form .input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.book-form .input-wrap input {
+  padding-right: calc(var(--u) * 3);
+}
+.book-form .password-toggle {
+  position: absolute;
+  right: calc(var(--u) * 1);
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 2);
+  height: calc(var(--u) * 2);
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: #aebbd0;
+}
+.book-form .password-toggle .material-symbols-rounded {
+  font-size: calc(var(--u) * 1.4);
+}
+.book-form .field input:focus {
+  border-color: #afc0d9;
+  box-shadow: 0 0 0 2px #afc0d920;
+  background: #0d1422cc;
+}
+.book-form .login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.5);
+  margin: calc(var(--u) * 0.9) 0 calc(var(--u) * 1.4);
+  font-size: calc(var(--u) * 0.85);
+  line-height: 1.3;
+}
+.book-form .login-options > label {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.65);
+  white-space: nowrap;
+}
+.book-form .login-options input {
+  appearance: none;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  width: calc(var(--u) * 1.25);
+  height: calc(var(--u) * 1.25);
+  border: 1px solid #9faec3;
+  border-radius: 2px;
+  background: #0d142288;
+  accent-color: #b5c3d8;
+}
+.book-form .login-options input:checked {
+  background: #b5c3d8;
+}
+.book-form .login-options input:checked::after {
+  content: "✓";
+  color: #111824;
+  font:
+    calc(var(--u) * 0.9) Inter,
+    sans-serif;
+}
+.book-form .link-btn {
+  font: inherit;
+  padding: 0;
+  color: #b8c8df;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-decoration: underline;
+  text-decoration-color: #b8c8df5f;
+  text-underline-offset: 0.17em;
+}
+.book-form .login-submit {
+  width: 100%;
+  min-height: 0;
+  height: calc(var(--u) * 3.45);
+  padding: 0 calc(var(--u) * 1.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #bcc8da;
+  border-radius: calc(var(--u) * 0.2);
+  background: linear-gradient(110deg, #d3dce9, #b5c2d6);
+  color: #172131;
+  box-shadow: none;
+  font:
+    600 calc(var(--u) * 0.95)/1.2 Inter,
+    "Segoe UI",
+    sans-serif;
+}
+.book-form .login-submit > span {
+  position: absolute;
+  right: calc(var(--u) * 1.8);
+  color: #27364b;
+  font-size: calc(var(--u) * 1.7);
+  transition: transform 0.2s;
+}
+.book-form .login-submit:hover:not(:disabled) {
+  background: #e0e6f0;
+}
+.book-form .login-submit:hover > span {
+  transform: translateX(3px);
+}
+.book-form .login-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.book-form .login-footer {
+  padding: 0;
+  border: 0;
+  margin-top: calc(var(--u) * 1.1);
+  font-size: calc(var(--u) * 0.88);
+  line-height: 1.3;
+  text-align: center;
+  color: #a9b5c7;
+}
+.book-form .form-error {
+  margin: 0 0 calc(var(--u) * 0.7);
+  color: #ffb8a2;
+  font:
+    500 calc(var(--u) * 0.85)/1.4 Inter,
+    sans-serif;
+}
+.book-form .form-error:empty {
+  display: none;
+}
+.book-form button:focus-visible,
+.book-form input[type="checkbox"]:focus-visible {
+  outline: 2px solid #a6eac2;
+  outline-offset: 3px;
+}
+.book-folio {
+  position: absolute;
+  top: 86.2%;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1);
+  font-size: calc(var(--u) * 0.8);
+  width: 25.4%;
+  color: #9baabd;
+}
+.book-folio-left {
+  left: 21.6%;
+}
+.book-folio-right {
+  left: 54%;
+}
+.book-folio i {
+  height: 1px;
+  flex: 1;
+  background: #a6b6cc40;
+}
+.book-explore {
+  position: absolute;
+  bottom: 1.4%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #a2b1c5;
+  font-size: calc(var(--u) * 0.65);
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 4px #000;
+  opacity: 0.8;
+}
+.book-register .book-right {
+  top: 17.8%;
+}
+.book-signup h1 {
+  font-size: calc(var(--u) * 2.45);
+  margin-bottom: calc(var(--u) * 0.55);
+}
+.book-signup .book-form-intro {
+  margin-bottom: calc(var(--u) * 0.8);
+}
+.book-signup .field {
+  margin-bottom: calc(var(--u) * 0.65);
+}
+.book-signup .field input {
+  height: calc(var(--u) * 2.65);
+}
+.book-signup .login-options {
+  margin: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.65);
+}
+.book-signup .login-footer {
+  margin-top: calc(var(--u) * 0.65);
+}
+.book-page-turn {
+  transform-origin: left center;
+  animation: book-page-settle 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes book-page-settle {
+  0% {
+    transform: rotateY(-26deg);
+    filter: brightness(0.8);
+    opacity: 0.3;
+  }
+  100% {
+    transform: rotateY(0);
+    filter: none;
+    opacity: 1;
+  }
+}
+@media (max-aspect-ratio: 4/3) and (min-width: 701px) {
+  .book-stage {
+    width: 100vw;
+  }
+}
+@media (max-width: 700px) {
+  .book-landing {
+    overflow: visible;
+    min-height: 100svh;
+    background-attachment: fixed;
+  }
+  .book-stage {
+    --u: clamp(10px, 3.1vw, 15px);
+    width: 100%;
+    aspect-ratio: auto;
+    min-height: max(850px, 100svh);
+    transform: none !important;
+  }
+  .book-art {
+    background-size: auto 100%;
+    background-position: 73% center;
+  }
+  .book-header {
+    top: 3%;
+    left: 8%;
+    right: 8%;
+    font-size: 15px;
+  }
+  .book-header > div {
+    gap: 10px;
+    font-size: 12px;
+  }
+  .book-header .material-symbols-rounded {
+    font-size: 26px;
+  }
+  .book-header > div::after,
+  .book-header > span,
+  .book-left,
+  .book-folio-left {
+    display: none;
+  }
+  .book-right,
+  .book-register .book-right {
+    top: 21%;
+    left: 13%;
+    width: 73%;
+  }
+  .book-form h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+  }
+  .book-form .book-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+  }
+  .book-form > .book-short-rule {
+    margin: 17px 0;
+    width: 36px;
+  }
+  .book-form-intro {
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+  .book-form .field {
+    margin-bottom: 20px;
+  }
+  .book-form .field > label {
+    font-size: 16px;
+    margin-bottom: 5px;
+  }
+  .book-form .field input {
+    height: 48px;
+    font-size: 17px;
+    padding-left: 13px;
+  }
+  .book-form .input-wrap input {
+    padding-right: 44px;
+  }
+  .book-form .password-toggle {
+    width: 40px;
+    height: 40px;
+    right: 4px;
+  }
+  .book-form .password-toggle .material-symbols-rounded {
+    font-size: 15px;
+  }
+  .book-form .login-options {
+    font-size: 12px;
+    margin: 14px 0 20px;
+    gap: 6px;
+  }
+  .book-form .login-options > label {
+    gap: 7px;
+  }
+  .book-form .login-options input {
+    width: 18px;
+    height: 18px;
+  }
+  .book-form .login-options input:checked::after {
+    font-size: 13px;
+  }
+  .book-form .login-options .link-btn {
+    min-height: 40px;
+  }
+  .book-form .login-submit {
+    height: 49px;
+    font-size: 21px;
+  }
+  .book-form .login-submit > span {
+    font-size: 25px;
+    right: 20px;
+  }
+  .book-form .login-footer {
+    font-size: 13px;
+    margin-top: 17px;
+  }
+  .book-form .form-error {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .book-folio-right {
+    left: 13%;
+    width: 73%;
+    font-size: 12px;
+    top: 87%;
+  }
+  .book-explore {
+    display: none;
+  }
+  .book-register .book-stage {
+    min-height: max(1050px, 100svh);
+  }
+  .book-register .book-right {
+    top: 16%;
+  }
+  .book-signup h1 {
+    font-size: 33px;
+  }
+  .book-signup .field {
+    margin-bottom: 12px;
+  }
+  .book-signup .book-form-intro {
+    margin-bottom: 23px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-stage {
+    transform: none !important;
+    transition: none;
+  }
+  .book-page-turn {
+    animation: none;
+  }
+}
+
+.book-left h2 {
+  color: #edf0f5;
+}
+.book-wordmark {
+  color: #d9e1ec;
+}
+.book-form .login-options,
+.book-description,
+.book-workflow {
+  color: #bdc7d6;
+}
+.book-form-intro {
+  color: #b1bdcf;
+}
+.book-header {
+  color: #b5c1d2;
+}
+.book-emerge .book-left,
+.book-emerge .book-right {
+  animation: book-content-arrive 1.8s ease-out both;
+}
+@keyframes book-content-arrive {
+  0%,
+  35% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-emerge .book-left,
+  .book-emerge .book-right {
+    animation: none;
+  }
+}
+
+.book-left {
+  top: 27%;
+}
+.book-folio {
+  display: none;
+}
+.book-no-webgl .book-art {
+  background: radial-gradient(ellipse at center, #26395544, transparent 65%);
+}
+
+.book-form .field > label {
+  font-weight: 500;
+}
+.book-header > div::after {
+  width: calc(var(--u) * 58);
+}
+.book-left h2 em {
+  font-weight: 500;
+}
+
+.book-left {
+  top: 34%;
+}
+.book-left h2 {
+  margin-top: calc(var(--u) * 2);
+}
+.book-form h1 {
+  margin-bottom: calc(var(--u) * 2.2);
+}
+.book-right {
+  top: 30%;
+}
+@media (max-width: 700px) {
+  .book-right {
+    top: 25%;
+  }
+  .book-form h1 {
+    margin-bottom: 28px;
+  }
+}
+
+.book-left {
+  top: 43%;
+}
+.book-wordmark {
+  font-size: calc(var(--u) * 1.45);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.book-wordmark .material-symbols-rounded {
+  font-size: calc(var(--u) * 6.2);
+}
+@media (max-width: 700px) {
+  .book-landing {
+    display: block;
+    overflow: hidden;
+  }
+  .book-stage,
+  .book-register .book-stage {
+    min-height: 100svh;
+    padding: 280px 20px 96px;
+  }
+  .book-stage .book-dust {
+    height: 100% !important;
+  }
+  .book-left {
+    display: block;
+    top: 28px;
+    left: 0;
+    width: 100%;
+  }
+  .book-wordmark {
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+  }
+  .book-wordmark .material-symbols-rounded {
+    font-size: 32px;
+  }
+  .book-right,
+  .book-register .book-right {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: min(100%, 420px);
+    margin: 0 auto;
+    padding: 28px 24px;
+    border: 0;
+    border-radius: 20px;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .book-form h1,
+  .book-signup h1 {
+    font-size: 30px;
+    margin: 0 0 26px;
+    letter-spacing: -0.03em;
+  }
+  .book-form .field > label {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .book-form .field input {
+    font-size: 16px;
+    height: 48px;
+    border-radius: 8px;
+  }
+  .book-form .login-submit {
+    font-size: 16px;
+    border-radius: 8px;
+    height: 48px;
+  }
+  .book-form .field {
+    margin-bottom: 18px;
+  }
+  .book-form .login-options {
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .book-landing .landing-appearance {
+    bottom: 20px;
+    right: 50%;
+    transform: translateX(50%);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 360px) {
+  .book-stage,
+  .book-register .book-stage {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .book-right,
+  .book-register .book-right {
+    padding: 24px 18px;
+  }
+}
+@media (min-width: 701px) {
+  .book-stage {
+    --u: min(1vw, 1.7768svh);
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+  }
+}

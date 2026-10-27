@@ -14,5 +14,6 @@
     "resolveJsonModule": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["app", "vite.config.ts"]
+  "include": ["app", "vite.config.ts"],
+  "exclude": ["app/public", "app/config.js", "app/docx-preview.js"]
 }
