@@ -6,14 +6,30 @@ import {
   Button,
   LinearProgress,
   Link,
+  ListItemText,
   MenuItem,
   Stack,
+  Step,
+  StepLabel,
+  Stepper,
   TextField,
   Typography,
 } from "@mui/material";
 import { ArrowBack, Close, UploadFileOutlined } from "@mui/icons-material";
 import { backend, message } from "./api";
-import { areas, categories, checkMetadata, grades, quarters } from "./domain";
+import {
+  areas,
+  categories,
+  categoryHelp,
+  checkMetadata,
+  fileAccept,
+  fileHint,
+  grades,
+  languages,
+  resourceTypes,
+  terms,
+  usageRights,
+} from "./domain";
 import type {
   Competency,
   CurriculumConfig,
@@ -46,16 +62,25 @@ export function ResourceForm({
       areas.includes(editing?.subject || "") ? editing!.subject : "",
     ),
     [grade, setGrade] = useState(editing?.grade || ""),
-    [term, setTerm] = useState(editing?.term || ""),
+    // A resource saved under the old "Quarter" labels must pick a term again.
+    [term, setTerm] = useState(
+      terms.includes(editing?.term || "") ? editing!.term : "",
+    ),
     [choice, setChoice] = useState<Competency | null>(null),
     [search, setSearch] = useState(""),
     [options, setOptions] = useState<Competency[]>([]),
-    [matches, setMatches] = useState(0),
     [searching, setSearching] = useState(false),
-    [lookupError, setLookupError] = useState("");
+    [lookupError, setLookupError] = useState(""),
+    [step, setStep] = useState(0);
   const receipt = useRef<string | null>(null),
-    fileSequence = useRef(0);
+    fileSequence = useRef(0),
+    stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const metadataOnly = !!editing && !editing.bank_draft;
+  // Editing an already submitted resource changes its details only, so there
+  // is no file step.
+  const steps = metadataOnly
+    ? ["Basics", "Curriculum"]
+    : ["File", "Basics", "Curriculum"];
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -94,10 +119,7 @@ export function ResourceForm({
           1,
         )
         .then((value) => {
-          if (!cancelled) {
-            setOptions(value.items);
-            setMatches(value.total);
-          }
+          if (!cancelled) setOptions(value.items);
         })
         .catch((e) => {
           if (!cancelled) setLookupError(message(e));
@@ -134,9 +156,30 @@ export function ResourceForm({
     receipt.current = null;
     setDirty(true);
   }
+  const firstInvalid = (within: Element | null | undefined) =>
+    within?.querySelector<HTMLInputElement>(
+      "input:invalid, textarea:invalid",
+    ) || null;
+  function next() {
+    const invalid = firstInvalid(stepRefs.current[step]);
+    if (invalid) {
+      invalid.reportValidity();
+      return;
+    }
+    setError("");
+    setStep(step + 1);
+  }
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || loading || !config) return;
+    // A required field may sit on a step that is not showing: go to it.
+    const invalid = firstInvalid(event.currentTarget);
+    if (invalid) {
+      const at = stepRefs.current.findIndex((node) => node?.contains(invalid));
+      if (at >= 0) setStep(at);
+      setError("Complete the required fields on this step.");
+      return;
+    }
     const action =
       (event.nativeEvent as SubmitEvent).submitter?.getAttribute("value") ||
       "submit";
@@ -168,14 +211,16 @@ export function ResourceForm({
           (choice.quarter && choice.quarter !== term)
         )
           throw Error(
-            "Choose a learning competency matching the grade, learning area and quarter.",
+            "Choose a learning competency matching the grade, learning area and term.",
           );
         fields.competency_id = choice.id;
         fields.competency = choice.competency_text;
       }
       checkMetadata(fields);
-      if (!metadataOnly && action === "submit" && !file)
+      if (!metadataOnly && action === "submit" && !file) {
+        setStep(0);
         throw Error("Choose a PDF or DOCX file before submitting.");
+      }
       setBusy(true);
       if (metadataOnly) {
         await backend.bank.edit({
@@ -256,6 +301,36 @@ export function ResourceForm({
       ))}
     </TextField>
   );
+  // A choice whose value is read from the form when it is saved.
+  const pick = (
+    name: string,
+    label: string,
+    value: string | null | undefined,
+    options: string[],
+  ) => (
+    <TextField
+      select
+      name={name}
+      label={label}
+      defaultValue={options.includes(value || "") ? value : ""}
+      required
+      sx={{ width: "100%", maxWidth: 260 }}
+    >
+      {options.map((option) => (
+        <MenuItem value={option} key={option}>
+          {option}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+  // Every step stays mounted so its values are kept; only one is shown.
+  const stepBox = (name: string) => ({
+    ref: (node: HTMLDivElement | null) => {
+      stepRefs.current[steps.indexOf(name)] = node;
+    },
+    sx: { ...formGrid, display: steps[step] === name ? "grid" : "none" },
+  });
+  const last = step === steps.length - 1;
   return (
     <Box sx={{ maxWidth: 880 }}>
       <Button
@@ -266,15 +341,23 @@ export function ResourceForm({
       >
         Back to resources
       </Button>
-      <Typography variant="h2" component="h2" sx={{ mb: 3 }}>
+      <Typography variant="h2" component="h2" sx={{ mb: 2 }}>
         {metadataOnly
           ? "Edit resource details"
           : editing
             ? "Edit draft"
             : "Upload resource"}
       </Typography>
+      <Stepper activeStep={step} sx={{ mb: 3, maxWidth: 560 }}>
+        {steps.map((name) => (
+          <Step key={name}>
+            <StepLabel>{name}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
       <Box
         component="form"
+        noValidate
         onSubmit={save}
         onChange={() => setDirty(true)}
         aria-label="Resource upload"
@@ -284,7 +367,80 @@ export function ResourceForm({
           disabled={busy}
           sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}
         >
-          <Box sx={formGrid}>
+          {!metadataOnly && (
+            <Box
+              ref={(node: HTMLDivElement | null) => {
+                stepRefs.current[0] = node;
+              }}
+              sx={{ display: step === 0 ? "block" : "none" }}
+            >
+              <Box
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files.length !== 1) {
+                    setError("Choose one PDF or DOCX file.");
+                    return;
+                  }
+                  void chooseFile(e.dataTransfer.files[0]);
+                }}
+                sx={{
+                  border: "1px dashed",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  p: 2.5,
+                  maxWidth: 560,
+                }}
+              >
+                <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
+                  <Button
+                    component="label"
+                    startIcon={<UploadFileOutlined />}
+                    variant="outlined"
+                    disabled={busy}
+                  >
+                    Choose file
+                    <input
+                      hidden
+                      type="file"
+                      accept={fileAccept}
+                      onChange={(e) => {
+                        void chooseFile(e.target.files?.[0] || null);
+                        e.target.value = "";
+                      }}
+                    />
+                  </Button>
+                  <Typography color="text.secondary" variant="caption">
+                    {fileHint}
+                  </Typography>
+                  {file && (
+                    <Box sx={row}>
+                      <Typography sx={{ overflowWrap: "anywhere" }}>
+                        {file.name} · {(file.size / 1048576).toFixed(2)} MB
+                      </Typography>
+                      <Button
+                        startIcon={<Close />}
+                        onClick={() => void chooseFile(null)}
+                        disabled={busy}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+              <Typography
+                color="text.secondary"
+                variant="caption"
+                component="p"
+                sx={{ mt: 1 }}
+              >
+                A draft can be saved without a file. A file is needed to submit
+                for review.
+              </Typography>
+            </Box>
+          )}
+          <Box {...stepBox("Basics")}>
             {input("title", "Resource title", editing?.title, 200)}
             <TextField
               select
@@ -292,15 +448,31 @@ export function ResourceForm({
               label="Category"
               required
               defaultValue={editing?.bank_category || editing?.category || ""}
+              slotProps={{
+                select: {
+                  renderValue: (value) =>
+                    categories[value as keyof typeof categories] || "",
+                },
+              }}
               sx={{ width: "100%", maxWidth: 260 }}
             >
-              <MenuItem value="">Choose category</MenuItem>
-              {Object.keys(categories).map((value) => (
+              {Object.entries(categories).map(([value, name]) => (
                 <MenuItem value={value} key={value}>
-                  {value}
+                  <ListItemText
+                    primary={name}
+                    secondary={categoryHelp[value]}
+                    slotProps={{ secondary: { sx: { whiteSpace: "normal" } } }}
+                  />
                 </MenuItem>
               ))}
             </TextField>
+            {pick(
+              "resource_type",
+              "Resource type",
+              editing?.bank_resource_type,
+              resourceTypes,
+            )}
+            {pick("language", "Language", editing?.bank_language, languages)}
             {select(
               "subject",
               "Learning area",
@@ -311,7 +483,7 @@ export function ResourceForm({
             {select("grade", "Grade level", grade, grades, (value) =>
               changeScope(setGrade, value),
             )}
-            {select("term", "Quarter", term, quarters, (value) =>
+            {select("term", "Term", term, terms, (value) =>
               changeScope(setTerm, value),
             )}
             <TextField
@@ -326,6 +498,8 @@ export function ResourceForm({
               5000,
               true,
             )}
+          </Box>
+          <Box {...stepBox("Curriculum")}>
             {mapped ? (
               <Box sx={wide}>
                 <Autocomplete
@@ -404,6 +578,7 @@ export function ResourceForm({
               editing?.bank_tags?.join(", "),
               1000,
             )}
+            {pick("rights", "Usage rights", editing?.bank_rights, usageRights)}
             {input(
               "source",
               "Reference / Source (optional)",
@@ -421,64 +596,6 @@ export function ResourceForm({
               false,
             )}
           </Box>
-          {!metadataOnly && (
-            <Box
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files.length !== 1) {
-                  setError("Choose one PDF or DOCX file.");
-                  return;
-                }
-                void chooseFile(e.dataTransfer.files[0]);
-              }}
-              sx={{
-                border: "1px dashed",
-                borderColor: "divider",
-                borderRadius: 1,
-                p: 2.5,
-                my: 3,
-                maxWidth: 560,
-              }}
-            >
-              <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-                <Button
-                  component="label"
-                  startIcon={<UploadFileOutlined />}
-                  variant="outlined"
-                  disabled={busy}
-                >
-                  Choose file
-                  <input
-                    hidden
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={(e) => {
-                      void chooseFile(e.target.files?.[0] || null);
-                      e.target.value = "";
-                    }}
-                  />
-                </Button>
-                <Typography color="text.secondary" variant="caption">
-                  PDF or DOCX · up to 20 MB
-                </Typography>
-                {file && (
-                  <Box sx={row}>
-                    <Typography sx={{ overflowWrap: "anywhere" }}>
-                      {file.name} · {(file.size / 1048576).toFixed(2)} MB
-                    </Typography>
-                    <Button
-                      startIcon={<Close />}
-                      onClick={() => void chooseFile(null)}
-                      disabled={busy}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                )}
-              </Stack>
-            </Box>
-          )}
         </Box>
         {progress !== null && busy && (
           <Box role="status" sx={{ my: 2, maxWidth: 560 }}>
@@ -490,12 +607,24 @@ export function ResourceForm({
             <LinearProgress variant="determinate" value={progress} />
           </Box>
         )}
-        <ErrorNotice error={error} />
+        <Box sx={{ mt: 2 }}>
+          <ErrorNotice error={error} />
+        </Box>
         <Box sx={{ ...row, mt: 3, justifyContent: "flex-start" }}>
-          <Button onClick={onBack} disabled={busy}>
-            Cancel
-          </Button>
-          {metadataOnly ? (
+          {step === 0 ? (
+            <Button onClick={onBack} disabled={busy}>
+              Cancel
+            </Button>
+          ) : (
+            <Button onClick={() => setStep(step - 1)} disabled={busy}>
+              Back
+            </Button>
+          )}
+          {!last ? (
+            <Button variant="contained" onClick={next} disabled={busy}>
+              Next
+            </Button>
+          ) : metadataOnly ? (
             <Button
               type="submit"
               value="metadata"

@@ -14,10 +14,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { DescriptionOutlined } from "@mui/icons-material";
 import type { ReactNode } from "react";
 import type { Resource } from "./types";
-import { resourceState, statusLabels, date } from "./domain";
+import { categories, resourceState, statusLabels } from "./domain";
 export const row = {
   display: "flex",
   alignItems: "center",
@@ -61,6 +60,45 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
     </Stack>
   );
 }
+/** File-type colours, matched to how PDF, Word and PowerPoint mark their files. */
+export const FILE_COLORS: Record<string, string> = {
+  PDF: "#b6463a",
+  DOCX: "#2f5d9e",
+  PPTX: "#c1702a",
+};
+export function FileTile({ name }: { name?: string }) {
+  const ext = (name?.split(".").pop() || "").toUpperCase();
+  const label = ext === "DOC" ? "DOCX" : ext === "PPT" ? "PPTX" : ext;
+  return (
+    <Box
+      aria-hidden="true"
+      sx={{
+        width: 32,
+        height: 38,
+        flexShrink: 0,
+        display: "grid",
+        alignItems: "end",
+        justifyItems: "center",
+        pb: 0.5,
+        fontSize: 8.5,
+        fontWeight: 700,
+        letterSpacing: "0.02em",
+        color: "#fff",
+        bgcolor: FILE_COLORS[label] || "text.secondary",
+        clipPath: "polygon(0 0, 72% 0, 100% 22%, 100% 100%, 0 100%)",
+      }}
+    >
+      {label || "FILE"}
+    </Box>
+  );
+}
+export const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 export function Empty({
   title,
   children,
@@ -104,71 +142,136 @@ export function ResourceCard({
   onOpen: (id: string) => void;
   showStatus?: boolean;
 }) {
+  const cat = resource.bank_category || resource.category || "";
+  const blurb = resource.bank_competency || resource.bank_description;
   return (
     <Card
-      sx={{ width: "100%", maxWidth: 340, minWidth: 0, alignSelf: "start" }}
+      sx={{
+        width: "100%",
+        minWidth: 0,
+        height: "100%",
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+        "&:hover": { borderColor: "text.secondary" },
+      }}
     >
-      <CardContent sx={{ p: 1.75, "&:last-child": { pb: 1.75 } }}>
-        <Stack
-          direction="row"
+      <Box sx={{ display: "flex", gap: 1.5, p: 1.75, pb: 1, pr: 5 }}>
+        <FileTile name={resource.filename} />
+        <Box sx={{ minWidth: 0 }}>
+          {cat && (
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "text.secondary",
+              }}
+            >
+              {categories[cat as keyof typeof categories] || cat}
+            </Typography>
+          )}
+          <Button
+            variant="text"
+            onClick={() => onOpen(resource.id)}
+            sx={{
+              p: 0,
+              minHeight: 0,
+              textAlign: "left",
+              justifyContent: "flex-start",
+              fontWeight: 600,
+              fontSize: 14,
+              lineHeight: 1.35,
+              color: "text.primary",
+              overflowWrap: "anywhere",
+              whiteSpace: "normal",
+            }}
+          >
+            {resource.title}
+          </Button>
+        </Box>
+      </Box>
+      <Typography
+        color="text.secondary"
+        sx={{
+          px: 1.75,
+          pb: 1.5,
+          fontSize: 12,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {blurb ||
+          [resource.subject, resource.grade].filter(Boolean).join(" · ")}
+      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1.75,
+          py: 1.25,
+          borderTop: 1,
+          borderColor: "divider",
+          fontSize: 12,
+          minWidth: 0,
+        }}
+      >
+        <Box
+          component="span"
+          aria-hidden="true"
           sx={{
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 1.5,
+            width: 22,
+            height: 22,
+            flexShrink: 0,
+            borderRadius: "50%",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 9,
+            fontWeight: 700,
+            color: "background.paper",
+            bgcolor: "primary.main",
           }}
         >
-          <DescriptionOutlined color="action" fontSize="small" />
-          <Typography variant="caption" color="text.secondary" sx={{ pr: 3 }}>
-            {resource.category || resource.bank_category} · v{resource.version}
-          </Typography>
-        </Stack>
-        <Button
-          variant="text"
-          onClick={() => onOpen(resource.id)}
-          sx={{
-            p: 0,
-            minHeight: 0,
-            textAlign: "left",
-            justifyContent: "flex-start",
-            fontWeight: 500,
-            lineHeight: 1.6,
-            overflowWrap: "anywhere",
-            whiteSpace: "normal",
-          }}
-        >
-          {resource.title}
-        </Button>
-        <Box sx={{ ...row, mt: 1, mb: 1.25, gap: 0.5 }}>
-          {[resource.subject, resource.grade, resource.term]
-            .filter(Boolean)
-            .map((value) => (
-              <Chip
-                key={value}
-                label={value}
-                sx={{ height: 21, fontSize: 10 }}
-              />
-            ))}
+          {initials(resource.creator || "?")}
         </Box>
         <Typography
-          color="text.secondary"
-          variant="caption"
-          component="p"
-          sx={{ mb: 1 }}
+          sx={{
+            fontSize: 12,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+          }}
+          title={resource.creator}
         >
-          {resource.creator} · {date(resource.updated)}
+          {resource.creator}
+          {resource.contributors?.length
+            ? ` +${resource.contributors.length}`
+            : ""}
         </Typography>
-        {showStatus && <Status resource={resource} />}
-        {!!resource.contributors?.length && (
-          <Typography
-            variant="caption"
-            component="p"
-            color="text.secondary"
-            sx={{ mt: 1 }}
-          >
-            Contributors: {resource.contributors.map((p) => p.name).join(", ")}
-          </Typography>
+        {showStatus ? (
+          <Status resource={resource} />
+        ) : (
+          [resource.grade, resource.term].filter(Boolean).map((t) => (
+            <Box
+              key={t}
+              component="span"
+              sx={{
+                fontSize: 11,
+                px: 0.875,
+                bgcolor: "action.hover",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {t}
+            </Box>
+          ))
         )}
-      </CardContent>
+      </Box>
     </Card>
   );
 }

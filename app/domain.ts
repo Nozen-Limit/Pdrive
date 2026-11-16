@@ -11,12 +11,45 @@ export const areas = [
   "Values Education",
 ];
 export const grades = [7, 8, 9, 10].map((n) => `Grade ${n}`);
-export const quarters = [1, 2, 3, 4].map((n) => `Quarter ${n}`);
+// School-calendar terms (DepEd Order No. 009, s. 2026), as the Project SIKAP
+// proposal schedules the school year. Older resources may still read
+// "Quarter 1-4"; they display as saved and are relabeled when edited.
+export const terms = [1, 2, 3].map((n) => `Term ${n}`);
+export const PPTX_TYPE =
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+export const fileAccept = ".pdf,.docx";
+export const fileHint = "PDF or DOCX · up to 20 MB";
 export const categories = {
   METHODS: "Teaching Methods",
   MODELS: "Strategic Innovations",
   UNITS: "Media Materials",
 };
+// One line each, so a teacher knows at once where a file belongs.
+export const categoryHelp: Record<string, string> = {
+  METHODS: "How to teach it: approaches, routines and techniques.",
+  MODELS: "Lesson plans and frameworks built around a new idea.",
+  UNITS: "Ready-to-use materials: worksheets, slides and readings.",
+};
+// LRMDS descriptors recorded for every new resource.
+export const resourceTypes = [
+  "Lesson plan",
+  "Activity sheet or worksheet",
+  "Slide deck",
+  "Assessment",
+  "Reading material",
+  "Other",
+];
+export const languages = [
+  "English",
+  "Filipino",
+  "English and Filipino",
+  "Other",
+];
+export const usageRights = [
+  "Original work",
+  "Adapted from a source",
+  "Used with permission",
+];
 export const criteria = {
   objectives: "Learning objectives",
   content: "Content accuracy",
@@ -101,10 +134,16 @@ export function checkMetadata(d: Record<string, unknown>) {
   if (
     !areas.includes(String(d.subject)) ||
     !grades.includes(String(d.grade)) ||
-    !quarters.includes(String(d.term)) ||
+    !terms.includes(String(d.term)) ||
     !Object.hasOwn(categories, String(d.category))
   )
-    throw Error("Choose a listed category, learning area, grade and quarter.");
+    throw Error("Choose a listed category, learning area, grade and term.");
+  if (
+    !resourceTypes.includes(String(d.resource_type)) ||
+    !languages.includes(String(d.language)) ||
+    !usageRights.includes(String(d.rights))
+  )
+    throw Error("Choose the resource type, language and usage rights.");
   if (!String(d.competency || "").trim())
     throw Error("Enter or choose the learning competency.");
   if (!Array.isArray(d.tags) || !d.tags.length || d.tags.length > 20)

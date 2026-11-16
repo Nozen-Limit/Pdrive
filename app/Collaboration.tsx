@@ -4,28 +4,32 @@ import {
   Button,
   Chip,
   Divider,
+  IconButton,
   MenuItem,
   Stack,
-  Tab,
-  Tabs,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
 import {
+  Add,
   ArrowBack,
   GroupsOutlined,
+  LockOutlined,
+  Refresh,
+  Search,
   UploadFileOutlined,
 } from "@mui/icons-material";
 import { backend, message } from "./api";
-import type { CollaborationState, Person } from "./types";
-import { date } from "./domain";
-import { Empty, ErrorNotice, Loading, row, type Confirm } from "./ui";
+import type { CollaborationState, Person, Resource } from "./types";
+import { date, fileAccept, fileHint } from "./domain";
+import {
+  ErrorNotice,
+  FileTile,
+  Loading,
+  initials,
+  row,
+  type Confirm,
+} from "./ui";
 import { useBusy } from "./operations";
 
 export default function Collaboration({
@@ -139,7 +143,7 @@ export default function Collaboration({
       if (action === "propose") {
         if (!file || !changes.trim())
           throw Error(
-            "Choose a PDF or DOCX and describe the proposed changes.",
+            "Choose a PDF or DOCX file and describe the proposed changes.",
           );
         await backend.validateBankFile(file);
         if (!staged.current || staged.current.file !== file) {
@@ -191,19 +195,55 @@ export default function Collaboration({
     locked = !!r && ((!r.bank_draft && r.status === "pending") || r.archived),
     members = detail?.members || [],
     proposals = detail?.proposals || [];
-  const resources = (listing?.resources || []).filter(
+  const all = listing?.resources || [];
+  const invites = all.filter((r) => r.membership === "invited");
+  const joined = all.filter((r) => r.membership !== "invited");
+  const mineCount = joined.filter((r) => r.owner === person.id).length;
+  const resources = joined.filter(
     (r) =>
-      (scope === "invitations"
-        ? r.membership === "invited"
-        : r.membership !== "invited") &&
+      (scope === "mine"
+        ? r.owner === person.id
+        : scope === "shared"
+          ? r.owner !== person.id
+          : true) &&
       `${r.title} ${r.creator} ${r.subject}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
+  const stage = (x: Resource) =>
+    x.bank_draft ? 0 : x.status === "approved" ? 3 : 2;
+  const pill = (x: Resource) =>
+    x.bank_draft
+      ? (["Shared draft", "info"] as const)
+      : x.status === "approved"
+        ? (["Approved", "success"] as const)
+        : x.status === "returned"
+          ? (["Returned", "warning"] as const)
+          : (["In review", "warning"] as const);
+  const avatar = (name: string, size = 24) => (
+    <Box
+      component="span"
+      aria-hidden="true"
+      sx={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: "50%",
+        display: "inline-grid",
+        placeItems: "center",
+        fontSize: size < 24 ? 8 : 9,
+        fontWeight: 700,
+        color: "background.paper",
+        bgcolor: "primary.main",
+      }}
+    >
+      {initials(name || "?")}
+    </Box>
+  );
   return (
-    <Box sx={{ maxWidth: 1150 }}>
-      <Box sx={{ ...row, justifyContent: "space-between", mb: 2 }}>
-        {id ? (
+    <Box sx={{ width: "100%" }}>
+      {id && (
+        <Box sx={{ ...row, justifyContent: "space-between", mb: 2 }}>
           <Button
             startIcon={<ArrowBack />}
             onClick={() => void open(null)}
@@ -211,150 +251,314 @@ export default function Collaboration({
           >
             Back to collaboration
           </Button>
-        ) : (
-          <Typography
-            component="h2"
-            sx={{
-              fontSize: 16,
-              fontWeight: 600,
-              display: "flex",
-              gap: 1,
-              alignItems: "center",
-            }}
-          >
-            <GroupsOutlined fontSize="small" />
-            Shared faculty work
-          </Typography>
-        )}
-        <Button onClick={() => setEpoch((n) => n + 1)} disabled={busy}>
-          Refresh
-        </Button>
-      </Box>
+        </Box>
+      )}
       <ErrorNotice error={error} retry={() => setEpoch((n) => n + 1)} />
       {loading ? (
         <Loading label="Loading collaboration…" />
       ) : error && !listing ? null : !id ? (
         <>
-          <Tabs
-            value={scope}
-            onChange={(_, value: string) => setScope(value)}
-            sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}
-          >
-            <Tab value="drafts" label="Shared resources" />
-            <Tab
-              value="invitations"
-              label={`Invitations (${(listing?.resources || []).filter((r) => r.membership === "invited").length})`}
-            />
-          </Tabs>
-          <Box sx={{ ...row, mb: 2, justifyContent: "space-between" }}>
+          {invites.map((inv) => (
+            <Box
+              key={inv.id}
+              sx={(theme) => ({
+                ...row,
+                gap: 1.5,
+                px: 2,
+                py: 1.5,
+                mb: 1.5,
+                border: 1,
+                borderColor: `color-mix(in srgb, ${theme.palette.info.main} 35%, transparent)`,
+                bgcolor: `color-mix(in srgb, ${theme.palette.info.main} 9%, ${theme.palette.background.paper})`,
+              })}
+            >
+              {avatar(inv.creator, 28)}
+              <Typography sx={{ flex: 1, minWidth: 200 }}>
+                <b>{inv.creator}</b> invited you to <b>{inv.title}</b>
+              </Typography>
+              <Button
+                variant="outlined"
+                disabled={busy}
+                onClick={() =>
+                  void run("respond", { status: "declined" }, inv.id)
+                }
+                sx={{ bgcolor: "background.paper" }}
+              >
+                Decline
+              </Button>
+              <Button
+                variant="contained"
+                disabled={busy}
+                onClick={() =>
+                  void run("respond", { status: "accepted" }, inv.id)
+                }
+              >
+                Accept
+              </Button>
+            </Box>
+          ))}
+          <Box sx={{ ...row, gap: 1.25, mb: 2 }}>
+            <Box
+              role="group"
+              aria-label="Show"
+              sx={{ display: "inline-flex", bgcolor: "action.hover", p: 0.375 }}
+            >
+              {(
+                [
+                  ["all", "All", joined.length],
+                  ["mine", "Mine", mineCount],
+                  ["shared", "Shared with me", joined.length - mineCount],
+                ] as const
+              ).map(([value, label, n]) => {
+                const on = (scope === "drafts" ? "all" : scope) === value;
+                return (
+                  <Button
+                    key={value}
+                    aria-pressed={on}
+                    onClick={() => setScope(value)}
+                    sx={{
+                      px: 1.75,
+                      color: on ? "text.primary" : "text.secondary",
+                      bgcolor: on ? "background.paper" : "transparent",
+                      boxShadow: on ? 1 : 0,
+                      "&:hover": {
+                        bgcolor: on ? "background.paper" : "action.hover",
+                      },
+                    }}
+                  >
+                    {label}
+                    <Box
+                      component="span"
+                      sx={{ ml: 0.75, color: "text.secondary", fontSize: 11 }}
+                    >
+                      {n}
+                    </Box>
+                  </Button>
+                );
+              })}
+            </Box>
+            <Box sx={{ flexGrow: 1 }} />
             <TextField
-              label="Search resources"
+              placeholder="Search"
+              aria-label="Search shared work"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              sx={{ width: "100%", maxWidth: 400 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <Search
+                      fontSize="small"
+                      sx={{ mr: 1, color: "text.secondary" }}
+                    />
+                  ),
+                },
+              }}
+              sx={{ width: { xs: "100%", sm: 260 } }}
             />
-            <Button onClick={onUpload} variant="outlined">
-              New resource
+            <IconButton
+              aria-label="Refresh"
+              title="Refresh"
+              onClick={() => setEpoch((n) => n + 1)}
+              disabled={busy}
+            >
+              <Refresh fontSize="small" />
+            </IconButton>
+            <Button variant="contained" startIcon={<Add />} onClick={onUpload}>
+              Start shared draft
             </Button>
           </Box>
           {!resources.length ? (
-            <Empty
-              title={
-                scope === "invitations"
-                  ? "No pending invitations"
-                  : "No shared resources yet"
-              }
-            />
+            <Box
+              sx={{
+                border: "1px dashed",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                py: 5,
+                px: 2,
+                display: "grid",
+                justifyItems: "center",
+                gap: 1.25,
+                textAlign: "center",
+              }}
+            >
+              <GroupsOutlined sx={{ fontSize: 28, color: "text.secondary" }} />
+              <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
+                {query
+                  ? `Nothing matches “${query}”`
+                  : scope === "shared"
+                    ? "No one has shared a draft with you yet"
+                    : "No shared drafts yet"}
+              </Typography>
+              <Button variant="contained" onClick={onUpload}>
+                Start shared draft
+              </Button>
+            </Box>
           ) : (
-            <TableContainer sx={{ borderBottom: 1, borderColor: "divider" }}>
-              <Table size="small" aria-label="Collaboration resources">
-                <TableHead>
-                  <TableRow>
-                    {[
-                      "Resource",
-                      "Owner",
-                      "Learning area",
-                      "Status",
-                      "Actions",
-                    ].map((h) => (
-                      <TableCell key={h}>{h}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {resources.map((resource) => (
-                    <TableRow key={resource.id}>
-                      <TableCell>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "minmax(0,1fr)",
+                  md: "repeat(2,minmax(0,1fr))",
+                },
+                gap: 1.5,
+              }}
+            >
+              {resources.map((x) => {
+                const step = stage(x);
+                const [label, tone] = pill(x);
+                const isLocked =
+                  (!x.bank_draft && x.status === "pending") || x.archived;
+                return (
+                  <Box
+                    component="article"
+                    key={x.id}
+                    onClick={() => void open(x.id)}
+                    sx={{
+                      border: 1,
+                      borderColor: "divider",
+                      bgcolor: "background.paper",
+                      p: 2,
+                      display: "grid",
+                      gap: 1.75,
+                      minWidth: 0,
+                      cursor: "pointer",
+                      "&:hover": { borderColor: "text.secondary" },
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", gap: 1.5, alignItems: "start" }}
+                    >
+                      <FileTile name={x.filename} />
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Button
-                          disabled={resource.membership === "invited"}
-                          onClick={() => void open(resource.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void open(x.id);
+                          }}
                           sx={{
+                            p: 0,
+                            minHeight: 0,
                             textAlign: "left",
                             justifyContent: "flex-start",
-                            p: 0,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "text.primary",
+                            whiteSpace: "normal",
+                            overflowWrap: "anywhere",
                           }}
                         >
-                          {resource.title}
+                          {x.title}
                         </Button>
                         <Typography
-                          variant="caption"
-                          component="p"
                           color="text.secondary"
+                          sx={{ fontSize: 12 }}
                         >
-                          {resource.category} · {resource.grade} ·{" "}
-                          {resource.term}
+                          {[x.subject, x.grade, x.term]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </Typography>
-                      </TableCell>
-                      <TableCell>{resource.creator}</TableCell>
-                      <TableCell>{resource.subject}</TableCell>
-                      <TableCell>
-                        {resource.membership === "invited"
-                          ? "Invitation"
-                          : resource.bank_draft
-                            ? "Shared draft"
-                            : resource.status === "pending"
-                              ? "In review · locked"
-                              : resource.status}
-                      </TableCell>
-                      <TableCell>
-                        {resource.membership === "invited" ? (
-                          <Box sx={row}>
-                            <Button
-                              disabled={busy}
-                              onClick={() =>
-                                void run(
-                                  "respond",
-                                  { status: "accepted" },
-                                  resource.id,
-                                )
+                      </Box>
+                      <Box
+                        component="span"
+                        sx={(theme) => ({
+                          fontSize: 11,
+                          fontWeight: 600,
+                          px: 1,
+                          py: 0.25,
+                          whiteSpace: "nowrap",
+                          color: `${tone}.main`,
+                          bgcolor: `color-mix(in srgb, ${theme.palette[tone].main} 13%, transparent)`,
+                        })}
+                      >
+                        {label}
+                      </Box>
+                    </Box>
+                    <Box>
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(4,1fr)",
+                          gap: 0.5,
+                        }}
+                      >
+                        {[0, 1, 2, 3].map((i) => (
+                          <Box
+                            key={i}
+                            sx={{
+                              height: 4,
+                              bgcolor:
+                                i < step || step === 3
+                                  ? "primary.main"
+                                  : i === step
+                                    ? "warning.main"
+                                    : "divider",
+                            }}
+                          />
+                        ))}
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(4,1fr)",
+                          gap: 0.5,
+                          mt: 0.5,
+                          fontSize: 11,
+                          color: "text.secondary",
+                        }}
+                      >
+                        {["Drafting", "Proposals", "In review", "Approved"].map(
+                          (s, i) => (
+                            <Box
+                              key={s}
+                              component="span"
+                              sx={
+                                i === step
+                                  ? { color: "text.primary", fontWeight: 600 }
+                                  : undefined
                               }
                             >
-                              Accept
-                            </Button>
-                            <Button
-                              disabled={busy}
-                              onClick={() =>
-                                void run(
-                                  "respond",
-                                  { status: "declined" },
-                                  resource.id,
-                                )
-                              }
-                            >
-                              Decline
-                            </Button>
-                          </Box>
-                        ) : (
-                          <Button onClick={() => void open(resource.id)}>
-                            Open
-                          </Button>
+                              {s}
+                            </Box>
+                          ),
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      </Box>
+                    </Box>
+                    <Box
+                      sx={{
+                        ...row,
+                        gap: 1,
+                        pt: 1.25,
+                        borderTop: 1,
+                        borderColor: "divider",
+                        fontSize: 12,
+                        color: "text.secondary",
+                      }}
+                    >
+                      {avatar(x.creator, 22)}
+                      <Typography sx={{ fontSize: 12 }}>
+                        {x.owner === person.id ? "You" : x.creator}
+                      </Typography>
+                      <Box sx={{ flexGrow: 1 }} />
+                      {isLocked && (
+                        <Box
+                          component="span"
+                          sx={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <LockOutlined sx={{ fontSize: 13 }} />
+                          Locked
+                        </Box>
+                      )}
+                      <span>{date(x.updated)}</span>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
           )}
         </>
       ) : (
@@ -485,7 +689,7 @@ export default function Collaboration({
                         <input
                           hidden
                           type="file"
-                          accept=".pdf,.docx"
+                          accept={fileAccept}
                           onChange={(e) => {
                             const next = e.target.files?.[0];
                             if (next) {
@@ -497,7 +701,7 @@ export default function Collaboration({
                         />
                       </Button>
                       <Typography variant="caption" color="text.secondary">
-                        {file?.name || "PDF or DOCX · up to 20 MB"}
+                        {file?.name || fileHint}
                       </Typography>
                       <Button
                         type="submit"

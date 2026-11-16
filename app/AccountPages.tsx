@@ -1,5 +1,5 @@
 import { useBusy } from "./operations";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Autocomplete,
   Avatar,
@@ -10,6 +10,7 @@ import {
   CardContent,
   Checkbox,
   Chip,
+  IconButton,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,16 +18,26 @@ import {
   Divider,
   FormControlLabel,
   MenuItem,
+  Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
 import {
   Add,
+  CheckCircleOutlined,
   EditOutlined,
+  GroupsOutlined,
   NotificationsNoneOutlined,
+  PersonOutlined,
   PushPinOutlined,
+  RateReviewOutlined,
+  UploadFileOutlined,
   UploadOutlined,
+  LockOutlined,
+  PhotoCameraOutlined,
 } from "@mui/icons-material";
 import { api, backend, message } from "./api";
 import { areas, date, grades } from "./domain";
@@ -265,19 +276,79 @@ export function Notes({ state, onChanged, notify, confirm, setDirty }: Common) {
     </>
   );
 }
+// What kind of event a notice is, read from its wording (the database stores
+// only the sentence). Each kind gets its own icon and a plain label.
+const noticeKinds: [RegExp, string, ReactNode][] = [
+  [/approved/i, "Approved", <CheckCircleOutlined fontSize="small" />],
+  [
+    /returned|feedback|revis/i,
+    "Feedback",
+    <RateReviewOutlined fontSize="small" />,
+  ],
+  [
+    /collaborat|invitation/i,
+    "Collaboration",
+    <GroupsOutlined fontSize="small" />,
+  ],
+  [
+    /submitted|review|resubmitted/i,
+    "Submission",
+    <UploadFileOutlined fontSize="small" />,
+  ],
+  [/account|sign|registered/i, "Account", <PersonOutlined fontSize="small" />],
+];
+const noticeKind = (body: string) =>
+  noticeKinds.find(([pattern]) => pattern.test(body)) || [
+    null,
+    "Notice",
+    <NotificationsNoneOutlined fontSize="small" />,
+  ];
+const startOfDay = (value: Date) =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+/** "Today", "Yesterday", "This week" or "Earlier", for grouping. */
+function noticeDay(created: string, now: Date) {
+  const days = Math.round(
+    (startOfDay(now) - startOfDay(new Date(created))) / 86400000,
+  );
+  return days <= 0
+    ? "Today"
+    : days === 1
+      ? "Yesterday"
+      : days < 7
+        ? "This week"
+        : "Earlier";
+}
+/** "5 min ago", "3 hr ago", then the date. */
+function noticeTime(created: string, now: Date) {
+  const minutes = Math.floor(
+    (now.getTime() - new Date(created).getTime()) / 60000,
+  );
+  if (Number.isNaN(minutes)) return "";
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)} hr ago`;
+  return date(created);
+}
 export function Notifications({
   state,
   onChanged,
   onOpen,
   onCollaboration,
+  now = new Date(),
 }: {
   state: SchoolState;
   onChanged: () => Promise<void>;
   onOpen: (id: string) => void;
   onCollaboration: () => void;
+  /** Fixed in previews so the grouping is stable. */
+  now?: Date;
 }) {
   const [error, setError] = useState(""),
-    [busy, setBusy] = useBusy();
+    [busy, setBusy] = useBusy(),
+    [show, setShow] = useState<"unread" | "all">(() =>
+      state.notifications.some((n) => !n.read) ? "unread" : "all",
+    ),
+    [kind, setKind] = useState<string | null>(null);
   async function acknowledge() {
     if (busy) return;
     setBusy(true);
@@ -285,73 +356,257 @@ export function Notifications({
     try {
       await api("notifications", {}, "POST");
       await onChanged();
+      setShow("all");
     } catch (e) {
       setError(message(e));
     } finally {
       setBusy(false);
     }
   }
+  const unread = state.notifications.filter((n) => !n.read).length;
+  const kinds = Array.from(
+    new Set(state.notifications.map((n) => noticeKind(n.body)[1] as string)),
+  );
+  const visible = state.notifications.filter(
+    (n) =>
+      (show === "all" || !n.read) && (!kind || noticeKind(n.body)[1] === kind),
+  );
+  const groups = ["Today", "Yesterday", "This week", "Earlier"]
+    .map((day) => ({
+      day,
+      items: visible.filter((n) => noticeDay(n.created, now) === day),
+    }))
+    .filter((group) => group.items.length);
+  const tone: Record<string, string> = {
+    Approved: "success.main",
+    Feedback: "warning.main",
+    Collaboration: "info.main",
+    Submission: "primary.main",
+  };
   return (
-    <Box sx={{ maxWidth: 960 }}>
-      <Box sx={{ ...row, justifyContent: "space-between", mb: 2 }}>
-        <Typography color="text.secondary">
-          {state.notifications.filter((n) => !n.read).length} unread
-        </Typography>
+    <Box sx={{ width: "100%" }}>
+      <ErrorNotice error={error} />
+      <Box sx={{ ...row, justifyContent: "space-between", gap: 1.5, mb: 2 }}>
+        <Box
+          role="group"
+          aria-label="Which notifications to show"
+          sx={{ display: "flex", bgcolor: "action.hover", p: 0.375 }}
+        >
+          {(
+            [
+              ["unread", `Unread`, unread],
+              ["all", "All", state.notifications.length],
+            ] as const
+          ).map(([value, label, n]) => (
+            <Button
+              key={value}
+              aria-pressed={show === value}
+              onClick={() => setShow(value)}
+              sx={{
+                px: 1.75,
+                color: show === value ? "text.primary" : "text.secondary",
+                bgcolor: show === value ? "background.paper" : "transparent",
+                boxShadow: show === value ? 1 : 0,
+                "&:hover": {
+                  bgcolor: show === value ? "background.paper" : "action.hover",
+                },
+              }}
+            >
+              {label}
+              <Box
+                component="span"
+                sx={{ ml: 0.75, color: "text.secondary", fontSize: 11 }}
+              >
+                {n}
+              </Box>
+            </Button>
+          ))}
+        </Box>
         <Button
           variant="outlined"
-          disabled={busy || !state.notifications.some((n) => !n.read)}
+          disabled={busy || !unread}
           onClick={() => void acknowledge()}
         >
           Mark all as read
         </Button>
       </Box>
-      <ErrorNotice error={error} />
-      {state.notifications.map((notice) => (
-        <Box
-          component="article"
-          key={notice.id}
-          sx={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 1.5,
-            py: 2,
-            borderBottom: 1,
-            borderColor: "divider",
-          }}
-        >
-          <NotificationsNoneOutlined
-            fontSize="small"
-            color={notice.read ? "disabled" : "primary"}
-          />
-          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+      {kinds.length > 1 && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2 }}>
+          {[null, ...kinds].map((k) => (
+            <Button
+              key={k || "every"}
+              size="small"
+              aria-pressed={kind === k}
+              onClick={() => setKind(k)}
+              variant={kind === k ? "contained" : "outlined"}
+              sx={{ minHeight: 28, py: 0.25 }}
+            >
+              {k || "Every type"}
+            </Button>
+          ))}
+        </Box>
+      )}
+      <Paper variant="outlined">
+        {groups.map((group, gi) => (
+          <Box key={group.day} component="section">
             <Typography
+              component="h2"
               sx={{
-                overflowWrap: "anywhere",
-                fontWeight: notice.read ? 400 : 500,
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "text.secondary",
+                px: 2.5,
+                pt: gi ? 2.5 : 2,
+                pb: 1,
               }}
             >
-              {notice.body}
+              {group.day}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {date(notice.created)}
-              {notice.read ? "" : " · Unread"}
-            </Typography>
-            {notice.module && (
-              <Button
-                onClick={() =>
-                  /collaborat/i.test(notice.body)
-                    ? onCollaboration()
-                    : onOpen(notice.module!)
-                }
-                sx={{ display: "block", p: 0, mt: 0.5, minHeight: 0 }}
-              >
-                Open resource
-              </Button>
-            )}
+            {group.items.map((notice) => {
+              const [, kindLabel, icon] = noticeKind(notice.body);
+              const collaboration = /collaborat/i.test(notice.body);
+              // "Resource submitted: Title — Name" reads as a headline plus the resource.
+              const split = notice.body.match(/^([^:]{3,60}):\s*(.+)$/);
+              const headline = split ? split[1] : notice.body;
+              const subject = split ? split[2] : "";
+              const color = tone[kindLabel as string] || "text.secondary";
+              const go = notice.module
+                ? () =>
+                    collaboration ? onCollaboration() : onOpen(notice.module!)
+                : undefined;
+              return (
+                <Box
+                  component="article"
+                  key={notice.id}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "36px minmax(0,1fr) auto",
+                      md: "36px minmax(0,1fr) 220px",
+                    },
+                    alignItems: "center",
+                    gap: 1.75,
+                    px: 2.5,
+                    py: 1.5,
+                    borderTop: 1,
+                    borderColor: "divider",
+                    cursor: go ? "pointer" : "default",
+                    bgcolor: notice.read ? "transparent" : "action.hover",
+                    "&:hover": { bgcolor: "action.selected" },
+                    "&:hover .notice-go": { opacity: 1 },
+                  }}
+                  onClick={go}
+                >
+                  <Box
+                    aria-hidden
+                    sx={(theme) => ({
+                      width: 36,
+                      height: 36,
+                      display: "grid",
+                      placeItems: "center",
+                      color,
+                      bgcolor: `color-mix(in srgb, ${
+                        color === "text.secondary"
+                          ? theme.palette.text.secondary
+                          : (theme.palette as any)[color.split(".")[0]].main
+                      } 14%, transparent)`,
+                    })}
+                  >
+                    {icon}
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: "text.secondary",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.75,
+                      }}
+                    >
+                      {!notice.read && (
+                        <Box
+                          component="span"
+                          aria-label="Unread"
+                          sx={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            bgcolor: "error.main",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      {headline}
+                    </Typography>
+                    {subject && (
+                      <Typography
+                        sx={{
+                          fontWeight: notice.read ? 500 : 600,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={subject}
+                      >
+                        {subject}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box
+                    sx={{
+                      ...row,
+                      gap: 1.5,
+                      flexWrap: "nowrap",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    {go && (
+                      <Button
+                        className="notice-go"
+                        variant="outlined"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          go();
+                        }}
+                        sx={{
+                          display: { xs: "none", md: "inline-flex" },
+                          opacity: 0,
+                          transition: "opacity .15s",
+                          bgcolor: "background.paper",
+                          "&:focus-visible": { opacity: 1 },
+                        }}
+                      >
+                        {collaboration ? "Open" : "Open resource"}
+                      </Button>
+                    )}
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        whiteSpace: "nowrap",
+                        minWidth: 76,
+                        textAlign: "right",
+                      }}
+                    >
+                      {noticeTime(notice.created, now)}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })}
           </Box>
-        </Box>
-      ))}
-      {!state.notifications.length && <Empty title="No notifications" />}
+        ))}
+        {!groups.length && (
+          <Typography color="text.secondary" sx={{ px: 2, py: 3 }}>
+            {show === "unread" && state.notifications.length
+              ? "You have read everything. Choose All to see earlier notifications."
+              : "No notifications yet. Reviews, feedback and invitations will appear here."}
+          </Typography>
+        )}
+      </Paper>
     </Box>
   );
 }
@@ -697,66 +952,158 @@ export function Profile({
     }
   }
   return (
-    <Box sx={{ maxWidth: 880 }}>
-      <Box sx={{ ...row, gap: 2, mb: 3, alignItems: "flex-start" }}>
-        <Avatar
-          src={user.avatarUrl}
-          alt={`${user.name} profile picture`}
-          sx={{ width: 64, height: 64, borderRadius: 1, fontSize: 24 }}
-        >
-          {user.name
-            .split(/\s+/)
-            .map((part) => part[0])
-            .slice(0, 2)
-            .join("")}
-        </Avatar>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h2" component="h2" gutterBottom>
-            {user.name}
-          </Typography>
-          <Typography color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
-            {user.email}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {user.role === "head" ? "Head Teacher" : "Teacher"}
-          </Typography>
-          <Box sx={{ ...row, mt: 1 }}>
-            <Button
-              component="label"
-              startIcon={<UploadOutlined />}
-              disabled={busy}
-            >
-              Choose profile picture
-              <input
-                hidden
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void photo(file);
-                  e.target.value = "";
-                }}
-              />
-            </Button>
-            {user.avatar_key && (
-              <Button onClick={() => void removePhoto()} disabled={busy}>
-                Remove picture
-              </Button>
-            )}
-          </Box>
-          <Typography variant="caption" color="text.secondary">
-            JPG, PNG or WebP · up to 2 MB
-          </Typography>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "minmax(0,1fr)", md: "300px minmax(0,1fr)" },
+        gap: 2.5,
+        alignItems: "start",
+      }}
+    >
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          display: "grid",
+          justifyItems: "center",
+          textAlign: "center",
+          gap: 1,
+          position: { md: "sticky" },
+          top: { md: 76 },
+        }}
+      >
+        <Box sx={{ position: "relative", mb: 1 }}>
+          <Avatar
+            src={user.avatarUrl}
+            alt={`${user.name} profile picture`}
+            sx={{
+              width: 104,
+              height: 104,
+              fontSize: 36,
+              fontWeight: 600,
+              bgcolor: "primary.main",
+              color: "background.paper",
+            }}
+          >
+            {user.name
+              .split(/\s+/)
+              .map((part) => part[0])
+              .slice(0, 2)
+              .join("")}
+          </Avatar>
+          <IconButton
+            component="label"
+            aria-label="Choose profile picture"
+            title="Choose profile picture (JPG, PNG or WebP, up to 2 MB)"
+            disabled={busy}
+            sx={{
+              position: "absolute",
+              right: -2,
+              bottom: -2,
+              width: 34,
+              height: 34,
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              "&:hover": { bgcolor: "background.paper" },
+            }}
+          >
+            <PhotoCameraOutlined sx={{ fontSize: 17 }} />
+            <input
+              hidden
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void photo(file);
+                e.target.value = "";
+              }}
+            />
+          </IconButton>
         </Box>
-      </Box>
-      <Divider sx={{ mb: 3 }} />
-      <Box component="form" onSubmit={save} onChange={() => setDirty(true)}>
+        <Typography component="h2" sx={{ fontSize: 18, fontWeight: 600 }}>
+          {user.name}
+        </Typography>
+        <Typography
+          color="text.secondary"
+          sx={{ overflowWrap: "anywhere", fontSize: 13 }}
+        >
+          {user.email}
+        </Typography>
+        <Box
+          component="span"
+          sx={{
+            fontSize: 11,
+            fontWeight: 600,
+            px: 1,
+            py: 0.25,
+            bgcolor: "action.selected",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {user.role === "head" ? "HEAD TEACHER" : "TEACHER"}
+        </Box>
+        {(selectedAreas.length > 0 || selectedGrades.length > 0) && (
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 0.75,
+              justifyContent: "center",
+              mt: 1.5,
+              pt: 2,
+              borderTop: 1,
+              borderColor: "divider",
+              width: "100%",
+            }}
+          >
+            {[...selectedAreas, ...selectedGrades].map((x) => (
+              <Box
+                key={x}
+                component="span"
+                sx={{
+                  fontSize: 12,
+                  px: 1,
+                  py: 0.25,
+                  border: 1,
+                  borderColor: "divider",
+                }}
+              >
+                {x}
+              </Box>
+            ))}
+          </Box>
+        )}
+        {user.avatar_key && (
+          <Button
+            onClick={() => void removePhoto()}
+            disabled={busy}
+            sx={{ mt: 1, color: "text.secondary" }}
+          >
+            Remove picture
+          </Button>
+        )}
+      </Paper>
+      <Paper
+        variant="outlined"
+        component="form"
+        onSubmit={save}
+        onChange={() => setDirty(true)}
+        sx={{ minWidth: 0 }}
+      >
         <Box
           component="fieldset"
           disabled={busy}
           sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}
         >
-          <Box sx={formGrid}>
+          <Typography
+            variant="h3"
+            component="h3"
+            sx={{ px: 3, py: 1.75, borderBottom: 1, borderColor: "divider" }}
+          >
+            Personal information
+          </Typography>
+          <Box sx={{ ...formGrid, p: 3 }}>
             <TextField
               name="name"
               label="Full name"
@@ -767,7 +1114,17 @@ export function Profile({
             <TextField
               label="Email"
               value={user.email}
-              slotProps={{ input: { readOnly: true } }}
+              helperText="Used to sign in"
+              slotProps={{
+                input: {
+                  readOnly: true,
+                  endAdornment: (
+                    <LockOutlined
+                      sx={{ fontSize: 16, color: "text.secondary" }}
+                    />
+                  ),
+                },
+              }}
             />
             <TextField
               name="phone"
@@ -793,13 +1150,28 @@ export function Profile({
               defaultValue={user.location || ""}
               slotProps={{ htmlInput: { maxLength: 200 } }}
             />
+          </Box>
+          <Typography
+            variant="h3"
+            component="h3"
+            sx={{
+              px: 3,
+              py: 1.75,
+              borderTop: 1,
+              borderBottom: 1,
+              borderColor: "divider",
+            }}
+          >
+            Teaching
+          </Typography>
+          <Box sx={{ ...formGrid, p: 3 }}>
             <TextField
               name="assignment"
               label="Department"
               defaultValue={user.assignment || ""}
               slotProps={{ htmlInput: { maxLength: 120 } }}
+              sx={{ gridColumn: "1 / -1" }}
             />
-            <Box />
             <Autocomplete
               multiple
               freeSolo
@@ -828,18 +1200,29 @@ export function Profile({
             />
           </Box>
         </Box>
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ px: 3 }}>
           <ErrorNotice error={error} />
         </Box>
-        <Button
-          variant="contained"
-          type="submit"
-          disabled={busy || !!phoneError}
-          sx={{ mt: 1 }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            px: 3,
+            py: 1.75,
+            borderTop: 1,
+            borderColor: "divider",
+            bgcolor: "action.hover",
+          }}
         >
-          Save profile
-        </Button>
-      </Box>
+          <Button
+            variant="contained"
+            type="submit"
+            disabled={busy || !!phoneError}
+          >
+            Save changes
+          </Button>
+        </Box>
+      </Paper>
     </Box>
   );
 }

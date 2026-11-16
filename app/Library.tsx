@@ -39,9 +39,10 @@ import { backend, message } from "./api";
 import {
   areas,
   categories,
+  categoryHelp,
   date,
   grades,
-  quarters,
+  terms,
   resourceState,
   statusLabels,
 } from "./domain";
@@ -68,6 +69,93 @@ export async function downloadResource(id: string) {
   link.click();
   link.remove();
 }
+/** A filter shown as a chip: "Grade" when unset, "Grade 8 ×" when set. */
+function FilterChip({
+  label,
+  value,
+  items,
+  onChange,
+  clearable = true,
+}: {
+  label: string;
+  value: string;
+  items: [string, string][];
+  onChange: (value: string) => void;
+  clearable?: boolean;
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const shown = items.find(([v]) => v === value)?.[1];
+  return (
+    <>
+      <Button
+        variant="outlined"
+        color="inherit"
+        aria-haspopup="menu"
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{
+          borderColor: value && clearable ? "primary.main" : "divider",
+          bgcolor: value && clearable ? "action.selected" : "background.paper",
+          fontWeight: 500,
+          gap: 0.75,
+        }}
+      >
+        {shown && clearable ? shown : shown ? `${label}: ${shown}` : label}
+        {value && clearable ? (
+          <Box
+            component="span"
+            role="button"
+            aria-label={`Remove ${shown}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange("");
+            }}
+            sx={{ color: "text.secondary", fontSize: 15, lineHeight: 1 }}
+          >
+            ×
+          </Box>
+        ) : (
+          <Box component="span" sx={{ color: "text.secondary", fontSize: 10 }}>
+            ▾
+          </Box>
+        )}
+      </Button>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+        {clearable && (
+          <MenuItem
+            selected={!value}
+            onClick={() => {
+              onChange("");
+              setAnchor(null);
+            }}
+          >
+            All
+          </MenuItem>
+        )}
+        {items.map(([v, text]) => (
+          <MenuItem
+            key={v}
+            selected={v === value}
+            onClick={() => {
+              onChange(v);
+              setAnchor(null);
+            }}
+          >
+            {text}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+const sorts: [string, string][] = [
+  ["approved", "Recently approved"],
+  ["updated", "Recently modified"],
+  ["name", "Name"],
+  ["newest", "Newest"],
+  ["oldest", "Oldest"],
+  ["creator", "Creator"],
+];
+
 export function Library({
   scope,
   head,
@@ -80,7 +168,7 @@ export function Library({
   onChanged,
   confirm,
   notify,
-  categoryRequest,
+  filterRequest,
 }: {
   scope: Scope;
   head: boolean;
@@ -93,7 +181,8 @@ export function Library({
   onChanged: () => Promise<void>;
   confirm: Confirm;
   notify: (value: string) => void;
-  categoryRequest: { value: string; key: number };
+  /** Filters to apply on arrival, e.g. from Home's map of the bank. */
+  filterRequest: { filters: Record<string, string>; key: number };
 }) {
   const desktop = useMediaQuery(useTheme().breakpoints.up("md"));
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
@@ -184,8 +273,10 @@ export function Library({
     setFilters((old) => ({ ...old, [name]: value }));
   };
   useEffect(() => {
-    if (categoryRequest.key) filter("category", categoryRequest.value);
-  }, [categoryRequest.key]);
+    if (!filterRequest.key) return;
+    setPage(1);
+    setFilters((old) => ({ ...old, ...filterRequest.filters }));
+  }, [filterRequest.key]);
   async function action(kind: "download" | "save" | "archive" | "delete") {
     if (!menu || actionBusy) return;
     const r = menu.resource;
@@ -280,67 +371,125 @@ export function Library({
   );
   return (
     <>
-      <Tabs
-        value={scope}
-        onChange={(_, value: Scope) => onScope(value)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}
+      <Box
+        role="group"
         aria-label="Resource collections"
+        sx={{
+          display: "inline-flex",
+          flexWrap: "wrap",
+          bgcolor: "action.hover",
+          p: 0.375,
+          mb: 2,
+          maxWidth: "100%",
+        }}
       >
-        <Tab value="shared" label="Digital Bank" />
-        <Tab value="mine" label="My Resources" />
-        <Tab value="saved" label="Saved" />
-        {head && <Tab value="all" label="All resources" />}
-        {head && <Tab value="review" label="Review queue" />}
-        {scope === "archived" && (
-          <Tab value="archived" label="Archived resources" />
-        )}
-        {scope === "recent" && <Tab value="recent" label="Recent" />}
-      </Tabs>
+        {(
+          [
+            ["shared", "Digital Bank"],
+            ["mine", "My Resources"],
+            ["saved", "Saved"],
+            ["recent", "Recent"],
+            ...(head
+              ? [
+                  ["all", "All resources"],
+                  ["review", "Review queue"],
+                  ["archived", "Archived"],
+                ]
+              : []),
+          ] as [Scope, string][]
+        ).map(([value, label]) => (
+          <Button
+            key={value}
+            aria-pressed={scope === value}
+            onClick={() => onScope(value)}
+            sx={{
+              px: 1.75,
+              color: scope === value ? "text.primary" : "text.secondary",
+              bgcolor: scope === value ? "background.paper" : "transparent",
+              boxShadow: scope === value ? 1 : 0,
+              "&:hover": {
+                bgcolor: scope === value ? "background.paper" : "action.hover",
+              },
+            }}
+          >
+            {label}
+          </Button>
+        ))}
+      </Box>
       {scope === "shared" && (
         <Box
+          role="group"
+          aria-label="Category"
           sx={{
             display: "grid",
             gridTemplateColumns: {
-              xs: "minmax(0,1fr)",
-              sm: "repeat(3,minmax(0,240px))",
+              xs: "repeat(2,minmax(0,1fr))",
+              md: "repeat(4,minmax(0,1fr))",
             },
-            gap: 1.5,
-            mb: 2.5,
+            border: 1,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            mb: 2,
           }}
         >
-          {Object.keys(categories).map((key) => (
-            <Button
-              key={key}
-              variant="outlined"
-              color="inherit"
-              onClick={() =>
-                filter("category", filters.category === key ? "" : key)
-              }
-              aria-pressed={filters.category === key}
-              sx={{
-                textAlign: "left",
-                display: "block",
-                p: 1.5,
-                borderColor:
-                  filters.category === key ? "primary.main" : "divider",
-                bgcolor:
-                  filters.category === key ? "action.selected" : undefined,
-              }}
-            >
-              <Typography sx={{ fontSize: 12, fontWeight: 500 }}>
-                {key[0] + key.slice(1).toLowerCase()}
-                <Box
+          {["", ...Object.keys(categories)].map((key, i) => {
+            const on = (filters.category || "") === key;
+            const total = key
+              ? counts?.[key]
+              : counts
+                ? Object.values(counts).reduce((a, b) => a + b, 0)
+                : undefined;
+            return (
+              <Button
+                key={key || "all"}
+                color="inherit"
+                aria-pressed={on}
+                title={key ? categoryHelp[key] : undefined}
+                onClick={() => filter("category", key)}
+                sx={{
+                  display: "grid",
+                  justifyItems: "start",
+                  gap: 0.25,
+                  p: "12px 16px",
+                  position: "relative",
+                  borderLeft: { md: i ? 1 : 0 },
+                  borderColor: { md: "divider" },
+                  bgcolor: on ? "action.selected" : "transparent",
+                  "&::after": on
+                    ? {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 3,
+                        bgcolor: "primary.main",
+                      }
+                    : {},
+                }}
+              >
+                <Typography
                   component="span"
-                  sx={{ float: "right", fontSize: 18, lineHeight: 1, pl: 2 }}
-                  aria-label={`${key} approved resources`}
+                  sx={{ fontSize: 12, color: "text.secondary" }}
                 >
-                  {counts?.[key] ?? "—"}
-                </Box>
-              </Typography>
-            </Button>
-          ))}
+                  {key
+                    ? categories[key as keyof typeof categories]
+                    : "All categories"}
+                </Typography>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: 20,
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {total ?? "—"}
+                </Typography>
+              </Button>
+            );
+          })}
         </Box>
       )}
       <Box sx={{ ...row, justifyContent: "space-between", mb: 2, gap: 1.5 }}>
@@ -365,38 +514,62 @@ export function Library({
             sx={{ width: "100%", maxWidth: 360 }}
           />
         )}
-        <Box sx={{ ...row, width: desktop ? "100%" : undefined }}>
+        <Box sx={{ ...row, gap: 1, width: desktop ? "100%" : undefined }}>
+          <FilterChip
+            label="Learning area"
+            value={filters.subject || ""}
+            items={areas.map((a) => [a, a])}
+            onChange={(v) => filter("subject", v)}
+          />
+          <FilterChip
+            label="Grade"
+            value={filters.grade || ""}
+            items={grades.map((g) => [g, g])}
+            onChange={(v) => filter("grade", v)}
+          />
+          <FilterChip
+            label="Quarter"
+            value={filters.term || ""}
+            items={terms.map((t) => [t, t])}
+            onChange={(v) => filter("term", v)}
+          />
           <Button
+            variant="outlined"
             color="inherit"
             startIcon={<FilterList fontSize="small" />}
             onClick={() => setFilterOpen(!filterOpen)}
+            sx={{ borderColor: "divider", bgcolor: "background.paper" }}
           >
-            Filters
+            More filters
           </Button>
+          {Object.keys(filters).some((k) => k !== "sort" && filters[k]) && (
+            <Button
+              onClick={() => {
+                setQuery("");
+                setFilters({ sort: filters.sort || "approved" });
+                setPage(1);
+              }}
+            >
+              Clear
+            </Button>
+          )}
+          <Box sx={{ flexGrow: 1 }} />
+          {result && !loading && (
+            <Typography
+              color="text.secondary"
+              sx={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              {result.total} {result.total === 1 ? "result" : "results"}
+            </Typography>
+          )}
           {desktop && (
-            <>
-              <Box sx={{ flexGrow: 1 }} />
-              <TextField
-                select
-                label="Sort"
-                value={filters.sort || "approved"}
-                onChange={(e) => filter("sort", e.target.value)}
-                sx={{ width: 180 }}
-              >
-                {[
-                  ["approved", "Recently approved"],
-                  ["updated", "Recently modified"],
-                  ["name", "Name"],
-                  ["newest", "Newest"],
-                  ["oldest", "Oldest"],
-                  ["creator", "Creator"],
-                ].map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </>
+            <FilterChip
+              label="Sort"
+              value={filters.sort || "approved"}
+              items={sorts}
+              clearable={false}
+              onChange={(v) => filter("sort", v)}
+            />
           )}
           <IconButton
             aria-label="Refresh resources"
@@ -445,9 +618,7 @@ export function Library({
         >
           {[
             ["category", "Category", Object.keys(categories)],
-            ["subject", "Learning area", areas],
-            ["grade", "Grade", grades],
-            ["term", "Quarter", quarters],
+            ["term", "Term", terms],
             ["creator", "Creator", creators],
             ["status", "Status", Object.keys(statusLabels)],
           ].map(([name, label, items]) => (
@@ -522,21 +693,73 @@ export function Library({
       {loading ? (
         <Loading label="Loading resources…" />
       ) : !error && !rows.length ? (
-        <Empty
-          title={
-            scope === "review"
-              ? "No resources are waiting for review"
-              : "No resources found"
-          }
+        <Box
+          sx={{
+            border: "1px dashed",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            py: 5,
+            px: 2,
+            display: "grid",
+            justifyItems: "center",
+            gap: 1.25,
+            textAlign: "center",
+          }}
         >
-          {scope === "mine" && (
-            <Box sx={{ mt: 2 }}>
-              <Button onClick={onUpload} variant="outlined">
+          <Search sx={{ fontSize: 28, color: "text.secondary" }} />
+          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
+            {scope === "review"
+              ? "No resources are waiting for review"
+              : filters.subject || filters.grade
+                ? `No ${filters.subject || ""} resources${filters.grade ? ` for ${filters.grade}` : ""} yet`
+                : query
+                  ? `Nothing matches “${query}”`
+                  : scope === "mine"
+                    ? "You have not uploaded a resource yet"
+                    : "No resources here yet"}
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+              justifyContent: "center",
+              mt: 0.5,
+            }}
+          >
+            {(
+              [
+                ["grade", filters.grade],
+                ["subject", filters.subject],
+                ["term", filters.term],
+                ["category", filters.category],
+              ] as const
+            )
+              .filter(([, v]) => v)
+              .map(([k, v]) => (
+                <Button
+                  key={k}
+                  variant="outlined"
+                  onClick={() => filter(k, "")}
+                >
+                  Remove{" "}
+                  {k === "category"
+                    ? categories[v as keyof typeof categories]
+                    : v}
+                </Button>
+              ))}
+            {query && (
+              <Button variant="outlined" onClick={() => setQuery("")}>
+                Clear search
+              </Button>
+            )}
+            {scope !== "review" && (
+              <Button variant="contained" onClick={onUpload}>
                 Upload resource
               </Button>
-            </Box>
-          )}
-        </Empty>
+            )}
+          </Box>
+        </Box>
       ) : (
         !error && (
           <>
@@ -546,15 +769,14 @@ export function Library({
                   display: "grid",
                   gridTemplateColumns:
                     "repeat(auto-fill,minmax(min(100%,260px),1fr))",
-                  maxWidth: 1120,
-                  alignItems: "start",
+                  alignItems: "stretch",
                   gap: 1.5,
                 }}
               >
                 {rows.map((r) => (
                   <Box
                     key={r.id}
-                    sx={{ position: "relative", width: "100%", maxWidth: 340 }}
+                    sx={{ position: "relative", width: "100%", height: "100%" }}
                   >
                     <ResourceCard
                       resource={r}

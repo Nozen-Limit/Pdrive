@@ -62,9 +62,9 @@ export function makeTheme(name: PaletteName) {
       text: { primary: p.text, secondary: p.muted },
       divider: p.line,
     },
-    shape: { borderRadius: 4 },
+    shape: { borderRadius: 0 },
     typography: {
-      fontFamily: 'Inter,"Segoe UI",sans-serif',
+      fontFamily: '"Public Sans","Segoe UI",sans-serif',
       fontSize: 12,
       h1: { fontSize: 20, fontWeight: 600 },
       h2: { fontSize: 16, fontWeight: 600 },
@@ -108,7 +108,7 @@ export function makeTheme(name: PaletteName) {
       },
       MuiChip: {
         defaultProps: { size: "small", variant: "outlined" },
-        styleOverrides: { root: { borderRadius: 4, fontSize: 11, height: 24 } },
+        styleOverrides: { root: { borderRadius: 0, fontSize: 11, height: 24 } },
       },
       MuiDialog: { defaultProps: { fullWidth: true, maxWidth: "sm" } },
       MuiStack: { defaultProps: { useFlexGap: true } },

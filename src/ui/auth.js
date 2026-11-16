@@ -37,6 +37,12 @@ function setAuthMode(mode) {
   slot.classList.remove("book-page-turn");
   void slot.offsetWidth;
   slot.classList.add("book-page-turn");
+  // The particle leaf turns with the form (see src/landing-scene.js).
+  window.dispatchEvent(
+    new CustomEvent("sikap-page-turn", {
+      detail: { forward: mode === "register" },
+    }),
+  );
 }
 function togglePassword() {
   const input = $("#login-password"),
@@ -138,6 +144,7 @@ async function schoolLogin(e) {
           email: f.get("email"),
           password: f.get("password"),
           remember: f.has("remember"),
+          privacy: f.has("privacy"),
         }),
       },
     );

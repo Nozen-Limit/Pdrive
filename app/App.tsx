@@ -22,10 +22,12 @@ import {
 } from "@mui/material";
 import { api, backend, message } from "./api";
 import type { Page, Resource, SchoolState, Scope } from "./types";
+import { resourceState } from "./domain";
 import { makeTheme, palettes, type PaletteName } from "./theme";
 import { Operations } from "./operations";
 import { Auth } from "./Auth";
 import { Workspace } from "./Workspace";
+import { Help } from "./Help";
 const Collaboration = lazy(() => import("./Collaboration"));
 const Library = lazy(() =>
   import("./Library").then((module) => ({ default: module.Library })),
@@ -72,6 +74,7 @@ function initialRoute(): { page: Page; scope: Scope; resource: string } {
       "profile",
       "summary",
       "collaboration",
+      "help",
     ];
     return {
       page: resource
@@ -114,7 +117,10 @@ export function App() {
       backend.recovery || !!backend.recoveryError,
     ),
     [route, setRoute] = useState(initialRoute),
-    [categoryRequest, setCategoryRequest] = useState({ value: "", key: 0 }),
+    [filterRequest, setFilterRequest] = useState<{
+      filters: Record<string, string>;
+      key: number;
+    }>({ filters: {}, key: 0 }),
     [editing, setEditing] = useState<Resource | null>(null),
     [dirty, setDirty] = useState(false),
     [epoch, setEpoch] = useState(0),
@@ -398,7 +404,7 @@ export function App() {
     if (page === "bank")
       body = (
         <Library
-          categoryRequest={categoryRequest}
+          filterRequest={filterRequest}
           scope={route.scope}
           head={head}
           userId={state.user.id}
@@ -474,6 +480,7 @@ export function App() {
           }
         />
       );
+    else if (page === "help") body = <Help head={head} />;
     else if (page === "summary" && head)
       body = (
         <>
@@ -504,13 +511,22 @@ export function App() {
           error={rowsError}
           retry={() => setEpoch((n) => n + 1)}
           onOpen={open}
+          epoch={epoch}
+          go={(page, scope) => void navigate(page, scope)}
+          onBrowse={(filters) => {
+            void navigate("bank", "shared").then((changed) => {
+              if (changed)
+                setFilterRequest((old) => ({
+                  filters,
+                  key: old.key + 1,
+                }));
+            });
+          }}
           onSummary={() => void navigate("summary")}
-          onBank={() => void navigate("bank", head ? "all" : "mine")}
-          onNotes={() => void navigate("notes")}
         />
       );
     const titles: Record<Page, string> = {
-      overview: "Overview",
+      overview: "Home",
       bank:
         route.scope === "mine"
           ? "My Resources"
@@ -520,10 +536,13 @@ export function App() {
               ? "Archived Resources"
               : route.scope === "saved"
                 ? "Saved Resources"
-                : "Digital Bank",
+                : route.scope === "recent"
+                  ? "Recently approved"
+                  : "Digital Bank",
       upload: editing ? "Edit resource" : "Upload resource",
       detail: "Resource details",
       notes: "Personal Notes",
+      help: "Help",
       notifications: "Notifications",
       teachers: "Teachers",
       profile: "Profile",
@@ -537,14 +556,17 @@ export function App() {
         scope={route.scope}
         title={titles[page]}
         navigate={(page, scope) => void navigate(page, scope)}
-        onCategory={(value) => {
-          void navigate("bank", "shared").then((changed) => {
-            if (changed)
-              setCategoryRequest((old) => ({ value, key: old.key + 1 }));
-          });
-        }}
         upload={() => void navigate("upload")}
         logout={() => void logout()}
+        reviewCount={
+          head
+            ? rows.filter(
+                (r) =>
+                  r.owner !== state.user.id &&
+                  ["pending", "resubmitted"].includes(resourceState(r)),
+              ).length
+            : 0
+        }
         palette={palette}
         onPalette={(value) => {
           setPalette(value);

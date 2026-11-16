@@ -13,6 +13,7 @@ export type Page =
   | "teachers"
   | "profile"
   | "collaboration"
+  | "help"
   | "summary";
 export interface Person {
   id: string;
@@ -51,6 +52,8 @@ export interface SchoolState {
   notes: SchoolNote[];
   notifications: Notice[];
   workflowReady: boolean;
+  /** False until this account agrees to the current Privacy Notice. */
+  privacyAccepted?: boolean;
 }
 export interface Resource {
   contributors?: { id: string; name: string }[];
@@ -83,6 +86,9 @@ export interface Resource {
   bank_curriculum_version?: string;
   bank_competency_source?: { title: string; url: string; page: string };
   bank_localization?: string;
+  bank_resource_type?: string | null;
+  bank_language?: string | null;
+  bank_rights?: string | null;
   bank_tags?: string[];
   bank_source?: string;
   bank_notes?: string;
@@ -158,6 +164,7 @@ export interface Backend {
   reset(email: string): Promise<unknown>;
   updatePassword(password: string): Promise<void>;
   validateBankFile(file: File): Promise<unknown>;
+  acceptPrivacy(): Promise<void>;
   phone: { normalize(value: string): string; format(value: string): string };
   bank: {
     collaboration(mid?: string | null): Promise<CollaborationState>;

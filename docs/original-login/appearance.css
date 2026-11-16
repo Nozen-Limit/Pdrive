@@ -1331,3 +1331,50 @@ html[data-sikap-theme="white"] .landing-appearance .appearance-popover {
   padding: 0;
   color: inherit;
 }
+
+/* White login: clear, high-contrast form over a lighter background. */
+html[data-sikap-theme="white"] .book-landing {
+  background: #f7f9fb;
+}
+html[data-sikap-theme="white"] .book-landing .book-form h1 {
+  color: #1f2a37;
+}
+html[data-sikap-theme="white"] .book-landing .book-form label {
+  color: #2b3a4c;
+  font-weight: 600;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .field input {
+  background: #ffffff;
+  color: #1f2a37;
+  border: 1.5px solid #b9c3cf;
+  box-shadow: 0 1px 2px #1f2a370d;
+}
+html[data-sikap-theme="white"]
+  .book-landing
+  .book-form
+  .field
+  input::placeholder {
+  color: #7a8696;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .field input:focus {
+  border-color: #34475f;
+  box-shadow: 0 0 0 3px #34475f26;
+  outline: none;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .login-submit {
+  color: #fff;
+  background: #2f4560;
+  border-color: #2f4560;
+  font-weight: 600;
+  box-shadow: 0 6px 16px #2f456033;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .login-submit:hover {
+  background: #263a52;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .link-btn {
+  color: #2f4560;
+  font-weight: 600;
+}
+html[data-sikap-theme="white"] .book-landing .book-form .login-options {
+  color: #3d4b5c;
+}

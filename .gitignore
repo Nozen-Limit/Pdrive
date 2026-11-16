@@ -10,3 +10,4 @@ node_modules/
 app/config.js
 app/docx-preview.js
 app/public/original-login/
+.mock/

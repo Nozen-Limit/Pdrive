@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import { webcrypto } from "node:crypto";
-import { validateResourceFile } from "../src/lib/resource-file.js";
+import {
+  validateResourceFile,
+  resourceExtension,
+} from "../src/lib/resource-file.js";
 import { docxFixture } from "./docx-fixture.mjs";
 const user = "10000000-0000-4000-8000-000000000001",
   module = "20000000-0000-4000-8000-000000000001";
@@ -71,10 +74,11 @@ async function handler({
   };
   const source = (
     await readFile("supabase/functions/bank-upload/index.js", "utf8")
-  ).replace(/^import .*;\r?\n/gm, "");
+  ).replace(/^import [^;]*;\r?\n/gm, "");
   vm.runInNewContext(source, {
     createClient: (_url, key) => (key === "service" ? admin : normal),
     validateResourceFile,
+    resourceExtension,
     Request,
     Response,
     Blob,

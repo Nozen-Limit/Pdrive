@@ -14,9 +14,9 @@ const appearanceThemes = {
     accent: "#ffffff",
     action: "#34475f",
     light: true,
-    particles: [0.24, 0.32, 0.43],
-    highlight: [0.4, 0.49, 0.6],
-    waves: [0.15, 0.19, 0.25],
+    particles: [0.18, 0.26, 0.38],
+    highlight: [0.3, 0.42, 0.58],
+    waves: [0.07, 0.09, 0.12],
   },
   ocean: {
     label: "Ocean",
@@ -46,7 +46,7 @@ const appearanceThemes = {
     waves: [0.15, 0.105, 0.065],
   },
 };
-let appearanceChoice = "slate";
+let appearanceChoice = "white";
 try {
   const saved = localStorage.getItem("sikap-appearance");
   if (appearanceThemes[saved]) appearanceChoice = saved;

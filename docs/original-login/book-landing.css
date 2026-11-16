@@ -443,6 +443,15 @@
 .book-signup .login-options {
   margin: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.65);
 }
+.book-form .privacy-consent {
+  justify-content: flex-start;
+}
+.book-form .privacy-consent > label {
+  white-space: normal;
+}
+.book-signup .privacy-consent {
+  margin-top: 0;
+}
 .book-signup .login-footer {
   margin-top: calc(var(--u) * 0.65);
 }
@@ -800,4 +809,17 @@
     height: 100svh;
     aspect-ratio: auto;
   }
+}
+.book-meaning {
+  margin: calc(var(--u) * 1.1) 0 0;
+  max-width: 24em;
+  font:
+    400 calc(var(--u) * 0.78)/1.55 Inter,
+    sans-serif;
+  letter-spacing: 0.04em;
+  color: #a8b5c8;
+  text-wrap: balance;
+}
+html[data-sikap-theme="white"] .book-meaning {
+  color: #56667b;
 }

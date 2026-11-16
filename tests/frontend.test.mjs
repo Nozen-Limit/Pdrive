@@ -73,6 +73,8 @@ test("Pages interface renders real login/signup and confirmation feedback withou
     preventDefault() {},
     target: { querySelector: (s) => (s === ".form-error" ? error : button) },
   };
+  // Sign-up no longer asks for Privacy Notice consent.
+  assert.doesNotMatch(app.innerHTML, /name="privacy"/);
   await vm.runInContext("schoolLogin(testEvent)", context);
   assert.ok(confirmed);
   assert.match(error.textContent, /Check your email/);

@@ -89,12 +89,15 @@ test("React monitoring counts each submitted resource once and folds resubmissio
   assert.equal(report.areas.find(([name]) => name === "Science")[1], 1);
   assert.equal(report.areas.length, 9);
 });
-test("React metadata validation rejects forged category, area, grade, quarter and missing competency or tags", () => {
+test("React metadata validation rejects forged category, area, grade, term and missing competency or tags", () => {
   const valid = {
     category: "METHODS",
     subject: "Science",
     grade: "Grade 7",
-    term: "Quarter 1",
+    term: "Term 2",
+    resource_type: "Slide deck",
+    language: "Filipino",
+    rights: "Original work",
     competency: "TEST fixture",
     tags: ["fixture"],
   };
@@ -104,6 +107,12 @@ test("React metadata validation rejects forged category, area, grade, quarter an
     { subject: "Made up" },
     { grade: "Grade 11" },
     { term: "Semester 1" },
+    { term: "Term 4" },
+    // The new form labels by term; old quarter labels must be relabeled.
+    { term: "Quarter 1" },
+    { resource_type: "Video" },
+    { language: "" },
+    { rights: undefined },
     { competency: " " },
     { tags: [] },
   ])

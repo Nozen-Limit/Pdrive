@@ -51,3 +51,25 @@ export async function documentXml(input) {
     await reader.close();
   }
 }
+// Confirms a PPTX is a real PowerPoint package. Slides are not previewed in
+// the site, so only the package structure is read, never the slide contents.
+export async function presentationCheck(input) {
+  if (input.byteLength > 20 * 1024 * 1024)
+    throw Error("Presentation exceeds 20 MB.");
+  const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(input)));
+  try {
+    let presentation,
+      contentTypes = false,
+      count = 0;
+    for await (const entry of reader.getEntriesGenerator()) {
+      if (++count > 3000) throw Error("Too many files in this presentation.");
+      if (entry.filename === "[Content_Types].xml") contentTypes = true;
+      if (entry.filename === "ppt/presentation.xml") presentation = entry;
+    }
+    if (!presentation || !contentTypes)
+      throw Error("This is not a PowerPoint PPTX presentation.");
+    if (presentation.encrypted) throw Error("Presentation is encrypted.");
+  } finally {
+    await reader.close();
+  }
+}

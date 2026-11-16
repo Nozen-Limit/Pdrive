@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
-import { validateResourceFile } from "../_shared/resource-file.js";
+import {
+  validateResourceFile,
+  resourceExtension,
+} from "../_shared/resource-file.js";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -88,7 +91,7 @@ Deno.serve(async (request) => {
     ]
       .map((n) => n.toString(16).padStart(2, "0"))
       .join("");
-    const key = `${auth.user.id}/${module}/${crypto.randomUUID()}.${mime === "application/pdf" ? "pdf" : "docx"}`;
+    const key = `${auth.user.id}/${module}/${crypto.randomUUID()}.${resourceExtension(mime)}`;
     const { error: uploadError } = await client.storage
       .from("sikap-modules")
       .upload(key, bytes, { contentType: mime, upsert: false });

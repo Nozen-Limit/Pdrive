@@ -58,6 +58,8 @@ function mount(host) {
   shared.lightMode = { value: palette?.light ? 1 : 0 };
   shared.aspect = { value: 1 };
   shared.bookFraming = { value: new THREE.Vector2(1, 0) };
+  // x: progress of the turning leaf (below 0 while it rests), y: direction.
+  shared.turn = { value: new THREE.Vector2(-1, 1) };
   const waveGeometry = new THREE.PlaneGeometry(2, 2);
   const waveMaterial = new THREE.ShaderMaterial({
     depthWrite: false,
@@ -117,6 +119,39 @@ function mount(host) {
     particlePositions.push(...p);
     particleSeeds.push(u, v, 2, random());
   }
+  // Lines of writing on the left page: rows of particles broken into words,
+  // above and below the wordmark, starting at the outer margin.
+  for (const band of wavesOnly ? [] : [0.17, 0.66]) {
+    for (let line = 0; line < 6; line++) {
+      const v = band + line * 0.034,
+        end = line === 5 ? 0.45 + random() * 0.2 : 0.14 + random() * 0.08;
+      let u = 0.87;
+      while (u > end) {
+        const word = 0.03 + random() * 0.085;
+        for (let i = 0; i < word * 900 && u - i / 900 > end; i++) {
+          const p = pagePoint(u - i / 900, v + (random() - 0.5) * 0.004, -1);
+          p[2] += 0.006;
+          particlePositions.push(...p);
+          particleSeeds.push(u - i / 900, v, 3, random());
+        }
+        u -= word + 0.018;
+      }
+    }
+  }
+  // One loose leaf that turns across the book when the form changes between
+  // signing in and creating an account. Denser along its edges.
+  for (let i = 0; i < (wavesOnly ? 0 : 9000); i++) {
+    let u = random(),
+      v = random();
+    if (i < 4200) {
+      const edge = i % 3;
+      if (edge === 0) u = 1 - random() * 0.03;
+      else if (edge === 1) v = random() * 0.022;
+      else v = 1 - random() * 0.03;
+    }
+    particlePositions.push(...pagePoint(u, v, 1));
+    particleSeeds.push(u, v, 4, random());
+  }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
     "position",
@@ -132,9 +167,18 @@ function mount(host) {
     depthWrite: false,
     blending: palette?.light ? THREE.NormalBlending : THREE.AdditiveBlending,
     uniforms: shared,
-    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;varying float opacity;varying float brightness;
+    vertexShader: `attribute vec4 seed;uniform float time;uniform float ratio;uniform vec2 pointer;uniform float pulse;uniform vec2 pulseOrigin;uniform float formation;uniform vec2 bookFraming;uniform vec2 turn;varying float opacity;varying float brightness;
       void main(){
-      float loose=step(1.5,seed.z);float edge=step(.5,seed.z);vec3 target=position;
+      float loose=step(1.5,seed.z)*step(seed.z,2.5);float written=step(2.5,seed.z)*step(seed.z,3.5);float leaf=step(3.5,seed.z);
+      float edge=step(.5,seed.z);vec3 target=position;
+      // The turning leaf swings about the spine; its outer edge trails the fold.
+      float swing=0.;
+      if(leaf>.5){
+        float a=clamp(turn.x,0.,1.)*3.14159;a+=sin(a)*.55*(seed.x-.5);
+        swing=sin(a);
+        target.x=cos(a)*seed.x*.645*turn.y;
+        target.y+=swing*seed.x*.11;
+      }
       if(seed.z>.5&&seed.z<1.5){
         float path=seed.y<.08?seed.x*.25:(seed.x>.9?.25+seed.y*.25:(seed.y>.92?.75-seed.x*.25:1.-seed.y*.25));
         float phase=fract(path+time*(.028+seed.w*.012));float u;float v;
@@ -157,9 +201,14 @@ function mount(host) {
       gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);gl_Position.y=gl_Position.y*bookFraming.x+bookFraming.y;
       gl_PointSize=(.65+seed.w*1.3+edge*.35+loose*1.3)*ratio;
       float quiet=step(.12,seed.x)*step(seed.x,.93)*step(.12,seed.y)*step(seed.y,.9);
-      opacity=mix(.24,.82,edge)*(1.-loose*.25)*(1.-quiet*.5);
+      opacity=mix(.24,.82,edge)*(1.-loose*.25)*(1.-quiet*.5*(1.-leaf));
       opacity*=mix(1.,smoothstep(0.,.1,life)*smoothstep(0.,.12,1.-life),loose);
-      opacity*=.75+.25*sin(time*.65+seed.w*30.);brightness=seed.w+influence*.8+ripple*.5;}`,
+      opacity*=.75+.25*sin(time*.65+seed.w*30.);brightness=seed.w+influence*.8+ripple*.5;
+      // Writing: a soft band of light travels down the lines, as if being read.
+      float reading=exp(-pow((fract(time*.06)-seed.y)*9.,2.));
+      opacity*=mix(1.,.95+reading*.9,written);brightness+=written*reading*.6;
+      // The leaf is only visible while it is in the air.
+      opacity*=mix(1.,swing*step(0.,turn.x)*.9,leaf);brightness+=leaf*swing*.35;}`,
     fragmentShader: `uniform vec3 particleTint;uniform vec3 particleHighlight;varying float opacity;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;vec3 color=mix(particleTint,particleHighlight,clamp(brightness,0.,1.));gl_FragColor=vec4(color,pow(1.-r,1.4)*opacity);}`,
   });
   disposables.push(material);
@@ -168,7 +217,18 @@ function mount(host) {
     last = 0,
     time = 0,
     inView = true;
+  // Scene time runs at half speed, so 0.5 here is about one second.
+  const TURN = 0.5;
+  let turnStart = reduced.matches ? -100 : 1.1;
+  const pageTurn = (e) => {
+    if (reduced.matches) return;
+    turnStart = time;
+    shared.turn.value.y = e.detail?.forward === false ? -1 : 1;
+  };
+  window.addEventListener("sikap-page-turn", pageTurn);
   function render() {
+    const progress = (time - turnStart) / TURN;
+    shared.turn.value.x = progress >= 0 && progress <= 1 ? progress : -1;
     shared.time.value = time;
     shared.formation.value = reduced.matches
       ? 1
@@ -223,7 +283,7 @@ function mount(host) {
   };
   const move = (e) => {
     if (reduced.matches) return;
-    shared.pointer.value.set(...locate(e));
+    // The particles no longer part around the cursor; only the book tilts.
     if (!stage.contains(document.activeElement) && innerWidth > 700) {
       const b = stage.getBoundingClientRect();
       stage.style.setProperty(
@@ -284,6 +344,7 @@ function mount(host) {
     document.removeEventListener("visibilitychange", loop);
     reduced.removeEventListener("change", loop);
     window.removeEventListener("sikap-appearance", changePalette);
+    window.removeEventListener("sikap-page-turn", pageTurn);
     disposables.forEach((x) => x.dispose());
     renderer.dispose();
   };

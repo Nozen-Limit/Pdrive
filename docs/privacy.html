@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Notice · Project SIKAP</title>
+    <style>
+      /* Notice version 2026-11-08. If the wording below changes, also change
+         PRIVACY_NOTICE_VERSION in src/backend.js so every account agrees again. */
+      :root {
+        --ink: #243244;
+        --muted: #5b6b80;
+        --line: #d5dde8;
+        --page: #f4f6f9;
+        --paper: #ffffff;
+        --accent: #34475f;
+        --mark: #fff1b8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font:
+          15px/1.65 Inter,
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        padding-inline: max(16px, env(safe-area-inset-left, 0px))
+          max(16px, env(safe-area-inset-right, 0px));
+        padding-block: 40px 56px;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: clamp(20px, 5vw, 44px);
+      }
+      .brand {
+        margin: 0 0 4px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(26px, 4vw, 32px);
+        line-height: 1.2;
+        color: var(--accent);
+        text-wrap: balance;
+      }
+      .meta {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      h2 {
+        margin: 30px 0 8px;
+        font-size: 17px;
+        color: var(--accent);
+      }
+      p,
+      li {
+        max-width: 65ch;
+      }
+      ul {
+        padding-left: 20px;
+        margin: 8px 0;
+      }
+      li + li {
+        margin-top: 4px;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+        margin: 8px 0;
+      }
+      dt {
+        font-weight: 600;
+      }
+      dd {
+        margin: 0;
+      }
+      /* Details the school must fill in before this notice is published. */
+      mark {
+        background: var(--mark);
+        color: var(--ink);
+        padding: 0 3px;
+        border-radius: 2px;
+      }
+      a {
+        color: var(--accent);
+      }
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (max-width: 480px) {
+        dl {
+          grid-template-columns: 1fr;
+        }
+        dd {
+          margin-bottom: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">Project SIKAP</p>
+      <h1>Privacy Notice</h1>
+      <p class="meta">Effective November 8, 2026 · Version 2026-11-08</p>
+
+      <p>
+        Project SIKAP is the Digital Bank of Learning Resource Units of Eduardo
+        L. Joson National High School (ELJ National High School), Division of
+        Nueva Ecija. This notice explains what personal information the website
+        collects from teachers and Head Teachers, why it is collected, and your
+        rights under the Data Privacy Act of 2012 (Republic Act No. 10173).
+      </p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li>
+          <strong>Account details:</strong> your full name, email address and
+          password. The password is stored securely by the sign-in service and
+          no one at the school can read it.
+        </li>
+        <li>
+          <strong>Profile details you choose to add:</strong> phone number,
+          location, teaching assignment, subjects, grade levels and profile
+          photo.
+        </li>
+        <li>
+          <strong>Your work in the Digital Bank:</strong> the resources you
+          upload and their details, file versions, review feedback,
+          collaboration invitations, comments and proposed files, saved
+          resources, personal notes and notifications.
+        </li>
+        <li>
+          <strong>Activity records:</strong> when a resource is created,
+          submitted, reviewed, approved or archived, and by whom.
+        </li>
+      </ul>
+
+      <h2>Why we collect it</h2>
+      <ul>
+        <li>To confirm you teach at the school and approve your account.</li>
+        <li>
+          To credit you as the creator or contributor of every resource you work
+          on.
+        </li>
+        <li>
+          To let Head Teachers review, approve and monitor submitted resources.
+        </li>
+        <li>To notify you about your resources and collaboration requests.</li>
+      </ul>
+      <p>
+        Your information is not sold or used for advertising. Any information
+        from this website used in the Project SIKAP research is reported without
+        names.
+      </p>
+
+      <h2>Who can see it</h2>
+      <ul>
+        <li>
+          Approved school accounts see your name on resources you create or
+          contribute to.
+        </li>
+        <li>
+          Head Teachers see account details to approve accounts and monitor
+          submissions.
+        </li>
+        <li>Your personal notes are visible only to you.</li>
+        <li>
+          The information is stored with Supabase, the database service the
+          website runs on.
+        </li>
+      </ul>
+
+      <h2>How long we keep it</h2>
+      <p>
+        <mark
+          >[School to confirm: for example, while you teach at ELJ National High
+          School, and up to N years after your account is closed.]</mark
+        >
+        Approved resources stay in the Digital Bank, with your name credited, as
+        part of the school's permanent collection.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>Under RA 10173 you have the right to:</p>
+      <ul>
+        <li>be told how your information is used, as in this notice;</li>
+        <li>see the personal information the website holds about you;</li>
+        <li>correct it, which you can do yourself on your Profile page;</li>
+        <li>object to its use, or ask for it to be removed or blocked;</li>
+        <li>get a copy of it in a common file format; and</li>
+        <li>
+          file a complaint with the National Privacy Commission
+          (privacy.gov.ph).
+        </li>
+      </ul>
+
+      <h2>Contact</h2>
+      <dl>
+        <dt>Data Protection Officer</dt>
+        <dd><mark>[Name and position]</mark></dd>
+        <dt>Email</dt>
+        <dd><mark>[Email address]</mark></dd>
+        <dt>Office</dt>
+        <dd>Eduardo L. Joson National High School, Nueva Ecija</dd>
+      </dl>
+
+      <h2>Your agreement</h2>
+      <p>
+        When you create an account, or choose “I agree” after signing in, the
+        website records the date and this notice's version. If the notice
+        changes, you will be asked to read and agree to it again.
+      </p>
+    </main>
+  </body>
+</html>

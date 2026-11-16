@@ -124,7 +124,14 @@ function remember(value) {
   localStorage.setItem("sikap-remember", value ? "yes" : "no");
   storage.removeItem("sikap-auth");
 }
-export const validateFile = validateResourceFile;
+// PowerPoint uploads are switched off until the school confirms it wants them.
+// The checks below the line stay in place so they can be turned back on.
+const POWERPOINT_ENABLED = false;
+export async function validateFile(file) {
+  if (!POWERPOINT_ENABLED && /\.pptx?$/i.test(file?.name || ""))
+    throw Error("Only PDF and Word (DOCX) files are supported.");
+  return validateResourceFile(file);
+}
 async function upload(file, mid) {
   const user = await current(),
     mime = await validateFile(file),
@@ -155,6 +162,13 @@ async function signedVersions(versions) {
     }),
   );
 }
+// Bump this whenever app/public/privacy.html changes, so every account is
+// asked to read and agree to the new notice (RA 10173).
+const PRIVACY_NOTICE_VERSION = "2026-11-08";
+const privacyConsent = () => ({
+  privacy_notice_version: PRIVACY_NOTICE_VERSION,
+  privacy_consent_at: new Date().toISOString(),
+});
 const backend = {
   phone: { normalize: normalizePhilippinePhone, format: formatPhilippinePhone },
   get recovery() {
@@ -263,6 +277,8 @@ const backend = {
         ...state,
         ...(!result.error ? result.data : {}),
         workflowReady: !result.error,
+        privacyAccepted:
+          user.user_metadata?.privacy_notice_version === PRIVACY_NOTICE_VERSION,
       };
     }
     if (path === "requirements" && method === "POST")
@@ -465,6 +481,10 @@ const backend = {
 const requestPasswordReset = client
   ? createResetRequester(client.auth, location.href, sessionStorage)
   : null;
-backend.validateBankFile = validateResourceFile;
+backend.validateBankFile = validateFile;
+backend.acceptPrivacy = async () => {
+  await backend.ready();
+  checked(await client.auth.updateUser({ data: privacyConsent() }));
+};
 backend.bank = createBankService(client, config, checked, signedVersions);
 window.sikapBackend = backend;

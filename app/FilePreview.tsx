@@ -7,6 +7,7 @@ import {
 } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { Version } from "./types";
+import { PPTX_TYPE } from "./domain";
 import { ErrorNotice, Loading } from "./ui";
 GlobalWorkerOptions.workerSrc = workerUrl;
 function PdfPreview({ url }: { url: string }) {
@@ -117,7 +118,12 @@ function PdfPreview({ url }: { url: string }) {
 export function FilePreview({ file }: { file: Version | undefined }) {
   const docx = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (file?.url && file.type !== "application/pdf" && docx.current) {
+    if (
+      file?.url &&
+      file.type !== "application/pdf" &&
+      file.type !== PPTX_TYPE &&
+      docx.current
+    ) {
       if (window.previewDocx) void window.previewDocx(file.url, docx.current);
       else
         docx.current.textContent =
@@ -128,6 +134,13 @@ export function FilePreview({ file }: { file: Version | undefined }) {
     return (
       <Typography color="text.secondary">
         The file is unavailable. Refresh the resource to try again.
+      </Typography>
+    );
+  if (file.type === PPTX_TYPE)
+    return (
+      <Typography color="text.secondary">
+        Slides can’t be previewed here. Download the file to open it in
+        PowerPoint or Google Slides.
       </Typography>
     );
   return file.type === "application/pdf" ? (

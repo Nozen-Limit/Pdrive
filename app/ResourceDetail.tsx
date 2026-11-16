@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Divider,
+  IconButton,
   Link,
   MenuItem,
   Stack,
@@ -16,6 +17,7 @@ import {
 import {
   ArrowBack,
   ArchiveOutlined,
+  Bookmark,
   BookmarkBorderOutlined,
   DownloadOutlined,
   ExpandMore,
@@ -24,12 +26,27 @@ import {
   UploadFileOutlined,
 } from "@mui/icons-material";
 import { backend, message, resourceDetails } from "./api";
-import { criteria, date, resourceState } from "./domain";
+import {
+  categories,
+  criteria,
+  date,
+  fileAccept,
+  fileHint,
+  resourceState,
+} from "./domain";
 import type { Person, Resource, ResourceDetail as Detail } from "./types";
 const FilePreview = lazy(() =>
   import("./FilePreview").then((module) => ({ default: module.FilePreview })),
 );
-import { ErrorNotice, Loading, Status, row, type Confirm } from "./ui";
+import {
+  ErrorNotice,
+  FileTile,
+  Loading,
+  Status,
+  initials,
+  row,
+  type Confirm,
+} from "./ui";
 export function ResourceDetail({
   id,
   person,
@@ -271,53 +288,125 @@ export function ResourceDetail({
               (head || (own && ["draft", "returned"].includes(state)));
           return (
             <>
-              <Box sx={{ maxWidth: 1100 }}>
-                <Typography
-                  variant="h1"
-                  component="h2"
-                  sx={{ overflowWrap: "anywhere", mb: 1 }}
+              <Box
+                component="header"
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "flex-start",
+                  gap: 2,
+                  p: { xs: 2, md: 2.5 },
+                  mb: 2.5,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Box
+                  sx={{
+                    transform: "scale(1.35)",
+                    transformOrigin: "top left",
+                    mr: 1.5,
+                    mb: 1.5,
+                  }}
                 >
-                  {r.title}
-                </Typography>
-                {!!r.contributors?.length && (
-                  <Typography color="text.secondary" sx={{ mb: 1 }}>
-                    Contributors: {r.contributors.map((p) => p.name).join(", ")}
-                  </Typography>
-                )}
-                <Box sx={{ ...row, mb: 1 }}>
-                  <Status resource={r} />
-                  <Typography variant="caption" color="text.secondary">
-                    {r.creator} · {r.subject} · {r.grade} · {r.term}
-                  </Typography>
+                  <FileTile name={file?.name || r.filename} />
                 </Box>
-                <Box sx={{ ...row, mb: 3 }}>
-                  {file?.downloadUrl && !file.unavailable && (
-                    <Button
-                      component="a"
-                      href={file.downloadUrl}
-                      download={file.name}
-                      startIcon={<DownloadOutlined />}
-                      variant="outlined"
-                    >
-                      Download
-                    </Button>
-                  )}
-                  {!!r.bank_category && (
-                    <Button
-                      startIcon={<BookmarkBorderOutlined />}
-                      disabled={busy}
-                      onClick={() => void saveToggle()}
-                    >
-                      {r.saved ? "Saved" : "Save resource"}
-                    </Button>
-                  )}
-                  {canEdit && (
-                    <Button onClick={() => onEdit(r)} disabled={busy}>
-                      Edit details
-                    </Button>
-                  )}
+                <Box sx={{ flex: "1 1 320px", minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "text.secondary",
+                    }}
+                  >
+                    {categories[
+                      (r.bank_category || r.category) as keyof typeof categories
+                    ] ||
+                      r.bank_category ||
+                      r.category}
+                  </Typography>
+                  <Typography
+                    variant="h1"
+                    component="h2"
+                    sx={{
+                      fontSize: 24,
+                      lineHeight: 1.25,
+                      overflowWrap: "anywhere",
+                      my: 0.5,
+                      textWrap: "balance",
+                    }}
+                  >
+                    {r.title}
+                  </Typography>
+                  <Box sx={{ ...row, gap: 1.25, color: "text.secondary" }}>
+                    <Status resource={r} />
+                    <Box sx={{ ...row, gap: 0.75 }}>
+                      <Box
+                        component="span"
+                        aria-hidden="true"
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          display: "inline-grid",
+                          placeItems: "center",
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "background.paper",
+                          bgcolor: "primary.main",
+                        }}
+                      >
+                        {initials(r.creator || "?")}
+                      </Box>
+                      <Typography sx={{ fontSize: 13, color: "text.primary" }}>
+                        {r.creator}
+                        {r.contributors?.length
+                          ? ` with ${r.contributors.map((p) => p.name).join(", ")}`
+                          : ""}
+                      </Typography>
+                    </Box>
+                    {[r.subject, r.grade, r.term].filter(Boolean).map((t) => (
+                      <Box
+                        key={t}
+                        component="span"
+                        sx={{
+                          fontSize: 12,
+                          px: 1,
+                          py: 0.25,
+                          bgcolor: "action.hover",
+                          color: "text.primary",
+                        }}
+                      >
+                        {t}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box
+                  sx={{
+                    ...row,
+                    gap: 1,
+                    ml: { sm: "auto" },
+                    width: { xs: "100%", sm: "auto" },
+                    flexDirection: { xs: "row-reverse", sm: "row" },
+                    justifyContent: { xs: "flex-end", sm: "flex-start" },
+                  }}
+                >
+                  <IconButton
+                    aria-label="Refresh"
+                    title="Refresh"
+                    onClick={() => setRetry((n) => n + 1)}
+                    disabled={busy}
+                    sx={{ border: 1, borderColor: "divider" }}
+                  >
+                    <Refresh fontSize="small" />
+                  </IconButton>
                   {head && !!r.bank_category && state !== "draft" && (
                     <Button
+                      variant="outlined"
                       startIcon={
                         r.archived ? <RestoreOutlined /> : <ArchiveOutlined />
                       }
@@ -327,13 +416,38 @@ export function ResourceDetail({
                       {r.archived ? "Restore" : "Archive"}
                     </Button>
                   )}
-                  <Button
-                    startIcon={<Refresh />}
-                    onClick={() => setRetry((n) => n + 1)}
-                    disabled={busy}
-                  >
-                    Refresh
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => onEdit(r)}
+                      disabled={busy}
+                    >
+                      Edit details
+                    </Button>
+                  )}
+                  {!!r.bank_category && (
+                    <Button
+                      variant="outlined"
+                      startIcon={
+                        r.saved ? <Bookmark /> : <BookmarkBorderOutlined />
+                      }
+                      disabled={busy}
+                      onClick={() => void saveToggle()}
+                    >
+                      {r.saved ? "Saved" : "Save"}
+                    </Button>
+                  )}
+                  {file?.downloadUrl && !file.unavailable && (
+                    <Button
+                      component="a"
+                      href={file.downloadUrl}
+                      download={file.name}
+                      startIcon={<DownloadOutlined />}
+                      variant="contained"
+                    >
+                      Download
+                    </Button>
+                  )}
                 </Box>
               </Box>
               <Box
@@ -341,41 +455,117 @@ export function ResourceDetail({
                   display: "grid",
                   gridTemplateColumns: {
                     xs: "minmax(0,1fr)",
-                    lg: "minmax(0,800px) minmax(260px,320px)",
+                    lg: "minmax(0,1fr) 340px",
                   },
-                  gap: 3,
+                  gap: 2.5,
                   alignItems: "start",
                 }}
               >
-                <Box sx={{ minWidth: 0 }}>
-                  {r.bank_description && (
-                    <Typography
+                <Box sx={{ minWidth: 0, display: "grid", gap: 2.5 }}>
+                  {(r.bank_description || r.bank_localization) && (
+                    <Box
+                      component="section"
                       sx={{
-                        whiteSpace: "pre-wrap",
-                        mb: 2,
-                        overflowWrap: "anywhere",
+                        border: 1,
+                        borderColor: "divider",
+                        bgcolor: "background.paper",
                       }}
                     >
-                      {r.bank_description}
-                    </Typography>
+                      <Typography
+                        variant="h3"
+                        component="h3"
+                        sx={{
+                          px: 2.5,
+                          py: 1.5,
+                          borderBottom: 1,
+                          borderColor: "divider",
+                        }}
+                      >
+                        About this resource
+                      </Typography>
+                      <Box sx={{ p: 2.5, display: "grid", gap: 2 }}>
+                        {r.bank_description && (
+                          <Typography
+                            sx={{
+                              whiteSpace: "pre-wrap",
+                              overflowWrap: "anywhere",
+                              fontSize: 14,
+                              lineHeight: 1.6,
+                              maxWidth: "70ch",
+                            }}
+                          >
+                            {r.bank_description}
+                          </Typography>
+                        )}
+                        {r.bank_localization && (
+                          <Box
+                            sx={(theme) => ({
+                              p: 1.75,
+                              borderLeft: 3,
+                              borderColor: "primary.main",
+                              bgcolor: `color-mix(in srgb, ${theme.palette.primary.main} 6%, transparent)`,
+                            })}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                color: "text.secondary",
+                                mb: 0.5,
+                              }}
+                            >
+                              How it was localized
+                            </Typography>
+                            <Typography
+                              sx={{
+                                whiteSpace: "pre-wrap",
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {r.bank_localization.replace(
+                                /^Contextualization \/ Localization:\s*/i,
+                                "",
+                              )}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
                   )}
                   {state !== "draft" && (
-                    <Suspense fallback={<Loading label="Loading preview…" />}>
-                      <FilePreview file={file} />
-                    </Suspense>
-                  )}
-                  <Box component="section" sx={{ mt: 3 }}>
-                    <Typography variant="h2" component="h3" gutterBottom>
-                      Contextualization / Localization
-                    </Typography>
-                    <Typography
-                      sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+                    <Box
+                      component="section"
+                      sx={{
+                        border: 1,
+                        borderColor: "divider",
+                        bgcolor: "background.paper",
+                      }}
                     >
-                      {r.bank_localization || "—"}
-                    </Typography>
-                  </Box>
-                  <Box component="section" sx={{ mt: 3 }}>
-                    <Typography variant="h2" component="h3" gutterBottom>
+                      <Typography
+                        variant="h3"
+                        component="h3"
+                        sx={{
+                          px: 2.5,
+                          py: 1.5,
+                          borderBottom: 1,
+                          borderColor: "divider",
+                        }}
+                      >
+                        Preview
+                      </Typography>
+                      <Box sx={{ p: 2.5 }}>
+                        <Suspense
+                          fallback={<Loading label="Loading preview…" />}
+                        >
+                          <FilePreview file={file} />
+                        </Suspense>
+                      </Box>
+                    </Box>
+                  )}
+                  <Box component="section">
+                    <Typography variant="h3" component="h3" sx={{ mb: 1.25 }}>
                       Version history
                     </Typography>
                     {!detail.versions.length && (
@@ -459,8 +649,8 @@ export function ResourceDetail({
                     ))}
                   </Box>
                   {!!detail.events.length && (
-                    <Box component="section" sx={{ mt: 3 }}>
-                      <Typography variant="h2" component="h3" gutterBottom>
+                    <Box component="section">
+                      <Typography variant="h3" component="h3" sx={{ mb: 1.25 }}>
                         Activity
                       </Typography>
                       <Stack spacing={1.5}>
@@ -485,12 +675,14 @@ export function ResourceDetail({
                     minWidth: 0,
                     border: 1,
                     borderColor: "divider",
-                    borderRadius: 1,
-                    p: 2,
+                    bgcolor: "background.paper",
+                    p: 2.5,
+                    position: { lg: "sticky" },
+                    top: { lg: 76 },
                   }}
                 >
-                  <Typography variant="h2" component="h3" sx={{ mb: 2 }}>
-                    Resource details
+                  <Typography variant="h3" component="h3" sx={{ mb: 2 }}>
+                    Details
                   </Typography>
                   <Box
                     component="dl"
@@ -499,34 +691,61 @@ export function ResourceDetail({
                       display: "grid",
                       gridTemplateColumns: "minmax(85px,.8fr) minmax(0,1fr)",
                       gap: 1.25,
-                      "& dt": { color: "text.secondary" },
+                      "& dt": { color: "text.secondary", fontSize: 12 },
                       "& dd": { m: 0, overflowWrap: "anywhere" },
                     }}
                   >
                     {[
-                      ["Category", r.bank_category || r.category],
+                      [
+                        "Category",
+                        categories[
+                          (r.bank_category ||
+                            r.category) as keyof typeof categories
+                        ] ||
+                          r.bank_category ||
+                          r.category,
+                      ],
                       ["Learning area", r.subject],
                       ["Grade", r.grade],
-                      ["Quarter", r.term],
-                      ["Created by", r.creator],
-                      ["Approved by", r.approverName || "—"],
-                      ["Approved on", date(r.approved)],
+                      ["Term", r.term],
+                      ["Resource type", r.bank_resource_type],
+                      ["Language", r.bank_language],
+                      ["Usage rights", r.bank_rights],
+                      ["Approved by", r.approverName],
+                      ["Approved on", r.approved && date(r.approved)],
                       ["Updated", date(r.updated)],
-                    ].map(([key, value]) => (
-                      <Box key={key} sx={{ display: "contents" }}>
-                        <Typography component="dt">{key}</Typography>
-                        <Typography component="dd">{value}</Typography>
-                      </Box>
-                    ))}
+                    ]
+                      .filter(([, value]) => value)
+                      .map(([key, value]) => (
+                        <Box key={key} sx={{ display: "contents" }}>
+                          <Typography component="dt">{key}</Typography>
+                          <Typography component="dd">{value}</Typography>
+                        </Box>
+                      ))}
                   </Box>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="h3" component="h4" gutterBottom>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "text.secondary",
+                      mb: 0.75,
+                    }}
+                  >
                     Learning competency
                   </Typography>
                   <Typography
-                    sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+                    sx={{
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                      fontWeight: 500,
+                      p: 1.5,
+                      bgcolor: "action.hover",
+                    }}
                   >
-                    {r.bank_competency}
+                    {r.bank_competency || "—"}
                   </Typography>
                   {r.bank_competency_code && (
                     <Typography variant="caption">
@@ -546,15 +765,42 @@ export function ResourceDetail({
                       · {r.bank_curriculum_version}
                     </Typography>
                   )}
-                  <Typography variant="h3" component="h4" sx={{ mt: 2, mb: 1 }}>
-                    Keywords / Tags
-                  </Typography>
-                  <Typography
-                    color="text.secondary"
-                    sx={{ overflowWrap: "anywhere" }}
-                  >
-                    {r.bank_tags?.join(", ") || "—"}
-                  </Typography>
+                  {!!r.bank_tags?.length && (
+                    <>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: "text.secondary",
+                          mt: 2,
+                          mb: 0.75,
+                        }}
+                      >
+                        Tags
+                      </Typography>
+                      <Box
+                        sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}
+                      >
+                        {r.bank_tags.map((t) => (
+                          <Box
+                            key={t}
+                            component="span"
+                            sx={{
+                              fontSize: 12,
+                              px: 1,
+                              py: 0.25,
+                              border: 1,
+                              borderColor: "divider",
+                            }}
+                          >
+                            {t}
+                          </Box>
+                        ))}
+                      </Box>
+                    </>
+                  )}
                   {r.bank_source && (
                     <>
                       <Typography
@@ -675,7 +921,7 @@ export function ResourceDetail({
                           <input
                             hidden
                             type="file"
-                            accept=".pdf,.docx"
+                            accept={fileAccept}
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file)
@@ -692,7 +938,7 @@ export function ResourceDetail({
                           />
                         </Button>
                         <Typography color="text.secondary" variant="caption">
-                          {revisionFile?.name || "PDF or DOCX · up to 20 MB"}
+                          {revisionFile?.name || fileHint}
                         </Typography>
                         <TextField
                           name="changes"
