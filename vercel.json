@@ -4,6 +4,25 @@
   "installCommand": "echo skip install",
   "buildCommand": "echo serving prebuilt docs",
   "outputDirectory": "docs",
-  "redirects": [{ "source": "/", "destination": "/Pdrive/", "permanent": false }],
-  "rewrites": [{ "source": "/Pdrive/:path*", "destination": "/:path*" }]
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/Pdrive/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/Pdrive",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/Pdrive/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/Pdrive/:path*",
+      "destination": "/:path*"
+    }
+  ]
 }
