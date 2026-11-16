@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo skip install",
+  "buildCommand": "echo serving prebuilt docs",
+  "outputDirectory": "docs",
+  "redirects": [{ "source": "/", "destination": "/Pdrive/", "permanent": false }],
+  "rewrites": [{ "source": "/Pdrive/:path*", "destination": "/:path*" }]
+}
