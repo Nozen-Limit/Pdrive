@@ -1,14 +1,16 @@
 import { createTheme } from "@mui/material/styles";
 export const palettes = {
+  // Paper white: the same colors as the front page.
   white: {
-    name: "White",
-    background: "#fafbfc",
+    name: "Paper white",
+    background: "#fcfcfa",
     paper: "#ffffff",
-    primary: "#34475f",
-    text: "#202b38",
-    muted: "#75808c",
-    line: "#e4e7eb",
-    side: "#f5f7f8",
+    primary: "#13213a",
+    text: "#13213a",
+    muted: "#66748a",
+    line: "#dfe4ea",
+    side: "#f6f7f5",
+    accent: "#f2b53a",
   },
   slate: {
     name: "Slate",
@@ -19,6 +21,7 @@ export const palettes = {
     muted: "#a2afc1",
     line: "#303d4c",
     side: "#131c27",
+    accent: "#b7c7df",
   },
   ocean: {
     name: "Ocean",
@@ -29,6 +32,7 @@ export const palettes = {
     muted: "#9bb6c7",
     line: "#294554",
     side: "#0e202d",
+    accent: "#a6cbdc",
   },
   forest: {
     name: "Forest",
@@ -39,6 +43,7 @@ export const palettes = {
     muted: "#a0b6a8",
     line: "#324b3d",
     side: "#15231d",
+    accent: "#b8cdbd",
   },
   warm: {
     name: "Warm",
@@ -49,6 +54,7 @@ export const palettes = {
     muted: "#c0b1a0",
     line: "#4d4135",
     side: "#272019",
+    accent: "#d9c6ac",
   },
 };
 export type PaletteName = keyof typeof palettes;
@@ -58,6 +64,7 @@ export function makeTheme(name: PaletteName) {
     palette: {
       mode: name === "white" ? "light" : "dark",
       primary: { main: p.primary },
+      secondary: { main: p.accent },
       background: { default: p.background, paper: p.paper },
       text: { primary: p.text, secondary: p.muted },
       divider: p.line,
