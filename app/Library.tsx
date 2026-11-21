@@ -217,7 +217,8 @@ export function Library({
     [filterOpen, setFilterOpen] = useState(false),
     [layout, setLayout] = useState<"list" | "grid" | "board">(() => {
       const saved = sessionStorage.getItem("sikap-react-layout");
-      return saved === "grid" || saved === "board" ? saved : "list";
+      // Board view is the default; a view picked this session is kept.
+      return saved === "grid" || saved === "list" ? saved : "board";
     }),
     [menu, setMenu] = useState<{
       anchor: HTMLElement;
