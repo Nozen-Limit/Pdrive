@@ -4,16 +4,36 @@ import {
   resourceExtension,
 } from "../_shared/resource-file.js";
 
-const headers = {
-  "Access-Control-Allow-Origin": "*",
+// Only the school's own site may call this from a browser. Set ALLOWED_ORIGINS
+// to a comma-separated list (e.g. https://school.github.io,https://sikap.vercel.app).
+// When it is not set, any origin is allowed, as before; sign-in is still required.
+const allowed = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+let headers = {};
+const corsFor = (origin) => ({
+  "Access-Control-Allow-Origin": !allowed.length
+    ? "*"
+    : allowed.includes(origin)
+      ? origin
+      : allowed[0],
   "Access-Control-Allow-Headers":
     "authorization, apikey, x-client-info, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  Vary: "Origin",
   "Content-Type": "application/json",
-};
+});
 const reply = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
 Deno.serve(async (request) => {
+  const origin = request.headers.get("Origin") || "";
+  headers = corsFor(origin);
+  if (allowed.length && origin && !allowed.includes(origin))
+    return reply(
+      { error: "Uploads are only accepted from the school site." },
+      403,
+    );
   if (request.method === "OPTIONS")
     return new Response(null, { status: 204, headers });
   if (request.method !== "POST")

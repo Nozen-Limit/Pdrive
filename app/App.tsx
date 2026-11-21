@@ -53,6 +53,7 @@ const scopeNames: Scope[] = [
   "review",
   "all",
   "archived",
+  "myarchive",
 ];
 function initialRoute(): { page: Page; scope: Scope; resource: string } {
   try {

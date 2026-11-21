@@ -123,3 +123,25 @@ Overview interface
   Module search, status tabs, filters and Board/List toggle use existing state.
   Requirements, notes, activity, module permissions and review rules remain
   connected to the existing data. This interface update requires no new SQL.
+
+TEACHER AND HEAD-TEACHER TOOLS (November 2026)
+  Run supabase/teacher-tools.sql once in the Supabase SQL Editor, after
+  proposal-alignment.sql. It is safe to rerun and deletes nothing. It adds:
+  "Don't accept" with a reason, review assignment to a head teacher or subject
+  coordinator, coordinators, owner-only head-teacher promotion, account
+  deactivation, problem reports, sharing, My archive, extra files on a
+  resource, collaboration ownership transfer, @mentions, announcements and
+  report export. Until it is applied, those buttons show "This feature needs
+  a database update" and the rest of SIKAP works as before.
+
+  Upload function origins: redeploy bank-upload and set its allowed sites,
+     supabase secrets set ALLOWED_ORIGINS=https://YOUR-SITE --project-ref REF
+     supabase functions deploy bank-upload --project-ref REF
+  Use a comma-separated list for several sites (GitHub Pages and Vercel).
+  Without ALLOWED_ORIGINS the function accepts any site, as before.
+
+  Security headers for the Vercel deployment are set in vercel.json.
+  GitHub Pages cannot set response headers.
+
+  Switched off pending the client: PowerPoint uploads (POWERPOINT_ENABLED in
+  src/backend.js, plus proposal-alignment.sql) and the Privacy Notice prompts.

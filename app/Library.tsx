@@ -85,40 +85,54 @@ function FilterChip({
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const shown = items.find(([v]) => v === value)?.[1];
+  const active = !!(value && clearable);
   return (
     <>
-      <Button
-        variant="outlined"
-        color="inherit"
-        aria-haspopup="menu"
-        onClick={(e) => setAnchor(e.currentTarget)}
+      <Box
         sx={{
-          borderColor: value && clearable ? "primary.main" : "divider",
-          bgcolor: value && clearable ? "action.selected" : "background.paper",
-          fontWeight: 500,
-          gap: 0.75,
+          display: "inline-flex",
+          border: 1,
+          borderColor: active ? "primary.main" : "divider",
+          bgcolor: active ? "action.selected" : "background.paper",
         }}
       >
-        {shown && clearable ? shown : shown ? `${label}: ${shown}` : label}
-        {value && clearable ? (
-          <Box
-            component="span"
-            role="button"
-            aria-label={`Remove ${shown}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange("");
+        <Button
+          color="inherit"
+          aria-haspopup="menu"
+          aria-label={shown ? `${label}: ${shown}` : label}
+          onClick={(e) => setAnchor(e.currentTarget)}
+          sx={{ fontWeight: 500, gap: 0.75, border: 0 }}
+        >
+          {shown && clearable ? shown : shown ? `${label}: ${shown}` : label}
+          {!active && (
+            <Box
+              component="span"
+              aria-hidden="true"
+              sx={{ color: "text.secondary", fontSize: 10 }}
+            >
+              ▾
+            </Box>
+          )}
+        </Button>
+        {active && (
+          <Button
+            color="inherit"
+            aria-label={`Remove ${shown} filter`}
+            onClick={() => onChange("")}
+            sx={{
+              minWidth: 0,
+              px: 1,
+              fontSize: 16,
+              lineHeight: 1,
+              color: "text.secondary",
+              borderLeft: 1,
+              borderColor: "divider",
             }}
-            sx={{ color: "text.secondary", fontSize: 15, lineHeight: 1 }}
           >
             ×
-          </Box>
-        ) : (
-          <Box component="span" sx={{ color: "text.secondary", fontSize: 10 }}>
-            ▾
-          </Box>
+          </Button>
         )}
-      </Button>
+      </Box>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
         {clearable && (
           <MenuItem
