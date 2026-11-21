@@ -26,6 +26,7 @@ import { resourceState } from "./domain";
 import { makeTheme, palettes, type PaletteName } from "./theme";
 import { Operations } from "./operations";
 import { Auth } from "./Auth";
+import { Landing } from "./Landing";
 import { Workspace } from "./Workspace";
 import { Help } from "./Help";
 const Collaboration = lazy(() => import("./Collaboration"));
@@ -354,7 +355,11 @@ export function App() {
   else if (!state || recovering)
     content = (
       <>
-        <Auth onSignedIn={loadSession} recovering={recovering} />
+        {recovering ? (
+          <Auth onSignedIn={loadSession} recovering={recovering} />
+        ) : (
+          <Landing onSignedIn={loadSession} />
+        )}
         {initialError && (
           <Box sx={{ position: "fixed", bottom: 16, left: 16, right: 16 }}>
             <ErrorNotice
