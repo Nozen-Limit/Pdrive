@@ -206,7 +206,7 @@ export function Workspace({
                   top: 6,
                   bottom: 6,
                   width: 3,
-                  bgcolor: "secondary.main",
+                  bgcolor: "primary.main",
                 },
               }}
             >
