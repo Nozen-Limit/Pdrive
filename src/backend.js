@@ -467,6 +467,19 @@ const backend = {
     if (initError) throw initError;
     return requestPasswordReset(email);
   },
+  // Signed-in password change: confirm the current password first.
+  async changePassword(currentPassword, nextPassword) {
+    const user = await current();
+    if (nextPassword.length < 12) fail("Use at least 12 characters.");
+    if (nextPassword === currentPassword)
+      fail("Choose a password different from your current one.");
+    const check = await client.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (check.error) fail("Your current password is incorrect.");
+    checked(await client.auth.updateUser({ password: nextPassword }));
+  },
   async updatePassword(password) {
     await this.ready();
     if (!recovery)

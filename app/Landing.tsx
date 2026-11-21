@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import { backend, message } from "./api";
 import "./landing.css";
 
@@ -9,18 +15,6 @@ const Book = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
     <path
       d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-const Icon = ({ d }: { d: string }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      d={d}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -43,7 +37,34 @@ const Logo = () => (
 
 /** Public front page: what SIKAP is, plus sign in and account creation. */
 export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null),
+    root = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  // Reveal sections as they scroll into view; the page is fully visible
+  // without this script or with reduced motion.
+  useEffect(() => {
+    const page = root.current;
+    if (!page || !("IntersectionObserver" in window)) return;
+    page.classList.add("js");
+    const seen = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            seen.unobserve(entry.target);
+          }
+        }),
+      { threshold: 0.18, rootMargin: "0px 0px -40px 0px" },
+    );
+    page.querySelectorAll(".reveal").forEach((el) => seen.observe(el));
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      seen.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
   const [mode, setMode] = useState<Mode>("signin"),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState<Notice>(null),
@@ -150,45 +171,274 @@ export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
 
   const register = mode === "register";
   return (
-    <div className="lp" id="top">
-      <div className="lp-bg" aria-hidden="true" />
-      <header className="lp-header lp-wrap">
-        <nav className="lp-nav" aria-label="Main">
+    <div className="lp" id="top" ref={root}>
+      <header className={`lp-header${scrolled ? " is-scrolled" : ""}`}>
+        <nav className="lp-nav lp-wrap" aria-label="Main">
           <Logo />
           <div className="lp-links">
             <a href="#how">How it works</a>
-            <a href="#features">Features</a>
+            <a href="#teachers">For teachers</a>
             <a href="#heads">For head teachers</a>
           </div>
-          <button
-            type="button"
-            className="lp-btn primary"
-            onClick={() => open("register")}
-          >
-            Create account
-          </button>
-          <button
-            type="button"
-            className="lp-btn outline"
-            onClick={() => open("signin")}
-          >
-            Sign in
-          </button>
+          <div className="lp-nav-actions">
+            <button
+              type="button"
+              className="lp-btn text"
+              onClick={() => open("signin")}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="lp-btn primary"
+              onClick={() => open("register")}
+            >
+              Create account
+            </button>
+          </div>
         </nav>
       </header>
 
       <main>
-        <div className="lp-wrap lp-hero">
-          <p className="lp-eyebrow">Project SIKAP</p>
-          <h1>
-            Every lesson, <span>shared and reviewed</span>
-          </h1>
-          <p className="lp-lead">
-            The school's Digital Bank of teaching resources. Teachers upload,
-            head teachers review, and every approved lesson is ready for the
-            whole faculty.
+        <section className="lp-hero">
+          <div className="lp-wrap lp-hero-grid">
+            <div>
+              <p className="lp-kicker lp-rise">Project SIKAP · Digital Bank</p>
+              <h1
+                className="lp-rise"
+                style={{ "--d": "0.08s" } as CSSProperties}
+              >
+                Every lesson your school writes, <em>checked and shared.</em>
+              </h1>
+              <p
+                className="lp-lead lp-rise"
+                style={{ "--d": "0.16s" } as CSSProperties}
+              >
+                Teachers upload the lessons and worksheets they already use. A
+                head teacher reviews each one. Approved resources become the
+                school's shared bank, tagged to the learning competency they
+                teach.
+              </p>
+              <div
+                className="lp-ctas lp-rise"
+                style={{ "--d": "0.24s" } as CSSProperties}
+              >
+                <button
+                  type="button"
+                  className="lp-btn primary"
+                  onClick={() => open("register")}
+                >
+                  Create your teacher account
+                </button>
+                <button
+                  type="button"
+                  className="lp-btn outline"
+                  onClick={() => open("signin")}
+                >
+                  Sign in{" "}
+                  <span className="arrow" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+              </div>
+              <dl
+                className="lp-facts lp-rise"
+                style={{ "--d": "0.32s" } as CSSProperties}
+              >
+                <div>
+                  <dt>4-point</dt>
+                  <dd>review checklist before anything is shared</dd>
+                </div>
+                <div>
+                  <dt>PDF · DOCX</dt>
+                  <dd>files up to 20 MB, kept private to the school</dd>
+                </div>
+                <div>
+                  <dt>Grade 7–10</dt>
+                  <dd>sorted by learning area, grade and term</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div
+              className="lp-flow lp-rise"
+              style={{ "--d": "0.2s" } as CSSProperties}
+              role="img"
+              aria-label="A lesson moves from a teacher's drafts, through head-teacher review, into the Digital Bank."
+            >
+              <div className="lp-flow-head">
+                <b>A lesson's way into the bank</b>
+                <span className="lp-live">Live example</span>
+              </div>
+              <div className="lp-lanes" aria-hidden="true">
+                {["Your drafts", "In review", "Digital Bank"].map((lane) => (
+                  <div className="lp-lane" key={lane}>
+                    <h4>{lane}</h4>
+                    <div className="lp-ghost">
+                      <i />
+                      <i />
+                    </div>
+                    <div className="lp-ghost" style={{ marginTop: 92 }}>
+                      <i />
+                      <i />
+                    </div>
+                  </div>
+                ))}
+                <div className="lp-mover">
+                  <div className="lp-mover-file">
+                    <span>PDF</span>
+                    <b>Energy flow in rice fields</b>
+                  </div>
+                  <small>Science · Grade 8 · Term 2</small>
+                  <div className="lp-checks">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                  <div className="lp-states">
+                    <span className="lp-state draft">Draft</span>
+                    <span className="lp-state review">Checklist</span>
+                    <span className="lp-state ok">Approved</span>
+                  </div>
+                </div>
+                <span className="lp-stamp">APPROVED</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section lp-wrap" id="how">
+          <p className="lp-eyebrow reveal">How it works</p>
+          <h2 className="reveal">
+            Three steps from your classroom to every classroom.
+          </h2>
+          <ol className="lp-path reveal">
+            <li>
+              <h3>Upload</h3>
+              <p>
+                Add a lesson plan, worksheet or module with its grade, term and
+                learning competency. Save it as a draft until it's ready.
+              </p>
+            </li>
+            <li>
+              <h3>Review</h3>
+              <p>
+                A head teacher or subject coordinator checks objectives,
+                content, activities and assessment, then approves it or sends it
+                back with notes.
+              </p>
+            </li>
+            <li>
+              <h3>Share</h3>
+              <p>
+                Approved resources join the Digital Bank, where every teacher
+                can find, save and download them, with your name on them.
+              </p>
+            </li>
+          </ol>
+        </section>
+
+        <section className="lp-section lp-wrap" id="teachers">
+          <div className="lp-split">
+            <div>
+              <p className="lp-eyebrow reveal">For teachers</p>
+              <h2 className="reveal">Less searching. More teaching.</h2>
+              <p className="lp-sub reveal">
+                Find what a colleague already made for the same competency, and
+                build on it instead of starting from a blank page.
+              </p>
+            </div>
+            <ul className="lp-list reveal">
+              <li>
+                <b>Search by competency</b>
+                <span>
+                  Filter by learning area, grade and term, or search a code such
+                  as <code>Science · Grade 8 · Term 2</code>.
+                </span>
+              </li>
+              <li>
+                <b>Write together</b>
+                <span>
+                  Invite colleagues to a draft, mention them in comments, and
+                  pick the final file together. Everyone is credited.
+                </span>
+              </li>
+              <li>
+                <b>Clear feedback</b>
+                <span>
+                  If something needs fixing, you see exactly which checklist
+                  item and why, then upload a revision.
+                </span>
+              </li>
+              <li>
+                <b>Your work, kept</b>
+                <span>
+                  Every version stays in the history. Extra files like answer
+                  keys travel with the lesson.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="lp-band" id="heads">
+          <div className="lp-wrap lp-split">
+            <div>
+              <p className="lp-eyebrow reveal">For head teachers</p>
+              <h2 className="reveal">
+                Review in minutes, with a record of every decision.
+              </h2>
+              <ul className="lp-plain reveal">
+                <li>
+                  One queue for everything waiting, or assign it to a subject
+                  coordinator
+                </li>
+                <li>
+                  Approve new teacher accounts and deactivate ones that leave
+                </li>
+                <li>
+                  Post announcements and see which competencies still have no
+                  resource
+                </li>
+                <li>
+                  Export the school's resources by teacher, subject or term
+                </li>
+              </ul>
+            </div>
+            <div
+              className="lp-sheet reveal"
+              aria-label="Example review checklist"
+            >
+              <header>
+                <b>Energy flow in rice fields</b>
+                <span>Version 2</span>
+              </header>
+              {(
+                [
+                  ["Objectives", "met"],
+                  ["Content", "met"],
+                  ["Activities", "met"],
+                  ["Assessment", "met"],
+                ] as const
+              ).map(([item, result]) => (
+                <div className="lp-check" key={item}>
+                  <span>{item}</span>
+                  <em className={result}>Meets requirements</em>
+                </div>
+              ))}
+              <span className="lp-stamp">APPROVED</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-closing lp-wrap">
+          <h2 className="reveal">Bring your lessons to the bank.</h2>
+          <p className="lp-sub reveal">
+            Sign up with your school email. Your head teacher approves the
+            account, and you can start uploading the same day.
           </p>
-          <div className="lp-ctas">
+          <div className="lp-ctas reveal">
             <button
               type="button"
               className="lp-btn primary"
@@ -201,241 +451,17 @@ export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
               className="lp-btn outline"
               onClick={() => open("signin")}
             >
-              Sign in
+              Sign in{" "}
+              <span className="arrow" aria-hidden="true">
+                →
+              </span>
             </button>
-          </div>
-          <p className="lp-trust">
-            For teachers and head teachers with an approved school account
-          </p>
-
-          <div className="lp-window" aria-label="Preview of the workspace">
-            <div className="lp-win">
-              <div className="lp-bar" aria-hidden="true">
-                <i style={{ background: "#ff5f57" }} />
-                <i style={{ background: "#febc2e" }} />
-                <i style={{ background: "#28c840" }} />
-              </div>
-              <div className="lp-appv">
-                <div className="lp-rail">
-                  <div className="on">Overview</div>
-                  <div>Digital Bank</div>
-                  <div>My Resources</div>
-                  <div>Collaboration</div>
-                </div>
-                <div className="lp-main">
-                  <h3>Magandang umaga, teacher</h3>
-                  <div className="lp-tiles">
-                    {[
-                      ["To do", "3"],
-                      ["Your approved", "7 / 9"],
-                      ["In review", "1"],
-                      ["Digital Bank", "214"],
-                    ].map(([label, value]) => (
-                      <div className="lp-tile" key={label}>
-                        <span>{label}</span>
-                        <b>{value}</b>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="lp-list">
-                    {(
-                      [
-                        [
-                          "DOCX",
-                          "#2f5d9e",
-                          "Local weather patterns",
-                          "Returned with feedback",
-                          "Revise",
-                          "#a23b3b",
-                          "#fbe3e1",
-                        ],
-                        [
-                          "PDF",
-                          "#b6463a",
-                          "Energy flow in rice fields",
-                          "Science 5 · Term 2",
-                          "Approved",
-                          "#2f7a4f",
-                          "#e3f2e8",
-                        ],
-                        [
-                          "PDF",
-                          "#b6463a",
-                          "Tula tungkol sa anihan",
-                          "Invitation to collaborate",
-                          "Invite",
-                          "#1f5fd6",
-                          "#e8eef8",
-                        ],
-                      ] as const
-                    ).map(([ext, color, title, sub, pill, ink, bg]) => (
-                      <div className="lp-li" key={title}>
-                        <span className="lp-fi" style={{ background: color }}>
-                          {ext}
-                        </span>
-                        <div>
-                          <strong>{title}</strong>
-                          <small>{sub}</small>
-                        </div>
-                        <span
-                          className="lp-pill"
-                          style={{ color: ink, background: bg }}
-                        >
-                          {pill}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <section className="lp-section lp-wrap" id="how">
-          <p className="lp-kick">How it works</p>
-          <h2>From your classroom to the whole faculty</h2>
-          <div className="lp-cards">
-            {[
-              [
-                "Upload",
-                "Add a lesson, worksheet or module as PDF or Word, tagged to its learning competency, grade and quarter.",
-              ],
-              [
-                "Review",
-                "A head teacher checks objectives, content, activities and assessment, then approves it or returns it with feedback.",
-              ],
-              [
-                "Share",
-                "Approved resources join the Digital Bank, where every teacher can find, save and download them.",
-              ],
-            ].map(([title, text], i) => (
-              <div className="lp-card" key={title}>
-                <span className="n">{i + 1}</span>
-                <h4>{title}</h4>
-                <p>{text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="lp-section lp-wrap" id="features">
-          <p className="lp-kick">Features</p>
-          <h2>Everything a faculty needs to build its bank</h2>
-          <div className="lp-cards">
-            {[
-              [
-                "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
-                "Find in seconds",
-                "Search and filter by learning area, grade, quarter and category.",
-              ],
-              [
-                "M9 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6",
-                "Write together",
-                "Invite colleagues to a draft, comment, and propose revised files. Everyone is credited.",
-              ],
-              [
-                "M5 12l4 4 10-10",
-                "Checklist review",
-                "Clear feedback on what to fix, with every version kept.",
-              ],
-              [
-                "M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 17h4",
-                "Curriculum-aligned",
-                "Each resource links to its official learning competency and code.",
-              ],
-              [
-                "M4 20V10M10 20V4M16 20v-7M22 20H2",
-                "See the gaps",
-                "A coverage map shows which grades and subjects still need resources.",
-              ],
-              [
-                "M5 4h14v12H5zM9 20h6M12 16v4",
-                "Works on any device",
-                "School computer, laptop or phone. Files stay private to the school.",
-              ],
-            ].map(([d, title, text]) => (
-              <div className="lp-card" key={title}>
-                <Icon d={d} />
-                <h4>{title}</h4>
-                <p>{text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="lp-section lp-wrap" id="heads">
-          <div className="lp-split">
-            <div>
-              <p className="lp-kick">For head teachers</p>
-              <h2>Review with confidence, not with paperwork</h2>
-              <ul>
-                {[
-                  "One queue for everything waiting for review",
-                  "Approve new teacher accounts before they can upload",
-                  "Teacher summary and curriculum coverage reports",
-                  "Archive outdated resources without losing their history",
-                ].map((text) => (
-                  <li key={text}>
-                    <i aria-hidden="true">✓</i>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="lp-review" aria-label="Example review checklist">
-              <b>Energy flow in rice fields · Version 2</b>
-              {[
-                ["Objectives", true],
-                ["Content", true],
-                ["Activities", false],
-                ["Assessment", true],
-              ].map(([item, ok]) => (
-                <div className="chk" key={String(item)}>
-                  <span>{item}</span>
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      color: ok ? "var(--lp-ok)" : "var(--lp-warn)",
-                    }}
-                  >
-                    {ok ? "Meets requirements" : "Needs revision"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <div className="lp-wrap">
-          <div className="lp-cta">
-            <h2>Bring your lessons to the bank</h2>
-            <p>
-              Create your account with your school email. Your head teacher
-              approves it, and you're in.
-            </p>
-            <div className="lp-ctas">
-              <button
-                type="button"
-                className="lp-btn outline"
-                onClick={() => open("register")}
-              >
-                Create your teacher account
-              </button>
-              <button
-                type="button"
-                className="lp-btn ghost"
-                onClick={() => open("signin")}
-              >
-                Sign in
-              </button>
-            </div>
           </div>
           <footer className="lp-footer">
             <span>© {new Date().getFullYear()} Project SIKAP</span>
-            <span>Questions about your account? Ask your head teacher.</span>
+            <span>Account questions? Ask your head teacher.</span>
           </footer>
-        </div>
+        </section>
       </main>
 
       <dialog
@@ -458,7 +484,7 @@ export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
               ×
             </button>
           </div>
-          <div className="lp-tabs" role="tablist">
+          <div className={`lp-tabs${register ? " right" : ""}`} role="tablist">
             <button
               type="button"
               role="tab"

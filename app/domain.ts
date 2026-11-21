@@ -62,6 +62,7 @@ export const statusLabels: Record<ResourceState, string> = {
   resubmitted: "Resubmitted",
   returned: "Returned for revision",
   approved: "Approved",
+  rejected: "Not accepted",
   archived: "Archived",
 };
 export function resourceState(r: Resource): ResourceState {

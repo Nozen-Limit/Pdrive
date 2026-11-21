@@ -27,6 +27,7 @@ import { makeTheme, palettes, type PaletteName } from "./theme";
 import { Operations } from "./operations";
 import { Auth } from "./Auth";
 import { Landing } from "./Landing";
+import { HeadTools } from "./HeadTools";
 import { Workspace } from "./Workspace";
 import { Help } from "./Help";
 const Collaboration = lazy(() => import("./Collaboration"));
@@ -76,6 +77,7 @@ function initialRoute(): { page: Page; scope: Scope; resource: string } {
       "summary",
       "collaboration",
       "help",
+      "tools",
     ];
     return {
       page: resource
@@ -384,11 +386,20 @@ export function App() {
           <Typography variant="h1" gutterBottom>
             {state.user.approval_status === "rejected"
               ? "Request not approved"
-              : state.user.approval_status
-                ? "Awaiting approval"
-                : "Account setup required"}
+              : state.user.approval_status === "deactivated"
+                ? "Account deactivated"
+                : state.user.approval_status
+                  ? "Awaiting approval"
+                  : "Account setup required"}
           </Typography>
           <Typography sx={{ my: 2 }}>{state.user.email}</Typography>
+          {state.user.approval_status === "deactivated" && (
+            <Typography color="text.secondary">
+              A head teacher deactivated this account. Your approved resources
+              stay in the Digital Bank. Ask your head teacher if you need access
+              again.
+            </Typography>
+          )}
           {state.user.approval_note && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {state.user.approval_note}
@@ -473,6 +484,8 @@ export function App() {
         />
       );
     else if (page === "teachers" && head) body = <Teachers {...common} />;
+    else if (page === "tools" && head)
+      body = <HeadTools onOpen={open} notify={notify} confirm={confirm} />;
     else if (page === "profile")
       body = (
         <Profile
@@ -552,6 +565,7 @@ export function App() {
       teachers: "Teachers",
       profile: "Profile",
       summary: "Teacher summary",
+      tools: "School tools",
       collaboration: "Collaboration",
     };
     content = (

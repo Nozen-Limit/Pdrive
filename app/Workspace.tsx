@@ -37,6 +37,7 @@ import {
   StickyNote2Outlined,
   StorageOutlined,
   GroupsOutlined,
+  CampaignOutlined,
 } from "@mui/icons-material";
 import type { ReactNode } from "react";
 import type { Page, SchoolState, Scope } from "./types";
@@ -125,6 +126,11 @@ export function Workspace({
                 <FactCheckOutlined />
               </Badge>
             ),
+          },
+          {
+            page: "tools" as Page,
+            label: "School tools",
+            icon: <CampaignOutlined />,
           },
         ]
       : []),

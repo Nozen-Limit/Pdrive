@@ -127,7 +127,9 @@ export function Status({ resource }: { resource: Resource }) {
           ? "success"
           : state === "returned"
             ? "warning"
-            : "default"
+            : state === "rejected"
+              ? "error"
+              : "default"
       }
       sx={{ width: "fit-content" }}
     />

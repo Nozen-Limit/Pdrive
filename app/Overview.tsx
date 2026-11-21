@@ -25,6 +25,8 @@ import {
   summary,
 } from "./domain";
 import type {
+  Announcement,
+  AssignedReview,
   Coverage,
   Page,
   Person,
@@ -188,6 +190,9 @@ export interface HomeData {
   invitations: number;
   pendingAccounts: number;
   coverage: Coverage | null;
+  /** Reviews assigned to this person (coordinators and heads). */
+  assigned?: AssignedReview[];
+  announcements?: Announcement[];
 }
 
 const greeting = (hour: number) =>
@@ -545,7 +550,18 @@ export function HomeView({
   // One resource opens directly; several open the list that holds them.
   const openOr = (items: Resource[], scope: Scope) => () =>
     items.length === 1 ? onOpen(items[0].id) : go("bank", scope);
+  const assigned = data.assigned || [];
   const todo = [
+    {
+      count: assigned.length,
+      title: "Assigned to you for review",
+      detail:
+        assigned.length === 1
+          ? `${assigned[0].title}, from ${assigned[0].creator}`
+          : "A head teacher asked you to review these",
+      action: "Review",
+      run: () => onOpen(assigned[0].id),
+    },
     {
       count: review.length,
       title: "Waiting for your review",
@@ -676,6 +692,34 @@ export function HomeView({
           {greeting(hour)}, {user.name}
         </Typography>
       </Box>
+      {(data.announcements || []).map((a) => (
+        <Box
+          key={a.id}
+          role="note"
+          sx={(theme) => ({
+            gridColumn: "1 / -1",
+            display: "flex",
+            gap: 1.5,
+            alignItems: "flex-start",
+            p: 2,
+            borderLeft: 3,
+            borderColor: "primary.main",
+            bgcolor: `color-mix(in srgb, ${theme.palette.primary.main} 7%, ${theme.palette.background.paper})`,
+          })}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 600 }}>{a.title}</Typography>
+            {a.body && (
+              <Typography sx={{ whiteSpace: "pre-wrap", mt: 0.25 }}>
+                {a.body}
+              </Typography>
+            )}
+            <Typography color="text.secondary" sx={{ fontSize: 12, mt: 0.5 }}>
+              {a.author} · {date(a.created)}
+            </Typography>
+          </Box>
+        </Box>
+      ))}
 
       <Box
         sx={{
@@ -902,10 +946,25 @@ export function Overview({
   const head = state.user.role === "head";
   const [invitations, setInvitations] = useState(0),
     [coverage, setCoverage] = useState<Coverage | null>(null),
-    [shared, setShared] = useState<HomeData["shared"]>(null);
+    [shared, setShared] = useState<HomeData["shared"]>(null),
+    [assigned, setAssigned] = useState<AssignedReview[]>([]),
+    [announcements, setAnnouncements] = useState<Announcement[]>([]);
   useEffect(() => {
     let cancelled = false;
     // Each of these is an extra: Home still works if one is unavailable.
+    // Optional until teacher-tools.sql is applied.
+    void backend.bank
+      .assigned()
+      .then((value) => {
+        if (!cancelled) setAssigned(value);
+      })
+      .catch(() => {});
+    void backend.bank
+      .announcements()
+      .then((value) => {
+        if (!cancelled) setAnnouncements(value);
+      })
+      .catch(() => {});
     void readShared()
       .then((value) => {
         if (!cancelled) setShared(value);
@@ -942,6 +1001,8 @@ export function Overview({
         shared,
         invitations,
         coverage,
+        assigned,
+        announcements,
         pendingAccounts: head
           ? (state.teachers || []).filter(
               (p) => p.approval_status === "pending",

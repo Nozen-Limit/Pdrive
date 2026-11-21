@@ -38,6 +38,7 @@ import type {
   Resource,
 } from "./types";
 import { ErrorNotice, Loading, formGrid, row, wide } from "./ui";
+const autosaveKey = (id?: string) => "sikap-autosave:" + (id || "new");
 export function ResourceForm({
   person,
   editing,
@@ -71,7 +72,69 @@ export function ResourceForm({
     [options, setOptions] = useState<Competency[]>([]),
     [searching, setSearching] = useState(false),
     [lookupError, setLookupError] = useState(""),
-    [step, setStep] = useState(0);
+    [step, setStep] = useState(0),
+    [restored, setRestored] = useState<Record<string, string> | null>(null),
+    [formKey, setFormKey] = useState(0),
+    [savedCopy, setSavedCopy] = useState<{
+      at: string;
+      fields: Record<string, string>;
+    } | null>(() => {
+      try {
+        const raw = localStorage.getItem(autosaveKey(editing?.id));
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }),
+    [autosavedAt, setAutosavedAt] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null),
+    autosaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+      undefined,
+    );
+  // Keep a copy of what is typed in this browser, so a closed tab or lost
+  // connection does not lose work. The server copy is saved with Save draft.
+  function autosave() {
+    clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      const form = formRef.current;
+      if (!form) return;
+      const fields: Record<string, string> = {};
+      new FormData(form).forEach((v, k) => {
+        if (typeof v === "string") fields[k] = v;
+      });
+      Object.assign(fields, { subject, grade, term });
+      const at = new Date().toISOString();
+      try {
+        localStorage.setItem(
+          autosaveKey(editing?.id),
+          JSON.stringify({ at, fields }),
+        );
+        setAutosavedAt(at);
+      } catch {
+        /* Storage can be full or blocked; saving still works. */
+      }
+    }, 800);
+  }
+  useEffect(() => () => clearTimeout(autosaveTimer.current), []);
+  function restore() {
+    if (!savedCopy) return;
+    const { subject: s, grade: g, term: tm, ...rest } = savedCopy.fields;
+    if (s !== undefined) setSubject(s);
+    if (g !== undefined) setGrade(g);
+    if (tm !== undefined) setTerm(tm);
+    setRestored(rest);
+    setFormKey((n) => n + 1);
+    setSavedCopy(null);
+    setDirty(true);
+  }
+  function discardCopy() {
+    try {
+      localStorage.removeItem(autosaveKey(editing?.id));
+    } catch {
+      /* nothing to remove */
+    }
+    setSavedCopy(null);
+  }
   const receipt = useRef<string | null>(null),
     fileSequence = useRef(0),
     stepRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -138,6 +201,7 @@ export function ResourceForm({
     setChoice(null);
     setSearch("");
     setDirty(true);
+    autosave();
   }
   async function chooseFile(value: File | null) {
     if (busy) return;
@@ -242,6 +306,12 @@ export function ResourceForm({
         });
       }
       setDirty(false);
+      clearTimeout(autosaveTimer.current);
+      try {
+        localStorage.removeItem(autosaveKey(editing?.id));
+      } catch {
+        /* nothing to remove */
+      }
       onSaved(id);
     } catch (e) {
       setError(message(e));
@@ -268,7 +338,7 @@ export function ResourceForm({
       key={name}
       name={name}
       label={label}
-      defaultValue={value || ""}
+      defaultValue={restored?.[name] ?? (value || "")}
       required={required}
       multiline={multiline}
       minRows={multiline ? 3 : undefined}
@@ -312,7 +382,13 @@ export function ResourceForm({
       select
       name={name}
       label={label}
-      defaultValue={options.includes(value || "") ? value : ""}
+      defaultValue={
+        restored?.[name] !== undefined && options.includes(restored[name])
+          ? restored[name]
+          : options.includes(value || "")
+            ? value
+            : ""
+      }
       required
       sx={{ width: "100%", maxWidth: 260 }}
     >
@@ -355,11 +431,50 @@ export function ResourceForm({
           </Step>
         ))}
       </Stepper>
+      {savedCopy && (
+        <Box
+          role="status"
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 1.5,
+            p: 1.75,
+            mb: 2,
+            border: 1,
+            borderColor: "primary.main",
+            bgcolor: "action.hover",
+          }}
+        >
+          <Typography sx={{ flex: "1 1 240px" }}>
+            You have unsaved changes from{" "}
+            {new Date(savedCopy.at).toLocaleString()}.
+          </Typography>
+          <Button onClick={discardCopy}>Discard</Button>
+          <Button variant="contained" onClick={restore}>
+            Restore
+          </Button>
+        </Box>
+      )}
+      {autosavedAt && (
+        <Typography
+          color="text.secondary"
+          role="status"
+          sx={{ fontSize: 12, mb: 1, textAlign: "right" }}
+        >
+          Saved on this device at {new Date(autosavedAt).toLocaleTimeString()}
+        </Typography>
+      )}
       <Box
         component="form"
+        key={formKey}
+        ref={formRef}
         noValidate
         onSubmit={save}
-        onChange={() => setDirty(true)}
+        onChange={() => {
+          setDirty(true);
+          autosave();
+        }}
         aria-label="Resource upload"
       >
         <Box
@@ -447,7 +562,10 @@ export function ResourceForm({
               name="category"
               label="Category"
               required
-              defaultValue={editing?.bank_category || editing?.category || ""}
+              defaultValue={
+                restored?.category ??
+                (editing?.bank_category || editing?.category || "")
+              }
               slotProps={{
                 select: {
                   renderValue: (value) =>

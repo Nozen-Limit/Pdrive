@@ -113,6 +113,29 @@ export default function Collaboration({
     setDirty(false);
     setId(next);
   }
+  async function transfer(teacherId: string, name: string) {
+    if (!id || !detail?.resource || busy) return;
+    if (
+      !(await confirm(
+        "Make " + name + " the owner?",
+        "They will manage contributors and submit the resource. You stay on the team as a contributor.",
+        "Transfer ownership",
+      ))
+    )
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await backend.bank.transfer(id, detail.resource.revision, teacherId);
+      setEpoch((n) => n + 1);
+      await onChanged();
+      notify(name + " is now the owner.");
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function run(
     action: string,
     payload: Record<string, unknown> = {},
@@ -789,6 +812,51 @@ export default function Collaboration({
                     </Button>
                   </Box>
                 )}
+                {!locked &&
+                  members.some(
+                    (m) => m.status === "accepted" && m.id !== person.id,
+                  ) && (
+                    <Box sx={{ ...row, gap: 0.75, mt: 1 }}>
+                      <Typography color="text.secondary" sx={{ fontSize: 12 }}>
+                        Mention to notify:
+                      </Typography>
+                      {[
+                        ...members.filter((m) => m.status === "accepted"),
+                        ...(owner
+                          ? []
+                          : [
+                              {
+                                id: r?.owner || "",
+                                name:
+                                  (listing?.resources || []).find(
+                                    (p) => p.id === id,
+                                  )?.creator || "",
+                              },
+                            ]),
+                      ]
+                        .filter((m) => m.id && m.name && m.id !== person.id)
+                        .map((m) => (
+                          <Button
+                            key={m.id}
+                            size="small"
+                            variant="outlined"
+                            disabled={busy}
+                            onClick={() =>
+                              setComment(
+                                (text) =>
+                                  (text ? text.replace(/s*$/, " ") : "") +
+                                  "@" +
+                                  m.name +
+                                  " ",
+                              )
+                            }
+                            sx={{ minHeight: 26, py: 0 }}
+                          >
+                            @{m.name}
+                          </Button>
+                        ))}
+                    </Box>
+                  )}
               </Box>
               <Box component="aside">
                 <Typography component="h3" variant="h3" sx={{ mb: 1.5 }}>
@@ -818,6 +886,14 @@ export default function Collaboration({
                             }
                           >
                             Remove
+                          </Button>
+                        )}
+                        {owner && !locked && m.status === "accepted" && (
+                          <Button
+                            disabled={busy}
+                            onClick={() => void transfer(m.id, m.name)}
+                          >
+                            Make owner
                           </Button>
                         )}
                       </Box>

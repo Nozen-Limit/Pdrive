@@ -389,6 +389,7 @@ export function Library({
             ["mine", "My Resources"],
             ["saved", "Saved"],
             ["recent", "Recent"],
+            ["myarchive", "My archive"],
             ...(head
               ? [
                   ["all", "All resources"],

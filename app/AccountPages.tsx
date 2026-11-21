@@ -615,22 +615,56 @@ const approvalLabel = (value?: string) =>
     ? "Approved"
     : value === "rejected"
       ? "Rejected"
-      : "Pending approval";
+      : value === "deactivated"
+        ? "Deactivated"
+        : "Pending approval";
 export function Teachers({
   state,
   onChanged,
   notify,
-}: Pick<Common, "state" | "onChanged" | "notify">) {
+  confirm,
+}: Pick<Common, "state" | "onChanged" | "notify"> & {
+  confirm: (title: string, body: string, action?: string) => Promise<boolean>;
+}) {
   const [filter, setFilter] = useState("all"),
     [person, setPerson] = useState<Person | null>(null),
     [review, setReview] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useBusy();
+  const me = state.user;
+  const isOwner = !!(me.isOwner || me.is_owner);
   const teachers = state.teachers.filter(
     (p) =>
-      p.role === "teacher" &&
-      (filter === "all" || p.approval_status === filter),
+      p.id !== me.id &&
+      (p.role === "teacher" || isOwner) &&
+      (filter === "all" ||
+        (filter === "head"
+          ? p.role === "head"
+          : filter === "coordinator"
+            ? !!p.is_coordinator
+            : p.approval_status === filter)),
   );
+  async function manage(
+    teacher: Person,
+    task: () => Promise<void>,
+    title: string,
+    body: string,
+    action: string,
+    done: string,
+  ) {
+    if (busy || !(await confirm(title, body, action))) return;
+    setBusy(true);
+    setError("");
+    try {
+      await task();
+      await onChanged();
+      notify(done);
+    } catch (e) {
+      notify(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function decide(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!person || busy) return;
@@ -668,9 +702,23 @@ export function Teachers({
           onChange={(e) => setFilter(e.target.value)}
           sx={{ width: 220 }}
         >
-          {["all", "approved", "pending", "rejected"].map((value) => (
+          {[
+            "all",
+            "approved",
+            "pending",
+            "rejected",
+            "deactivated",
+            "coordinator",
+            ...(isOwner ? ["head"] : []),
+          ].map((value) => (
             <MenuItem key={value} value={value}>
-              {value === "all" ? "All teachers" : approvalLabel(value)}
+              {value === "all"
+                ? "All accounts"
+                : value === "coordinator"
+                  ? "Subject coordinators"
+                  : value === "head"
+                    ? "Head teachers"
+                    : approvalLabel(value)}
             </MenuItem>
           ))}
         </TextField>
@@ -714,6 +762,101 @@ export function Teachers({
           </Box>
           <Box sx={row}>
             <Chip label={approvalLabel(teacher.approval_status)} />
+            {teacher.role === "head" && (
+              <Chip label="Head teacher" color="primary" />
+            )}
+            {teacher.is_coordinator && <Chip label="Coordinator" />}
+            {teacher.approval_status === "approved" &&
+              teacher.role === "teacher" && (
+                <Button
+                  disabled={busy}
+                  onClick={() =>
+                    void manage(
+                      teacher,
+                      () =>
+                        backend.bank.setRole(
+                          teacher.id,
+                          "teacher",
+                          !teacher.is_coordinator,
+                        ),
+                      teacher.is_coordinator
+                        ? "Remove coordinator role?"
+                        : "Make " + teacher.name + " a subject coordinator?",
+                      teacher.is_coordinator
+                        ? "They will no longer review resources assigned to them."
+                        : "Head teachers can then assign resources to them for review.",
+                      teacher.is_coordinator
+                        ? "Remove role"
+                        : "Make coordinator",
+                      teacher.is_coordinator
+                        ? "Coordinator role removed."
+                        : teacher.name + " is now a subject coordinator.",
+                    )
+                  }
+                >
+                  {teacher.is_coordinator
+                    ? "Remove coordinator"
+                    : "Make coordinator"}
+                </Button>
+              )}
+            {isOwner && teacher.approval_status === "approved" && (
+              <Button
+                disabled={busy}
+                onClick={() =>
+                  void manage(
+                    teacher,
+                    () =>
+                      backend.bank.setRole(
+                        teacher.id,
+                        teacher.role === "head" ? "teacher" : "head",
+                        false,
+                      ),
+                    teacher.role === "head"
+                      ? "Change " + teacher.name + " to a teacher?"
+                      : "Make " + teacher.name + " a head teacher?",
+                    teacher.role === "head"
+                      ? "They will lose review, approval and report access."
+                      : "They will review resources, approve accounts and see school reports.",
+                    teacher.role === "head"
+                      ? "Make teacher"
+                      : "Make head teacher",
+                    "Role updated.",
+                  )
+                }
+              >
+                {teacher.role === "head" ? "Make teacher" : "Make head teacher"}
+              </Button>
+            )}
+            {teacher.role === "teacher" &&
+              ["approved", "deactivated"].includes(
+                teacher.approval_status || "",
+              ) && (
+                <Button
+                  color={
+                    teacher.approval_status === "approved" ? "error" : "primary"
+                  }
+                  disabled={busy}
+                  onClick={() => {
+                    const active = teacher.approval_status !== "approved";
+                    void manage(
+                      teacher,
+                      () => backend.bank.setActive(teacher.id, active),
+                      active
+                        ? "Reactivate " + teacher.name + "?"
+                        : "Deactivate " + teacher.name + "?",
+                      active
+                        ? "They can sign in and use SIKAP again."
+                        : "They can no longer sign in to SIKAP. Their approved resources stay in the Digital Bank with their name.",
+                      active ? "Reactivate" : "Deactivate",
+                      active ? "Account reactivated." : "Account deactivated.",
+                    );
+                  }}
+                >
+                  {teacher.approval_status === "approved"
+                    ? "Deactivate"
+                    : "Reactivate"}
+                </Button>
+              )}
             <Button
               onClick={() => {
                 setPerson(teacher);
@@ -1223,6 +1366,105 @@ export function Profile({
           </Button>
         </Box>
       </Paper>
+      <PasswordCard notify={notify} />
     </Box>
+  );
+}
+
+/** Change the password while signed in; the current one is checked first. */
+function PasswordCard({ notify }: { notify: (text: string) => void }) {
+  const [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [show, setShow] = useState(false);
+  async function change(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget,
+      f = new FormData(form),
+      next = String(f.get("next") || "");
+    setError("");
+    if (next !== String(f.get("confirm") || "")) {
+      setError("The new passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await backend.changePassword(String(f.get("current") || ""), next);
+      form.reset();
+      notify("Password changed.");
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Paper
+      variant="outlined"
+      component="form"
+      onSubmit={change}
+      sx={{ gridColumn: { md: 2 }, minWidth: 0 }}
+    >
+      <Typography
+        variant="h3"
+        component="h3"
+        sx={{ px: 3, py: 1.75, borderBottom: 1, borderColor: "divider" }}
+      >
+        Password
+      </Typography>
+      <Box sx={{ ...formGrid, p: 3 }}>
+        <TextField
+          name="current"
+          label="Current password"
+          type={show ? "text" : "password"}
+          autoComplete="current-password"
+          required
+          sx={{ gridColumn: "1 / -1" }}
+        />
+        <TextField
+          name="next"
+          label="New password"
+          type={show ? "text" : "password"}
+          autoComplete="new-password"
+          required
+          helperText="At least 12 characters"
+          slotProps={{ htmlInput: { minLength: 12 } }}
+        />
+        <TextField
+          name="confirm"
+          label="Confirm new password"
+          type={show ? "text" : "password"}
+          autoComplete="new-password"
+          required
+        />
+      </Box>
+      <Box sx={{ px: 3 }}>
+        <ErrorNotice error={error} />
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: "action.hover",
+        }}
+      >
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={show}
+              onChange={(e) => setShow(e.target.checked)}
+            />
+          }
+          label="Show passwords"
+        />
+        <Button variant="contained" type="submit" disabled={busy}>
+          {busy ? "Changing…" : "Change password"}
+        </Button>
+      </Box>
+    </Paper>
   );
 }

@@ -7,7 +7,11 @@ export function createBankService(client, config, checked, signVersions) {
           ? "Collaboration database setup is required. Apply supabase/collaboration.sql in the Supabase SQL Editor, then refresh."
           : /curriculum|competency/.test(name)
             ? "Curriculum catalog setup is required. Ask the administrator to apply curriculum-catalog.sql."
-            : "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
+            : /reject|assign|account_|report|share|colleague|attach|detach|transfer|announcement/.test(
+                  name,
+                )
+              ? "This feature needs a database update. Ask the administrator to apply supabase/teacher-tools.sql."
+              : "Digital Bank setup is required. Ask the administrator to apply digital-bank.sql.",
       );
     return checked(result);
   }
@@ -37,8 +41,54 @@ export function createBankService(client, config, checked, signVersions) {
     async details(id) {
       const detail = await call("bank_details", { mid: id });
       detail.versions = await signVersions(detail.versions);
+      if (detail.attachments)
+        detail.attachments = await signVersions(detail.attachments);
       return detail;
     },
+    // Teacher and head-teacher tools (supabase/teacher-tools.sql).
+    reject: (args) => call("bank_reject", args),
+    assign: (mid, reviewer) => call("bank_assign", { mid, reviewer }),
+    assigned: () => call("bank_assigned"),
+    setRole: (uid, role, coordinator) =>
+      call("set_account_role", { uid, new_role: role, coordinator }),
+    setActive: (uid, active) => call("set_account_active", { uid, active }),
+    report: (mid, reason, details) =>
+      call("bank_report", { mid, reason, details }),
+    reports: () => call("report_list"),
+    resolveReport: (rid, note) => call("report_resolve", { rid, note }),
+    share: (mid, recipient, note) =>
+      call("bank_share", { mid, recipient, note }),
+    colleagues: () => call("colleague_list"),
+    async hide(mid, hidden) {
+      const user = checked(await client.auth.getUser()).user;
+      checked(
+        await (hidden
+          ? client
+              .from("hidden_resources")
+              .upsert(
+                { owner: user.id, module: mid },
+                { onConflict: "owner,module", ignoreDuplicates: true },
+              )
+          : client
+              .from("hidden_resources")
+              .delete()
+              .eq("owner", user.id)
+              .eq("module", mid)),
+      );
+    },
+    async attachments(list) {
+      return signVersions(list || []);
+    },
+    attach: (mid, object_key, label) =>
+      call("bank_attach", { mid, object_key, label }),
+    detach: (aid) => call("bank_detach", { aid }),
+    transfer: (mid, expected_revision, new_owner) =>
+      call("collab_transfer", { mid, expected_revision, new_owner }),
+    announcements: () => call("announcement_list"),
+    announce: (title, body, expires) =>
+      call("announcement_post", { title, body, expires: expires || null }),
+    removeAnnouncement: (aid) => call("announcement_delete", { aid }),
+    reportRows: () => call("report_rows"),
     save: (args) => call("bank_save", args),
     edit: (args) => call("bank_edit", args),
     revise: (args) => call("bank_revise", args),

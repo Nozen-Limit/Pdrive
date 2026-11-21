@@ -35,6 +35,7 @@ import {
   resourceState,
 } from "./domain";
 import type { Person, Resource, ResourceDetail as Detail } from "./types";
+import { RejectButton, ResourceActions, ResourceExtras } from "./ResourceTools";
 const FilePreview = lazy(() =>
   import("./FilePreview").then((module) => ({ default: module.FilePreview })),
 );
@@ -274,7 +275,7 @@ export function ResourceDetail({
             file = detail.versions[0],
             canReview =
               !!r.bank_category &&
-              head &&
+              (detail.canReview ?? head) &&
               !own &&
               !r.contributors?.some((p) => p.id === person.id) &&
               ["pending", "resubmitted"].includes(state),
@@ -437,6 +438,13 @@ export function ResourceDetail({
                       {r.saved ? "Saved" : "Save"}
                     </Button>
                   )}
+                  <ResourceActions
+                    detail={detail}
+                    person={person}
+                    busy={busy}
+                    notify={notify}
+                    onHidden={(hidden) => setDetail({ ...detail, hidden })}
+                  />
                   {file?.downloadUrl && !file.unavailable && (
                     <Button
                       component="a"
@@ -462,6 +470,12 @@ export function ResourceDetail({
                 }}
               >
                 <Box sx={{ minWidth: 0, display: "grid", gap: 2.5 }}>
+                  <ResourceExtras
+                    detail={detail}
+                    person={person}
+                    notify={notify}
+                    onChanged={() => setRetry((n) => n + 1)}
+                  />
                   {(r.bank_description || r.bank_localization) && (
                     <Box
                       component="section"
@@ -895,6 +909,17 @@ export function ResourceDetail({
                           >
                             Approve
                           </Button>
+                          <RejectButton
+                            detail={detail}
+                            disabled={busy}
+                            onDone={async () => {
+                              setDirty(false);
+                              await onChanged();
+                              notify(
+                                "Resource not accepted. The teacher was told why.",
+                              );
+                            }}
+                          />
                         </Stack>
                       )}
                     </Box>
