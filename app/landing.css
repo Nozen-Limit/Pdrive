@@ -123,8 +123,12 @@
   transform-origin: left;
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.lp-links a:hover::after {
+.lp-links a:hover::after,
+.lp-links a.is-active::after {
   transform: scaleX(1);
+}
+.lp-links a.is-active {
+  color: var(--ink);
 }
 .lp-nav-actions {
   display: flex;
@@ -1160,4 +1164,9 @@
   .lp h1 em {
     background-size: 100% 100%;
   }
+}
+
+/* Land sections just below the sticky menu bar. */
+.lp-band {
+  scroll-margin-top: 68px;
 }

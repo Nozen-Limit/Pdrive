@@ -23,8 +23,8 @@ const Book = ({ size = 18 }: { size?: number }) => (
     />
   </svg>
 );
-const Logo = () => (
-  <a className="lp-logo" href="#top">
+const Logo = ({ onClick }: { onClick?: (e: React.MouseEvent) => void }) => (
+  <a className="lp-logo" href="#top" onClick={onClick}>
     <span className="lp-mark">
       <Book />
     </span>
@@ -39,7 +39,38 @@ const Logo = () => (
 export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
   const dialog = useRef<HTMLDialogElement>(null),
     root = useRef<HTMLDivElement>(null);
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false),
+    [active, setActive] = useState("");
+  // Glide to a section instead of jumping, and keep the address bar clean
+  // (the app uses the address for its own pages).
+  const go = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const target = id === "top" ? root.current : document.getElementById(id);
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (id === "top")
+      window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+    else
+      target?.scrollIntoView({
+        behavior: still ? "auto" : "smooth",
+        block: "start",
+      });
+  };
+  // Underline the link for the section currently on screen.
+  useEffect(() => {
+    const ids = ["how", "teachers", "heads"];
+    const update = () => {
+      const line = window.innerHeight * 0.35;
+      let current = "";
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) current = id;
+      }
+      setActive(current);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
   // Reveal sections as they scroll into view; the page is fully visible
   // without this script or with reduced motion.
   useEffect(() => {
@@ -174,11 +205,25 @@ export function Landing({ onSignedIn }: { onSignedIn: () => Promise<void> }) {
     <div className="lp" id="top" ref={root}>
       <header className={`lp-header${scrolled ? " is-scrolled" : ""}`}>
         <nav className="lp-nav lp-wrap" aria-label="Main">
-          <Logo />
+          <Logo onClick={(e) => go(e, "top")} />
           <div className="lp-links">
-            <a href="#how">How it works</a>
-            <a href="#teachers">For teachers</a>
-            <a href="#heads">For head teachers</a>
+            {(
+              [
+                ["how", "How it works"],
+                ["teachers", "For teachers"],
+                ["heads", "For head teachers"],
+              ] as const
+            ).map(([id, label]) => (
+              <a
+                key={id}
+                href={"#" + id}
+                className={active === id ? "is-active" : undefined}
+                aria-current={active === id ? "true" : undefined}
+                onClick={(e) => go(e, id)}
+              >
+                {label}
+              </a>
+            ))}
           </div>
           <div className="lp-nav-actions">
             <button
